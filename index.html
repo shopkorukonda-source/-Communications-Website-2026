@@ -1455,5 +1455,190 @@ function processCheckout(){
   else showView('loginView');
 })();
 </script>
+<script>
+(function () {
+  const SUPABASE_URL = 'https://rxrzzxtpkxnolbsrbymi.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_YoB_rYUUMsaaCGXFue9_eg_gbWfDOa3';
+
+  const cdn = document.createElement('script');
+  cdn.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+
+  cdn.onload = async function () {
+    const db = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_KEY,
+      {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          storage: window.sessionStorage
+        }
+      }
+    );
+
+    window.slvSupabase = db;
+
+    window.toggleLoginInputs = function () {
+      const admin = $('loginRole').value === 'Admin';
+      $('empIdBox').style.display = 'block';
+      const label = document.querySelector('label[for="loginId"]');
+      label.textContent = admin ? 'Admin Email' : 'Employee ID';
+      $('loginId').placeholder = admin
+        ? 'Enter admin email'
+        : 'e.g. SLV01';
+      $('loginId').type = admin ? 'email' : 'text';
+      $('loginId').required = true;
+    };
+
+    window.handleLogin = async function () {
+      const role = $('loginRole').value;
+      const pass = $('loginPass').value.trim();
+      const id = $('loginId').value.trim();
+
+      if (!id || !pass) {
+        alert('Email / Employee ID and Password enter cheyyandi');
+        return;
+      }
+
+      if (role === 'Admin') {
+        try {
+          const { data, error } = await db.auth.signInWithPassword({
+            email: id.toLowerCase(),
+            password: pass
+          });
+
+          if (error) throw error;
+
+          const { data: profile, error: profileError } = await db
+            .from('profiles')
+            .select('id,full_name,employee_code,role,is_active')
+            .eq('id', data.user.id)
+            .single();
+
+          if (profileError) throw profileError;
+
+          if (
+            profile.role !== 'admin' ||
+            profile.is_active !== true
+          ) {
+            await db.auth.signOut();
+            alert('Admin access ledu. Contact administrator.');
+            return;
+          }
+
+          currentUser = {
+            id: profile.id,
+            name: profile.full_name || 'Master Admin',
+            role: 'Admin'
+          };
+
+          saveLoginSession(currentUser);
+          showView('adminView');
+
+        } catch (error) {
+          alert('Admin Login Failed: ' + error.message);
+        }
+        return;
+      }
+
+      const empId = id.toUpperCase();
+      const emps = getEmployees();
+
+      if (emps[empId] && emps[empId].pass === pass) {
+        const attendance = ensureTodayAttendance();
+
+        if (attendance && attendance.shiftCloseAt) {
+          alert('Ee roju shift already close ayyindi.');
+          return;
+        }
+
+        currentUser = {
+          id: empId,
+          name: emps[empId].name,
+          role: 'Employee',
+          shift: emps[empId].shift || '09:00 AM - 05:00 PM',
+          openingCashBalance: getCashWalletBalance()
+        };
+
+        if (attendance) {
+          attendance.sessions = attendance.sessions || [];
+          attendance.sessions.push({
+            loginAt: Date.now(),
+            logoutAt: null
+          });
+
+          const records = getAttendance();
+          const idx = records.findIndex(
+            x => x.employeeId === empId && x.day === attendance.day
+          );
+
+          if (idx >= 0) records[idx] = attendance;
+          saveAttendance(records);
+        }
+
+        saveLoginSession(currentUser);
+        showView('employeeView');
+      } else {
+        alert('Wrong Employee ID or Password!');
+      }
+    };
+
+    const oldLogout = window.logout;
+
+    window.logout = async function () {
+      if (currentUser && currentUser.role === 'Admin') {
+        await db.auth.signOut();
+        sessionStorage.removeItem(KEYS.user);
+        currentUser = null;
+        showView('loginView');
+      } else if (oldLogout) {
+        oldLogout();
+      }
+    };
+
+    toggleLoginInputs();
+
+    const saved = readLoginSession();
+
+    if (saved && saved.role === 'Employee') {
+      currentUser = saved;
+      showView('employeeView');
+      return;
+    }
+
+    sessionStorage.removeItem(KEYS.user);
+    currentUser = null;
+    showView('loginView');
+
+    const { data } = await db.auth.getSession();
+
+    if (data.session) {
+      const { data: profile } = await db
+        .from('profiles')
+        .select('id,full_name,role,is_active')
+        .eq('id', data.session.user.id)
+        .single();
+
+      if (profile && profile.role === 'admin' && profile.is_active) {
+        currentUser = {
+          id: profile.id,
+          name: profile.full_name || 'Master Admin',
+          role: 'Admin'
+        };
+        saveLoginSession(currentUser);
+        showView('adminView');
+      } else {
+        await db.auth.signOut();
+      }
+    }
+  };
+
+  cdn.onerror = function () {
+    alert('Supabase library load avvaledu. Internet check cheyyandi.');
+  };
+
+  document.head.appendChild(cdn);
+})();
+</script>
 </body>
 </html>
