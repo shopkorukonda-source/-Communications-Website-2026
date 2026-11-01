@@ -517,6 +517,7 @@ footer{padding:20px!important;color:#8988a3}
       <button class="side-menu-link" onclick="adminMenuGo('adminWallets')">💼 Wallet Management</button>
       <button class="side-menu-link" onclick="adminMenuGo('adminTarget')">🎯 Monthly Target Wallet</button>
       <button class="side-menu-link" onclick="adminMenuGo('adminEmployees')">👥 Employees & Wallet Access</button>
+      <button class="side-menu-link" onclick="adminMenuGo('adminAttendance')">📅 Employee Attendance & Shift Reports</button>
       <button class="side-menu-link" onclick="adminMenuGo('adminLeaves')">🌴 Leave Requests</button>
       <button class="side-menu-link" onclick="adminMenuGo('adminTransactions')">📊 Transactions & Collection</button>
       <button class="side-menu-link side-logout" onclick="logout()">🚪 Logout</button>
@@ -535,6 +536,16 @@ footer{padding:20px!important;color:#8988a3}
         <button class="btn-red" onclick="setHoliday()">Publish Holiday</button>
         <button class="btn-secondary" onclick="clearHoliday()">Remove Holiday</button>
       </div>
+      <hr>
+      <h4>🔐 Change Admin Password</h4>
+      <p class="muted">మీ Admin password ను ఇక్కడే private గా మార్చుకోవచ్చు.</p>
+      <label for="currentAdminPassword">Current Admin Password</label>
+      <input id="currentAdminPassword" type="password" autocomplete="current-password" placeholder="Current password">
+      <label for="newAdminPassword">New Admin Password</label>
+      <input id="newAdminPassword" type="password" autocomplete="new-password" placeholder="New password (minimum 6 characters)">
+      <label for="confirmAdminPassword">Confirm New Password</label>
+      <input id="confirmAdminPassword" type="password" autocomplete="new-password" placeholder="Re-enter new password">
+      <button class="btn-green" onclick="changeAdminPassword()">Save New Admin Password</button>
     </div>
 
     <div id="adminServices" class="section-box admin-section" style="border-left:4px solid #f9ab00">
@@ -637,6 +648,14 @@ footer{padding:20px!important;color:#8988a3}
       </div>
       <button class="btn-green" onclick="addEmployee()">+ Add Employee</button>
       <div id="empListContainer"></div>
+    </div>
+
+    <div id="adminAttendance" class="section-box admin-section">
+      <h4>📅 Employee Attendance & Shift Reports</h4>
+      <p class="muted">రోజువారీ Login / Logout, Lunch Break, Shift Close మరియు పని గంటల వివరాలు.</p>
+      <label for="attendanceDateFilter">Select Date</label>
+      <input id="attendanceDateFilter" type="date" onchange="renderAdminAttendance()">
+      <div id="adminAttendanceReports" class="muted">No attendance records yet.</div>
     </div>
 
     <div id="adminLeaves" class="section-box admin-section">
@@ -758,7 +777,9 @@ function handleLogin(){
   const role=$('loginRole').value,pass=$('loginPass').value.trim();
   if(!pass){alert('పాస్‌వర్డ్ ఎంటర్ చేయండి');return}
   if(role==='Admin'){
-    if(pass==='admin123'||pass==='123456'){
+    const savedAdminPassword=localStorage.getItem('slvAdminPassword');
+    const validAdminPassword=savedAdminPassword!==null?pass===savedAdminPassword:(pass==='admin123'||pass==='123456');
+    if(validAdminPassword){
       currentUser={id:'ADMIN',name:'Master Admin',role:'Admin'};write(KEYS.user,currentUser);showView('adminView');
     }else alert('పాస్‌వర్డ్ తప్పు!');
     return;
@@ -766,7 +787,13 @@ function handleLogin(){
   const id=$('loginId').value.trim().toUpperCase(),emps=getEmployees();
   if(emps[id]&&emps[id].pass===pass){
     currentUser={id,name:emps[id].name,role:'Employee',shift:emps[id].shift||'09:00 AM - 05:00 PM',openingCashBalance:getCashWalletBalance()};
-    ensureTodayAttendance();
+    const attendance=ensureTodayAttendance();
+    if(attendance){
+      attendance.sessions=attendance.sessions||[];
+      attendance.sessions.push({loginAt:Date.now(),logoutAt:null});
+      const records=getAttendance(),idx=records.findIndex(x=>x.employeeId===id&&x.day===attendance.day);
+      if(idx>=0)records[idx]=attendance;saveAttendance(records);
+    }
     write(KEYS.user,currentUser);showView('employeeView');
   }else alert('తప్పు యూజర్ ఐడీ లేదా పాస్‌వర్డ్!');
 }
@@ -777,7 +804,33 @@ function requireUser(){
   if(currentUser.role!=='Employee'){showView('loginView');return false}
   return true;
 }
-function logout(){localStorage.removeItem(KEYS.user);currentUser=null;$('loginPass').value='';showView('loginView')}
+function logout(){
+  if(currentUser&&currentUser.role==='Employee'){
+    const rec=getTodayAttendance();
+    if(rec){
+      const sessions=rec.sessions||[],last=sessions[sessions.length-1];
+      if(last&&!last.logoutAt)last.logoutAt=Date.now();
+      const records=getAttendance(),idx=records.findIndex(x=>x.employeeId===rec.employeeId&&x.day===rec.day);
+      if(idx>=0)records[idx]=rec;saveAttendance(records);
+    }
+  }
+  localStorage.removeItem(KEYS.user);currentUser=null;$('loginPass').value='';showView('loginView')
+}
+function changeAdminPassword(){
+  const current=$('currentAdminPassword').value;
+  const next=$('newAdminPassword').value;
+  const confirmNext=$('confirmAdminPassword').value;
+  const saved=localStorage.getItem('slvAdminPassword');
+  const validCurrent=saved!==null?current===saved:(current==='admin123'||current==='123456');
+  if(!validCurrent){alert('Current Admin Password తప్పు.');return}
+  if(next.length<6){alert('కొత్త Password కనీసం 6 characters ఉండాలి.');return}
+  if(next!==confirmNext){alert('New Password మరియు Confirm Password match కావడం లేదు.');return}
+  if(next===current){alert('కొత్త Password పాత Password కి భిన్నంగా ఉండాలి.');return}
+  localStorage.setItem('slvAdminPassword',next);
+  ['currentAdminPassword','newAdminPassword','confirmAdminPassword'].forEach(id=>$(id).value='');
+  alert('Admin Password విజయవంతంగా మార్చబడింది. తదుపరి Login కు కొత్త Password ఉపయోగించండి.');
+}
+
 function saveDrawerMode(){localStorage.setItem(KEYS.drawer,$('drawerModeSelect').value);alert('డ్రాయర్ మోడ్ సేవ్ అయింది')}
 function setHoliday(){const h=$('holidayInput').value.trim();if(!h){alert('Holiday వివరాలు నమోదు చేయండి');return}localStorage.setItem(KEYS.holiday,h);alert('హాలిడే ప్రకటించబడింది');renderEmployee()}
 function clearHoliday(){localStorage.removeItem(KEYS.holiday);$('holidayInput').value='';alert('హాలిడే తొలగించబడింది');renderEmployee()}
@@ -1078,7 +1131,27 @@ function adminMenuGo(sectionId){
   toggleAdminMenu(false);
   if(selected)selected.scrollIntoView({behavior:'smooth',block:'start'});
 }
-function renderAdmin(){$('drawerModeSelect').value=localStorage.getItem(KEYS.drawer)||'Single';$('holidayInput').value=localStorage.getItem(KEYS.holiday)||'';if(!document.querySelector('#adminView .active-admin-section'))$('adminSettings').classList.add('active-admin-section');renderEmpList();renderLeaves();renderTransactions();renderWallets();renderServicesAdmin();renderMonthlyTarget();renderCashWallet();renderShiftCloseReports()}
+function renderAdminAttendance(){
+  const c=$('adminAttendanceReports');if(!c)return;
+  const date=$('attendanceDateFilter').value||localDayKey();
+  const records=getAttendance().filter(r=>r.day===date).slice().sort((a,b)=>(a.employeeName||'').localeCompare(b.employeeName||''));
+  c.innerHTML='';
+  if(!records.length){c.textContent='ఈ తేదీకి Attendance records లేవు.';return}
+  records.forEach(rec=>{
+    const box=document.createElement('div');box.className='shift-report-card';
+    const title=document.createElement('b');title.textContent=(rec.employeeName||rec.employeeId)+' ('+rec.employeeId+') — '+rec.day;
+    const sessions=document.createElement('div');
+    const sessionList=rec.sessions||[];
+    sessions.textContent='Login / Logout: '+(sessionList.length?sessionList.map((x,i)=>'#'+(i+1)+' '+formatClock(x.loginAt)+' – '+(x.logoutAt?formatClock(x.logoutAt):'Still Logged In')).join(' | '):'Login session details not recorded');
+    const close=document.createElement('div');close.textContent='Shift Start: '+formatClock(rec.shiftStartAt)+' | Shift Close: '+(rec.shiftCloseAt?formatClock(rec.shiftCloseAt):'Pending');
+    const breaks=document.createElement('div');breaks.textContent='Lunch: '+((rec.lunchBreaks||[]).map(b=>formatClock(b.startAt)+' – '+(b.endAt?formatClock(b.endAt):'In Progress')).join(' | ')||'No lunch break');
+    const duration=attendanceDurations(rec,Date.now());
+    const hours=document.createElement('div');hours.textContent='Lunch Duration: '+formatDuration(duration.lunch)+' | Working Hours: '+formatDuration(duration.worked);
+    const status=document.createElement('div');status.textContent=rec.shiftCloseAt?'Status: Shift Closed':(rec.lunchBreaks||[]).some(b=>b.startAt&&!b.endAt)?'Status: Lunch Break':'Status: Shift In Progress';
+    box.append(title,sessions,close,breaks,hours,status);c.append(box);
+  });
+}
+function renderAdmin(){$('drawerModeSelect').value=localStorage.getItem(KEYS.drawer)||'Single';$('holidayInput').value=localStorage.getItem(KEYS.holiday)||'';if(!document.querySelector('#adminView .active-admin-section'))$('adminSettings').classList.add('active-admin-section');renderEmpList();renderLeaves();renderTransactions();renderWallets();renderServicesAdmin();renderMonthlyTarget();renderCashWallet();renderShiftCloseReports();if($('attendanceDateFilter')){$('attendanceDateFilter').value=localDayKey();renderAdminAttendance()}}
 function toggleEmployeeMenu(force){
   const menu=$('employeeSideMenu'),shade=$('employeeMenuShade');
   const open=typeof force==='boolean'?force:!menu.classList.contains('open');
