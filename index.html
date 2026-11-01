@@ -1542,50 +1542,140 @@ function processCheckout(){
       }
 
       const empId = id.toUpperCase();
-      const emps = getEmployees();
+const email = `slv-${empId.toLowerCase()}@employees.invalid`;
 
-      if (emps[empId] && emps[empId].pass === pass) {
-        const attendance = ensureTodayAttendance();
+try {
+  const { data, error } = await db.auth.signInWithPassword({
+    email,
+    password: pass
+  });
 
-        if (attendance && attendance.shiftCloseAt) {
-          alert('Ee roju shift already close ayyindi.');
-          return;
-        }
+  if (error) throw error;
 
-        currentUser = {
-          id: empId,
-          name: emps[empId].name,
-          role: 'Employee',
-          shift: emps[empId].shift || '09:00 AM - 05:00 PM',
-          openingCashBalance: getCashWalletBalance()
-        };
+  const { data: profile, error: profileError } = await db
+    .from('profiles')
+    .select('id, full_name, employee_code, role, is_active')
+    .eq('id', data.user.id)
+    .single();
 
-        if (attendance) {
-          attendance.sessions = attendance.sessions || [];
-          attendance.sessions.push({
-            loginAt: Date.now(),
-            logoutAt: null
-          });
+  if (profileError) throw profileError;
 
-          const records = getAttendance();
-          const idx = records.findIndex(
-            x => x.employeeId === empId && x.day === attendance.day
-          );
+  if (
+    profile.role !== 'employee' ||
+    profile.is_active !== true ||
+    profile.employee_code !== empId
+  ) {
+    await db.auth.signOut();
+    throw new Error('Employee access not active');
+  }
 
-          if (idx >= 0) records[idx] = attendance;
-          saveAttendance(records);
-        }
+  const emps = getEmployees();
+  const attendance = ensureTodayAttendance();
 
-        saveLoginSession(currentUser);
-        showView('employeeView');
-      } else {
-        alert('Wrong Employee ID or Password!');
-      }
+  if (attendance && attendance.shiftCloseAt) {
+    await db.auth.signOut();
+    alert('Ee roju shift already close ayyindi.');
+    return;
+  }
+
+  currentUser = {
+    id: empId,
+    authId: data.user.id,
+    name: profile.full_name,
+    role: 'Employee',
+    shift: emps[empId]?.shift || '09:00 AM - 05:00 PM',
+    openingCashBalance: getCashWalletBalance()
+  };
+
+  if (attendance) {
+    attendance.sessions = attendance.sessions || [];
+    attendance.sessions.push({
+      loginAt: Date.now(),
+      logoutAt: null
+    });
+
+    const records = getAttendance();
+    const idx = records.findIndex(
+      x => x.employeeId === empId && x.day === attendance.day
+    );
+
+    if (idx >= 0) records[idx] = attendance;
+    saveAttendance(records);
+  }
+
+  saveLoginSession(currentUser);
+  showView('employeeView');
+
+} catch (error) {
+  alert('Employee Login Failed: ' + error.message);
+}
     };
 
-    const oldLogout = window.logout;
+    window.createEmployeeInSupabase = async function(id, name, password) {
+  const { data, error } = await db.functions.invoke('create-employee', {
+    body: {
+      employee_code: id,
+      full_name: name,
+      password: password
+    }
+  });
+
+  if (error) throw error;
+  if (!data || !data.success) {
+    throw new Error(data?.message || 'Employee creation failed');
+  }
+
+  return data;
+};
+   window.addEmployee = async function() {
+  const id = $('newEmpId').value.trim().toUpperCase();
+  const name = $('newEmpName').value.trim();
+  const pass = $('newEmpPass').value.trim();
+  const shift = $('newEmpShift').value.trim() || '09:00 AM - 05:00 PM';
+
+  if (!id || !name || !pass) {
+    alert('అన్ని వివరాలు నింపండి');
+    return;
+  }
+
+  const emps = getEmployees();
+
+  if (emps[id]) {
+    alert('ఈ Employee ID ఇప్పటికే ఉంది');
+    return;
+  }
+
+  try {
+    await window.createEmployeeInSupabase(id, name, pass);
+
+    emps[id] = {
+      name,
+      shift,
+      wallets: getWallets().map(w => w.name),
+      authManaged: true
+    };
+
+    write(KEYS.employees, emps);
+
+    ['newEmpId', 'newEmpName', 'newEmpPass', 'newEmpShift']
+      .forEach(k => $(k).value = '');
+
+    renderEmpList();
+    alert('Employee successfully created in Supabase!');
+  } catch (error) {
+    alert('Employee Creation Failed: ' + error.message);
+  }
+};
+   const oldLogout = window.logout;
 
     window.logout = async function () {
+     if (currentUser && currentUser.role === 'Employee') {
+  await db.auth.signOut();
+  sessionStorage.removeItem(KEYS.user);
+  currentUser = null;
+  showView('loginView');
+  return;
+}
       if (currentUser && currentUser.role === 'Admin') {
         await db.auth.signOut();
         sessionStorage.removeItem(KEYS.user);
