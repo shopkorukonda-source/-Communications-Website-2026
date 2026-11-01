@@ -460,6 +460,17 @@ footer{padding:20px!important;color:#8988a3}
 .shift-report-card{padding:14px;margin:10px 0;border:1px solid #e7e4f5;border-radius:12px;background:#fff;line-height:1.7}
 @media(max-width:650px){.denomination-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.shift-close-panel{padding:14px}}
 
+
+/* Employee attendance and shift controls */
+.attendance-panel{border:1px solid #e4e1fb;background:linear-gradient(145deg,#fff,#f8f7ff)}
+.attendance-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}
+.attendance-stats>div{padding:12px;border:1px solid #e9e6f7;border-radius:12px;background:#fff;display:flex;flex-direction:column;gap:6px}
+.attendance-stats small{font-size:11px;color:#77758f}.attendance-stats b{font-size:14px;color:#393477}
+.attendance-status{padding:10px 12px;border-radius:10px;background:#edf8f2;color:#16734f;font-weight:700;font-size:13px;margin:10px 0}
+.attendance-status.on-break{background:#fff5e5;color:#9a5a00}.attendance-status.closed{background:#f2f0f8;color:#5f5a78}
+.attendance-actions{display:flex;gap:8px;flex-wrap:wrap}.attendance-actions button{flex:1;min-width:145px}
+@media(max-width:480px){.attendance-stats{grid-template-columns:1fr 1fr}.attendance-stats>div{padding:10px}}
+
 </style>
 </head>
 <body>
@@ -484,7 +495,7 @@ footer{padding:20px!important;color:#8988a3}
     <label for="loginPass">Password</label>
     <input id="loginPass" type="password" autocomplete="current-password" placeholder="Enter password">
     <button style="width:100%" onclick="handleLogin()">Login</button>
-    <p class="muted" style="text-align:center">First-time demo credentials: Admin: admin123 | Employee: SLV01 / 123456</p>
+
   </main>
 
   <!-- ADMIN -->
@@ -661,6 +672,21 @@ footer{padding:20px!important;color:#8988a3}
     </aside>
     <div id="holidayAlert" class="banner">🚨 HOLIDAY: <span id="holidayText"></span></div>
     <div class="slab-box"><b>🕒 Assigned Shift:</b> <span id="shiftInfo" style="color:#1a73e8">Loading...</span></div>
+    <section id="attendancePanel" class="section-box attendance-panel">
+      <h4>🕘 Today's Attendance & Shift</h4>
+      <div class="attendance-stats">
+        <div><small>Shift Start / Login</small><b id="attStart">--</b></div>
+        <div><small>Lunch Break</small><b id="attLunch">Not started</b></div>
+        <div><small>Shift Close</small><b id="attClose">Pending</b></div>
+        <div><small>Working Hours</small><b id="attHours">0h 0m</b></div>
+      </div>
+      <div id="attStatus" class="attendance-status">Loading attendance...</div>
+      <div class="row attendance-actions">
+        <button id="lunchStartBtn" class="btn-orange" onclick="startLunchBreak()">🍽️ Lunch Break Start</button>
+        <button id="resumeShiftBtn" class="btn-green hidden" onclick="resumeShift()">▶️ Resume Shift</button>
+      </div>
+      <p class="muted">Shift Start login సమయంలో ఆటోమేటిక్‌గా నమోదు అవుతుంది. Shift Close కోసం కింద Cash Tally పూర్తి చేయండి.</p>
+    </section>
     <div class="slab-box" style="background:#e6f4ea;border-color:#34a853;margin-top:10px">
       <b id="drawerTitle">💵 Cash Drawer:</b>
       <div style="font-size:22px;font-weight:bold;color:#137333">₹ <span id="drawerCash">0</span></div>
@@ -678,6 +704,9 @@ footer{padding:20px!important;color:#8988a3}
     <button class="btn-orange shift-close-trigger" onclick="openShiftClose()">🔒 Shift Off / Cash Tally</button>
     <div id="shiftClosePanel" class="shift-close-panel" style="display:none"></div>
     <h3 style="margin-top:18px">🌴 Apply for Leave</h3>
+    <label for="leaveDate">Leave Date</label>
+    <input id="leaveDate" type="date" required>
+    <label for="leaveReason">Reason for leave</label>
     <input id="leaveReason" placeholder="Reason for leave">
     <button class="btn-green" onclick="applyLeave()">Submit Leave</button>
     <div class="section-box">
@@ -736,7 +765,8 @@ function handleLogin(){
   }
   const id=$('loginId').value.trim().toUpperCase(),emps=getEmployees();
   if(emps[id]&&emps[id].pass===pass){
-    currentUser={id,name:emps[id].name,role:'Employee',shift:emps[id].shift||'09:00 AM - 05:00 PM',shiftStartedAt:Date.now(),openingCashBalance:getCashWalletBalance()};
+    currentUser={id,name:emps[id].name,role:'Employee',shift:emps[id].shift||'09:00 AM - 05:00 PM',openingCashBalance:getCashWalletBalance()};
+    ensureTodayAttendance();
     write(KEYS.user,currentUser);showView('employeeView');
   }else alert('తప్పు యూజర్ ఐడీ లేదా పాస్‌వర్డ్!');
 }
@@ -784,7 +814,7 @@ function renderLeaves(){
   if(!leaves.length){c.textContent='No leave requests.';return}
   leaves.forEach((l,i)=>{
     const row=document.createElement('div');row.className='leave-row';const info=document.createElement('div');
-    const strong=document.createElement('b');strong.textContent=l.name+' ('+l.id+')';const detail=document.createElement('div');detail.textContent=(l.date||'')+' • '+l.reason+' • '+(l.status||'Pending');info.append(strong,detail);
+    const strong=document.createElement('b');strong.textContent=l.name+' ('+l.id+')';const detail=document.createElement('div');detail.textContent='Leave on: '+(l.date||'Date not selected')+' • Applied: '+(l.appliedOn||'')+' • '+l.reason+' • '+(l.status||'Pending');info.append(strong,detail);
     const actions=document.createElement('div');
     ['Approved','Rejected'].forEach(status=>{const btn=document.createElement('button');btn.className=(status==='Approved'?'btn-green':'btn-red')+' btn-small';btn.textContent=status;btn.onclick=()=>updateLeave(i,status);actions.append(btn)});
     row.append(info,actions);c.append(row);
@@ -792,8 +822,15 @@ function renderLeaves(){
 }
 function updateLeave(i,status){const leaves=getLeaves();if(!leaves[i])return;leaves[i].status=status;write(KEYS.leaves,leaves);renderLeaves()}
 function applyLeave(){
-  const reason=$('leaveReason').value.trim();if(!reason){alert('లీవ్ కారణం రాయండి');return}
-  const leaves=getLeaves();leaves.push({id:currentUser.id,name:currentUser.name,reason,status:'Pending',date:new Date().toLocaleDateString('en-IN')});write(KEYS.leaves,leaves);$('leaveReason').value='';alert('లీవ్ రిక్వెస్ట్ పంపబడింది');
+  const date=$('leaveDate').value;
+  const reason=$('leaveReason').value.trim();
+  if(!date){alert('దయచేసి లీవ్ తేదీ ఎంచుకోండి');$('leaveDate').focus();return}
+  if(!reason){alert('లీవ్ కారణం రాయండి');$('leaveReason').focus();return}
+  const leaves=getLeaves();
+  leaves.push({id:currentUser.id,name:currentUser.name,reason,status:'Pending',date,appliedOn:new Date().toLocaleDateString('en-IN')});
+  write(KEYS.leaves,leaves);
+  $('leaveDate').value='';$('leaveReason').value='';
+  alert('లీవ్ రిక్వెస్ట్ పంపబడింది');
 }
 function getTransactions(){return read(KEYS.transactions,[])}
 function renderTransactions(){
@@ -1059,6 +1096,52 @@ function getEmployeeWalletNames(){
   const emp=getEmployees()[currentUser?.id]||{};
   return Array.isArray(emp.wallets)?emp.wallets:getWallets().map(w=>w.name);
 }
+const ATTENDANCE_KEY='slvDailyAttendance';
+function localDayKey(d=new Date()){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return y+'-'+m+'-'+day}
+function getAttendance(){return read(ATTENDANCE_KEY,[])}
+function saveAttendance(list){write(ATTENDANCE_KEY,list)}
+function ensureTodayAttendance(){
+  if(!currentUser||currentUser.role!=='Employee')return null;
+  const day=localDayKey(),list=getAttendance();let rec=list.find(x=>x.employeeId===currentUser.id&&x.day===day);
+  if(!rec){rec={employeeId:currentUser.id,employeeName:currentUser.name,day,shiftStartAt:Date.now(),lunchBreaks:[],shiftCloseAt:null};list.push(rec);saveAttendance(list)}
+  currentUser.shiftStartedAt=rec.shiftStartAt;currentUser.openingCashBalance=Number(currentUser.openingCashBalance??getCashWalletBalance());
+  write(KEYS.user,currentUser);return rec;
+}
+function getTodayAttendance(){
+  if(!currentUser||currentUser.role!=='Employee')return null;
+  const day=localDayKey();return getAttendance().find(x=>x.employeeId===currentUser.id&&x.day===day)||ensureTodayAttendance();
+}
+function attendanceDurations(rec,at=Date.now()){
+  if(!rec)return {worked:0,lunch:0};
+  const end=Number(rec.shiftCloseAt||at),start=Number(rec.shiftStartAt)||end;let lunch=0;
+  (rec.lunchBreaks||[]).forEach(b=>{const a=Number(b.startAt)||0,z=Number(b.endAt||((!rec.shiftCloseAt)?at:end))||a;lunch+=Math.max(0,z-a)});
+  return {worked:Math.max(0,end-start-lunch),lunch};
+}
+function formatDuration(ms){const mins=Math.floor(Math.max(0,ms)/60000);return Math.floor(mins/60)+'h '+(mins%60)+'m'}
+function formatClock(ts){return ts?new Date(ts).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'--'}
+function renderAttendancePanel(){
+  const rec=getTodayAttendance();if(!rec)return;
+  const now=Date.now(),breaks=rec.lunchBreaks||[],active=breaks.length&& !breaks[breaks.length-1].endAt?breaks[breaks.length-1]:null;
+  const dur=attendanceDurations(rec,now);
+  $('attStart').textContent=formatClock(rec.shiftStartAt);
+  $('attLunch').textContent=breaks.length?formatDuration(dur.lunch)+' ('+breaks.map(b=>formatClock(b.startAt)+'–'+(b.endAt?formatClock(b.endAt):'Now')).join(', ')+')':'Not started';
+  $('attClose').textContent=rec.shiftCloseAt?formatClock(rec.shiftCloseAt):'Pending';
+  $('attHours').textContent=formatDuration(dur.worked);
+  const status=$('attStatus');status.className='attendance-status'+(active?' on-break':rec.shiftCloseAt?' closed':'');
+  status.textContent=rec.shiftCloseAt?'Shift Closed':active?'Lunch Break In Progress':'Shift In Progress';
+  $('lunchStartBtn').classList.toggle('hidden',!!active||!!rec.shiftCloseAt);
+  $('resumeShiftBtn').classList.toggle('hidden',!active||!!rec.shiftCloseAt);
+}
+function startLunchBreak(){
+  const rec=getTodayAttendance();if(!rec||rec.shiftCloseAt)return alert('Shift ఇప్పటికే close అయింది.');
+  const breaks=rec.lunchBreaks||[];if(breaks.length&&!breaks[breaks.length-1].endAt)return alert('Lunch break ఇప్పటికే ప్రారంభమైంది.');
+  breaks.push({startAt:Date.now(),endAt:null});rec.lunchBreaks=breaks;const all=getAttendance();const i=all.findIndex(x=>x.employeeId===rec.employeeId&&x.day===rec.day);if(i>=0)all[i]=rec;saveAttendance(all);renderAttendancePanel();
+}
+function resumeShift(){
+  const rec=getTodayAttendance();if(!rec||rec.shiftCloseAt)return alert('Shift ఇప్పటికే close అయింది.');
+  const breaks=rec.lunchBreaks||[],last=breaks[breaks.length-1];if(!last||last.endAt)return alert('Active lunch break లేదు.');
+  last.endAt=Date.now();const all=getAttendance();const i=all.findIndex(x=>x.employeeId===rec.employeeId&&x.day===rec.day);if(i>=0)all[i]=rec;saveAttendance(all);renderAttendancePanel();
+}
 function getShiftTransactions(){
   const start=Number(currentUser?.shiftStartedAt)||0;
   return getTransactions().filter(t=>t.empId===currentUser?.id&&Number(t.timestamp||0)>=start);
@@ -1108,7 +1191,10 @@ function submitShiftClose(){
   if(Math.abs(cashDiff)>0.005&&!overallReason){alert('Cash Short / Excess‌కు కారణం నమోదు చేయండి');return}
   if(walletResults.some(w=>!w.matched)&&!overallReason){alert('Wallet mismatch కారణాన్ని Overall Reasonలో కూడా నమోదు చేయండి');return}
   const denoms={};document.querySelectorAll('#shiftClosePanel .denom-count').forEach(i=>denoms[i.dataset.denom]=Number(i.value)||0);
-  const record={employeeId:currentUser.id,employeeName:currentUser.name,closedAt:new Date().toLocaleString('en-IN'),timestamp:Date.now(),openingCash:Number(currentUser.openingCashBalance)||0,shiftTransactionCount:getShiftTransactions().length,expectedCash:expected,countedCash:counted,cashDifference:cashDiff,denominations:denoms,walletResults,reason:overallReason};
+  const closedAt=Date.now(),attendance=getTodayAttendance();
+  if(attendance){const breaks=attendance.lunchBreaks||[],last=breaks[breaks.length-1];if(last&&!last.endAt)last.endAt=closedAt;attendance.shiftCloseAt=closedAt;const all=getAttendance();const ai=all.findIndex(x=>x.employeeId===attendance.employeeId&&x.day===attendance.day);if(ai>=0)all[ai]=attendance;saveAttendance(all)}
+  const durations=attendanceDurations(attendance,closedAt);
+  const record={employeeId:currentUser.id,employeeName:currentUser.name,closedAt:new Date(closedAt).toLocaleString('en-IN'),timestamp:closedAt,shiftStartAt:attendance?.shiftStartAt||null,lunchBreaks:attendance?.lunchBreaks||[],lunchDurationMs:durations.lunch,workingDurationMs:durations.worked,workingHours:formatDuration(durations.worked),openingCash:Number(currentUser.openingCashBalance)||0,shiftTransactionCount:getShiftTransactions().length,expectedCash:expected,countedCash:counted,cashDifference:cashDiff,denominations:denoms,walletResults,reason:overallReason};
   const reports=read('slvShiftCloseReports',[]);reports.push(record);write('slvShiftCloseReports',reports);
   alert('Shift Close report Adminకు పంపబడింది. Cash / Wallet tally వివరాలు సేవ్ అయ్యాయి.');
   currentUser.shiftClosed=true;write(KEYS.user,currentUser);$('shiftClosePanel').style.display='none';renderShiftCloseReports();
@@ -1120,8 +1206,10 @@ function renderShiftCloseReports(){
   reports.forEach(r=>{
     const box=document.createElement('div');box.className='shift-report-card';
     const head=document.createElement('b');head.textContent=r.employeeName+' ('+r.employeeId+') — '+r.closedAt;
+    const attendance=document.createElement('div');attendance.textContent='Shift Start: '+formatClock(r.shiftStartAt)+' | Shift Close: '+r.closedAt+' | Lunch: '+formatDuration(r.lunchDurationMs||0)+' | Daily Working Hours: '+(r.workingHours||'Not recorded');
+    const breakTimes=document.createElement('div');breakTimes.textContent='Lunch timings: '+((r.lunchBreaks||[]).map(b=>formatClock(b.startAt)+'–'+(b.endAt?formatClock(b.endAt):'Not resumed')).join(', ')||'No lunch break recorded');
     const cash=document.createElement('div');cash.textContent='Cash: Expected ₹'+Number(r.expectedCash).toFixed(2)+' | Counted ₹'+Number(r.countedCash).toFixed(2)+' | Difference ₹'+Number(r.cashDifference).toFixed(2);
-    box.append(head,cash);
+    box.append(head,attendance,breakTimes,cash);
     r.walletResults.forEach(w=>{const line=document.createElement('div');line.textContent=w.wallet+': System ₹'+w.systemBalance.toFixed(2)+' / Actual ₹'+w.actualBalance.toFixed(2)+' — '+(w.matched?'Matched':'Mismatch ₹'+w.difference.toFixed(2)+' | '+w.reason);box.append(line)});
     if(r.reason){const reason=document.createElement('small');reason.textContent='Reason: '+r.reason;box.append(reason)}
     c.append(box);
@@ -1135,6 +1223,7 @@ function renderEmployee(){
   if(!allWallets.length){walletList.textContent='No wallets assigned. Please contact Admin.'}
   allWallets.forEach(w=>{const item=document.createElement('div');item.className='assigned-wallet-item';const name=document.createElement('span');name.textContent=w.name;const bal=document.createElement('b');bal.textContent='₹'+Number(w.balance||0).toFixed(2);item.append(name,bal);walletList.append(item)});
   const emps=getEmployees();$('shiftInfo').textContent=(emps[currentUser.id]&&emps[currentUser.id].shift)||currentUser.shift||'09:00 AM - 05:00 PM';
+  renderAttendancePanel();
   const holiday=localStorage.getItem(KEYS.holiday)||'';
   $('holidayAlert').style.display=holiday?'block':'none';$('holidayText').textContent=holiday;$('employeeHolidayText').textContent=holiday||'No current announcement.';
   const mode=localStorage.getItem(KEYS.drawer)||'Single',txs=getTransactions();let cash=0;
@@ -1161,6 +1250,9 @@ function calculateTotal(){
 }
 function processCheckout(){
   if(!currentUser||currentUser.role!=='Employee'){alert('Employee login అవసరం');showView('loginView');return}
+  const attendance=getTodayAttendance(),breaks=attendance?.lunchBreaks||[],lastBreak=breaks[breaks.length-1];
+  if(attendance?.shiftCloseAt){alert('మీ Shift Close అయింది. కొత్త పనికి Admin సహాయం తీసుకోండి.');return}
+  if(lastBreak&&!lastBreak.endAt){alert('Lunch Break లో ఉన్నారు. ముందుగా Resume Shift నొక్కండి.');return}
   const rows=[...document.querySelectorAll('.service-row')],wallets=getWallets(),services=getServices();
   const deductions={},newTransactions=[];let total=0;
   rows.forEach(row=>{
