@@ -788,6 +788,11 @@ function handleLogin(){
   if(emps[id]&&emps[id].pass===pass){
     currentUser={id,name:emps[id].name,role:'Employee',shift:emps[id].shift||'09:00 AM - 05:00 PM',openingCashBalance:getCashWalletBalance()};
     const attendance=ensureTodayAttendance();
+    if(attendance&&attendance.shiftCloseAt){
+      currentUser=null;
+      alert('ఈ రోజు మీ Shift ఇప్పటికే Close అయింది. తిరిగి Login చేయడానికి Admin మాత్రమే Shift Reopen చేయగలరు.');
+      return;
+    }
     if(attendance){
       attendance.sessions=attendance.sessions||[];
       attendance.sessions.push({loginAt:Date.now(),logoutAt:null});
@@ -1147,9 +1152,31 @@ function renderAdminAttendance(){
     const breaks=document.createElement('div');breaks.textContent='Lunch: '+((rec.lunchBreaks||[]).map(b=>formatClock(b.startAt)+' – '+(b.endAt?formatClock(b.endAt):'In Progress')).join(' | ')||'No lunch break');
     const duration=attendanceDurations(rec,Date.now());
     const hours=document.createElement('div');hours.textContent='Lunch Duration: '+formatDuration(duration.lunch)+' | Working Hours: '+formatDuration(duration.worked);
-    const status=document.createElement('div');status.textContent=rec.shiftCloseAt?'Status: Shift Closed':(rec.lunchBreaks||[]).some(b=>b.startAt&&!b.endAt)?'Status: Lunch Break':'Status: Shift In Progress';
-    box.append(title,sessions,close,breaks,hours,status);c.append(box);
+    const status=document.createElement('div');status.textContent=rec.shiftCloseAt?'Status: Shift Closed — Employee Login Locked':(rec.lunchBreaks||[]).some(b=>b.startAt&&!b.endAt)?'Status: Lunch Break':'Status: Shift In Progress';
+    box.append(title,sessions,close,breaks,hours,status);
+    const reopenHistory=rec.reopenHistory||[];
+    if(reopenHistory.length){const audit=document.createElement('div');audit.textContent='Admin Reopen History: '+reopenHistory.map(x=>formatClock(x.at)+' by '+(x.by||'Admin')).join(' | ');box.append(audit)}
+    if(rec.shiftCloseAt){
+      const reopen=document.createElement('button');reopen.type='button';reopen.className='btn-green';reopen.textContent='🔓 Admin: Reopen Shift';
+      reopen.addEventListener('click',()=>adminReopenShift(rec.employeeId,rec.day));box.append(reopen);
+    }
+    c.append(box);
   });
+}
+function adminReopenShift(employeeId,day){
+  if(!currentUser||currentUser.role!=='Admin'){alert('ఈ చర్య Admin మాత్రమే చేయగలరు.');return}
+  const records=getAttendance(),idx=records.findIndex(x=>x.employeeId===employeeId&&x.day===day);
+  if(idx<0||!records[idx].shiftCloseAt){alert('Closed Shift record కనబడలేదు.');return}
+  const rec=records[idx];
+  if(!confirm((rec.employeeName||employeeId)+' వారి '+day+' Shift ను Admin గా Reopen చేయాలా?'))return;
+  rec.reopenHistory=rec.reopenHistory||[];
+  rec.reopenHistory.push({at:Date.now(),by:currentUser.name||'Admin'});
+  rec.lastAdminReopenedAt=Date.now();
+  rec.lastAdminReopenedBy=currentUser.name||'Admin';
+  rec.shiftCloseAt=null;
+  records[idx]=rec;saveAttendance(records);
+  renderAdminAttendance();
+  alert('Shift Reopen అయింది. Employee ఇప్పుడు మళ్లీ Login చేయవచ్చు. Admin Reopen History నమోదు అయింది.');
 }
 function renderAdmin(){$('drawerModeSelect').value=localStorage.getItem(KEYS.drawer)||'Single';$('holidayInput').value=localStorage.getItem(KEYS.holiday)||'';if(!document.querySelector('#adminView .active-admin-section'))$('adminSettings').classList.add('active-admin-section');renderEmpList();renderLeaves();renderTransactions();renderWallets();renderServicesAdmin();renderMonthlyTarget();renderCashWallet();renderShiftCloseReports();if($('attendanceDateFilter')){$('attendanceDateFilter').value=localDayKey();renderAdminAttendance()}}
 function toggleEmployeeMenu(force){
@@ -1265,7 +1292,7 @@ function submitShiftClose(){
   if(walletResults.some(w=>!w.matched)&&!overallReason){alert('Wallet mismatch కారణాన్ని Overall Reasonలో కూడా నమోదు చేయండి');return}
   const denoms={};document.querySelectorAll('#shiftClosePanel .denom-count').forEach(i=>denoms[i.dataset.denom]=Number(i.value)||0);
   const closedAt=Date.now(),attendance=getTodayAttendance();
-  if(attendance){const breaks=attendance.lunchBreaks||[],last=breaks[breaks.length-1];if(last&&!last.endAt)last.endAt=closedAt;attendance.shiftCloseAt=closedAt;const all=getAttendance();const ai=all.findIndex(x=>x.employeeId===attendance.employeeId&&x.day===attendance.day);if(ai>=0)all[ai]=attendance;saveAttendance(all)}
+  if(attendance){const breaks=attendance.lunchBreaks||[],last=breaks[breaks.length-1];if(last&&!last.endAt)last.endAt=closedAt;attendance.shiftCloseHistory=attendance.shiftCloseHistory||[];attendance.shiftCloseHistory.push({closedAt,by:currentUser.name||currentUser.id});attendance.shiftCloseAt=closedAt;const all=getAttendance();const ai=all.findIndex(x=>x.employeeId===attendance.employeeId&&x.day===attendance.day);if(ai>=0)all[ai]=attendance;saveAttendance(all)}
   const durations=attendanceDurations(attendance,closedAt);
   const record={employeeId:currentUser.id,employeeName:currentUser.name,closedAt:new Date(closedAt).toLocaleString('en-IN'),timestamp:closedAt,shiftStartAt:attendance?.shiftStartAt||null,lunchBreaks:attendance?.lunchBreaks||[],lunchDurationMs:durations.lunch,workingDurationMs:durations.worked,workingHours:formatDuration(durations.worked),openingCash:Number(currentUser.openingCashBalance)||0,shiftTransactionCount:getShiftTransactions().length,expectedCash:expected,countedCash:counted,cashDifference:cashDiff,denominations:denoms,walletResults,reason:overallReason};
   const reports=read('slvShiftCloseReports',[]);reports.push(record);write('slvShiftCloseReports',reports);
