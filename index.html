@@ -1235,12 +1235,19 @@ function getAttendance(){
   return records;
 }
 function saveAttendance(list){
-  write(ATTENDANCE_KEY,(Array.isArray(list)?list:[]).map(r=>({...r,lunchBreaks:cleanLunchBreaks(r.lunchBreaks)})));
+  const normalized=(Array.isArray(list)?list:[]).map(r=>({...r,lunchBreaks:cleanLunchBreaks(r.lunchBreaks)}));
+  write(ATTENDANCE_KEY,normalized);
+  // Only records created by this version are eligible for cloud sync.
+  if(window.slvSupabase){
+    normalized.filter(r=>r.cloudSync===true).forEach(r=>{
+      syncAttendanceRecord(r).catch(err=>{window.slvAttendanceSyncError=err?.message||String(err);console.error('SLV attendance sync failed:',err)});
+    });
+  }
 }
 function ensureTodayAttendance(){
   if(!currentUser||currentUser.role!=='Employee')return null;
   const day=localDayKey(),list=getAttendance();let rec=list.find(x=>x.employeeId===currentUser.id&&x.day===day);
-  if(!rec){rec={employeeId:currentUser.id,employeeName:currentUser.name,day,shiftStartAt:Date.now(),lunchBreaks:[],shiftCloseAt:null};list.push(rec);saveAttendance(list)}
+  if(!rec){rec={employeeId:currentUser.id,employeeName:currentUser.name,day,shiftStartAt:Date.now(),lunchBreaks:[],shiftCloseAt:null,cloudSync:true,sessions:[]};list.push(rec);saveAttendance(list)}
   currentUser.shiftStartedAt=rec.shiftStartAt;currentUser.openingCashBalance=Number(currentUser.openingCashBalance??getCashWalletBalance());
   saveLoginSession(currentUser);return rec;
 }
@@ -1350,9 +1357,10 @@ function submitShiftClose(){
   if(walletResults.some(w=>!w.matched)&&!overallReason){alert('Wallet mismatch కారణాన్ని Overall Reasonలో కూడా నమోదు చేయండి');return}
   const denoms={};document.querySelectorAll('#shiftClosePanel .denom-count').forEach(i=>denoms[i.dataset.denom]=Number(i.value)||0);
   const closedAt=Date.now(),attendance=getTodayAttendance();
-  if(attendance){const breaks=attendance.lunchBreaks||[],last=breaks[breaks.length-1];if(last&&!last.endAt)last.endAt=closedAt;attendance.shiftCloseHistory=attendance.shiftCloseHistory||[];attendance.shiftCloseHistory.push({closedAt,by:currentUser.name||currentUser.id});attendance.shiftCloseAt=closedAt;const all=getAttendance();const ai=all.findIndex(x=>x.employeeId===attendance.employeeId&&x.day===attendance.day);if(ai>=0)all[ai]=attendance;saveAttendance(all)}
+  if(attendance){const breaks=attendance.lunchBreaks||[],last=breaks[breaks.length-1];if(last&&!last.endAt)last.endAt=closedAt;const sessions=attendance.sessions||[],activeSession=sessions[sessions.length-1];if(activeSession&&!activeSession.logoutAt)activeSession.logoutAt=closedAt;attendance.sessions=sessions;attendance.shiftCloseHistory=attendance.shiftCloseHistory||[];attendance.shiftCloseHistory.push({closedAt,by:currentUser.name||currentUser.id});attendance.shiftCloseAt=closedAt;const all=getAttendance();const ai=all.findIndex(x=>x.employeeId===attendance.employeeId&&x.day===attendance.day);if(ai>=0)all[ai]=attendance;saveAttendance(all)}
   const durations=attendanceDurations(attendance,closedAt);
   const record={employeeId:currentUser.id,employeeName:currentUser.name,closedAt:new Date(closedAt).toLocaleString('en-IN'),timestamp:closedAt,shiftStartAt:attendance?.shiftStartAt||null,lunchBreaks:attendance?.lunchBreaks||[],lunchDurationMs:durations.lunch,workingDurationMs:durations.worked,workingHours:formatDuration(durations.worked),openingCash:Number(currentUser.openingCashBalance)||0,shiftTransactionCount:getShiftTransactions().length,expectedCash:expected,countedCash:counted,cashDifference:cashDiff,denominations:denoms,walletResults,reason:overallReason};
+  if(attendance){attendance.shiftClose=record;attendance.cashTally=counted;const all=getAttendance();const ai=all.findIndex(x=>x.employeeId===attendance.employeeId&&x.day===attendance.day);if(ai>=0)all[ai]=attendance;saveAttendance(all)}
   const reports=read('slvShiftCloseReports',[]);reports.push(record);write('slvShiftCloseReports',reports);
   alert('Shift Close report Adminకు పంపబడింది. Cash / Wallet tally వివరాలు సేవ్ అయ్యాయి.');
   currentUser.shiftClosed=true;saveLoginSession(currentUser);$('shiftClosePanel').style.display='none';renderShiftCloseReports();
@@ -1478,6 +1486,88 @@ function processCheckout(){
 
     window.slvSupabase = db;
 
+    // Attendance cloud sync: employee_user_id is the Supabase profiles UUID,
+    // while the local employeeId remains the shop's employee code.
+    window.syncAttendanceRecord = async function(rec) {
+      if (!rec || rec.cloudSync !== true) return;
+      let profileId = currentUser && currentUser.role === 'Employee' && currentUser.id === rec.employeeId
+        ? (currentUser.authId || null) : null;
+      let profile = null;
+      if (!profileId) {
+        const { data, error } = await db.from('profiles')
+          .select('id,employee_code,full_name')
+          .eq('employee_code', String(rec.employeeId)).maybeSingle();
+        if (error) throw error;
+        profile = data;
+        profileId = data?.id || null;
+      }
+      if (!profileId) throw new Error('Attendance employee profile not found: ' + rec.employeeId);
+      const sessions = Array.isArray(rec.sessions) ? rec.sessions : [];
+      const lastSession = sessions[sessions.length - 1];
+      const breaks = cleanLunchBreaks(rec.lunchBreaks);
+      const activeBreak = breaks.some(b => !b.endAt);
+      const duration = attendanceDurations(rec, Date.now());
+      const payload = {
+        employee_user_id: profileId,
+        work_date: rec.day,
+        login_at: rec.shiftStartAt ? new Date(rec.shiftStartAt).toISOString() : null,
+        logout_at: lastSession?.logoutAt ? new Date(lastSession.logoutAt).toISOString() : null,
+        lunch_breaks: breaks,
+        shift_status: rec.shiftCloseAt ? 'closed' : activeBreak ? 'on_break' : 'open',
+        total_work_minutes: Math.floor(duration.worked / 60000),
+        cash_tally: Number(rec.cashTally || rec.shiftClose?.countedCash || 0),
+        sessions,
+        shift_close: rec.shiftClose || (rec.shiftCloseAt ? { closedAt: rec.shiftCloseAt, history: rec.shiftCloseHistory || [] } : null),
+        reopen_history: rec.reopenHistory || [],
+        updated_at: new Date().toISOString()
+      };
+      const { error } = await db.from('attendance').upsert(payload, { onConflict: 'employee_user_id,work_date' });
+      if (error) throw error;
+      window.slvAttendanceSyncError = null;
+    };
+
+    window.loadAttendanceFromSupabase = async function(workDate) {
+      if (!currentUser || currentUser.role !== 'Admin') return;
+      const { data: rows, error } = await db.from('attendance')
+        .select('id,employee_user_id,work_date,login_at,logout_at,lunch_breaks,shift_status,total_work_minutes,cash_tally,sessions,shift_close,reopen_history')
+        .eq('work_date', workDate);
+      if (error) throw error;
+      const { data: profiles, error: profileError } = await db.from('profiles')
+        .select('id,employee_code,full_name');
+      if (profileError) throw profileError;
+      const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+      const local = getAttendance();
+      (rows || []).forEach(row => {
+        const prof = profileMap.get(row.employee_user_id) || {};
+        const sessions = Array.isArray(row.sessions) ? row.sessions : [];
+        const close = row.shift_close || null;
+        const rec = {
+          employeeId: prof.employee_code || row.employee_user_id,
+          employeeName: prof.full_name || 'Employee', day: row.work_date,
+          shiftStartAt: row.login_at ? new Date(row.login_at).getTime() : null,
+          lunchBreaks: cleanLunchBreaks(row.lunch_breaks),
+          shiftCloseAt: close?.timestamp || close?.closedAt ? (Number(close.timestamp || close.closedAt) || new Date(close.closedAt).getTime()) : (row.shift_status === 'closed' ? (row.logout_at ? new Date(row.logout_at).getTime() : Date.now()) : null),
+          sessions, shiftClose: close, cashTally: Number(row.cash_tally || 0),
+          reopenHistory: row.reopen_history || [], cloudSync: true
+        };
+        const idx = local.findIndex(x => x.employeeId === rec.employeeId && x.day === rec.day);
+        if (idx >= 0) local[idx] = { ...local[idx], ...rec }; else local.push(rec);
+      });
+      // Direct local write avoids re-uploading records while rendering reports.
+      write(ATTENDANCE_KEY, local);
+      return rows || [];
+    };
+
+    const originalAdminAttendanceRender = window.renderAdminAttendance;
+    window.renderAdminAttendance = function() {
+      const date = $('attendanceDateFilter')?.value || localDayKey();
+      if (currentUser && currentUser.role === 'Admin') {
+        window.loadAttendanceFromSupabase(date)
+          .then(() => originalAdminAttendanceRender && originalAdminAttendanceRender())
+          .catch(err => { console.error('Attendance report load failed:', err); if ($('adminAttendanceReports')) $('adminAttendanceReports').textContent = 'Cloud Attendance load failed: ' + err.message; });
+      } else if (originalAdminAttendanceRender) originalAdminAttendanceRender();
+    };
+
     window.toggleLoginInputs = function () {
       const admin = $('loginRole').value === 'Admin';
       $('empIdBox').style.display = 'block';
@@ -1570,14 +1660,6 @@ try {
   }
 
   const emps = getEmployees();
-  const attendance = ensureTodayAttendance();
-
-  if (attendance && attendance.shiftCloseAt) {
-    await db.auth.signOut();
-    alert('Ee roju shift already close ayyindi.');
-    return;
-  }
-
   currentUser = {
     id: empId,
     authId: data.user.id,
@@ -1586,6 +1668,14 @@ try {
     shift: emps[empId]?.shift || '09:00 AM - 05:00 PM',
     openingCashBalance: getCashWalletBalance()
   };
+  const attendance = ensureTodayAttendance();
+
+  if (attendance && attendance.shiftCloseAt) {
+    currentUser = null;
+    await db.auth.signOut();
+    alert('Ee roju shift already close ayyindi.');
+    return;
+  }
 
   if (attendance) {
     attendance.sessions = attendance.sessions || [];
@@ -1669,21 +1759,26 @@ try {
    const oldLogout = window.logout;
 
     window.logout = async function () {
-     if (currentUser && currentUser.role === 'Employee') {
-  await db.auth.signOut();
-  sessionStorage.removeItem(KEYS.user);
-  currentUser = null;
-  showView('loginView');
-  return;
-}
-      if (currentUser && currentUser.role === 'Admin') {
+      if (currentUser && currentUser.role === 'Employee') {
+        const rec = getTodayAttendance();
+        if (rec) {
+          const sessions = rec.sessions || [], last = sessions[sessions.length - 1];
+          if (last && !last.logoutAt) last.logoutAt = Date.now();
+          rec.sessions = sessions;
+          const all = getAttendance(), idx = all.findIndex(x => x.employeeId === rec.employeeId && x.day === rec.day);
+          if (idx >= 0) all[idx] = rec;
+          saveAttendance(all);
+          try { await window.syncAttendanceRecord(rec); }
+          catch (err) { alert('Attendance cloud sync failed. Please inform Admin: ' + err.message); }
+        }
+        sessionStorage.removeItem(KEYS.user); currentUser = null; showView('loginView');
         await db.auth.signOut();
-        sessionStorage.removeItem(KEYS.user);
-        currentUser = null;
-        showView('loginView');
-      } else if (oldLogout) {
-        oldLogout();
+        return;
       }
+      if (currentUser && currentUser.role === 'Admin') {
+        sessionStorage.removeItem(KEYS.user); currentUser = null; showView('loginView');
+        await db.auth.signOut();
+      } else if (oldLogout) oldLogout();
     };
 
     toggleLoginInputs();
