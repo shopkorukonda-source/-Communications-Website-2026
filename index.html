@@ -1201,28 +1201,41 @@ function getEmployeeWalletNames(){
 const ATTENDANCE_KEY='slvDailyAttendance';
 function localDayKey(d=new Date()){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return y+'-'+m+'-'+day}
 function cleanLunchBreaks(breaks){
-  const valid=(Array.isArray(breaks)?breaks:[])
-    .filter(b=>b&&Number(b.startAt)>0&&(!b.endAt||Number(b.endAt)>Number(b.startAt)))
-    .sort((a,b)=>Number(a.startAt)-Number(b.startAt));
+  const source=Array.isArray(breaks)?breaks:[];
+  const valid=source
+    .filter(b=>{
+      if(!b||!Number.isFinite(Number(b.startAt))||Number(b.startAt)<=0)return false;
+      // Keep an active break; completed breaks shorter than 60 seconds are
+      // treated as accidental taps and excluded from attendance reports.
+      if(!b.endAt)return true;
+      return Number(b.endAt)-Number(b.startAt)>=60000;
+    })
+    .map(b=>({startAt:Number(b.startAt),endAt:b.endAt?Number(b.endAt):null}))
+    .sort((a,b)=>a.startAt-b.startAt);
   const unique=[];
-  valid.forEach(b=>{
-    const duplicate=unique.some(x=>Number(x.startAt)===Number(b.startAt)&&Number(x.endAt||0)===Number(b.endAt||0));
-    if(!duplicate)unique.push({startAt:Number(b.startAt),endAt:b.endAt?Number(b.endAt):null});
-  });
-  // Only one active lunch break can exist at a time.
+  for(const b of valid){
+    const duplicate=unique.some(x=>
+      x.startAt===b.startAt && Number(x.endAt||0)===Number(b.endAt||0)
+    );
+    if(!duplicate)unique.push(b);
+  }
+  // If old data contains multiple active breaks, retain only the newest one.
   const active=unique.filter(b=>!b.endAt);
   if(active.length>1){
-    const keep=active[0];
+    const keep=active[active.length-1];
     return unique.filter(b=>b.endAt||b===keep);
   }
   return unique;
 }
 function getAttendance(){
-  const records=read(ATTENDANCE_KEY,[]);
-  return records.map(r=>({...r,lunchBreaks:cleanLunchBreaks(r.lunchBreaks)}));
+  const raw=read(ATTENDANCE_KEY,[]);
+  const records=(Array.isArray(raw)?raw:[]).map(r=>({...r,lunchBreaks:cleanLunchBreaks(r.lunchBreaks)}));
+  // Persist only the attendance cleanup; all other shop data remains untouched.
+  try{localStorage.setItem(ATTENDANCE_KEY,JSON.stringify(records));}catch(e){}
+  return records;
 }
 function saveAttendance(list){
-  write(ATTENDANCE_KEY,list.map(r=>({...r,lunchBreaks:cleanLunchBreaks(r.lunchBreaks)})));
+  write(ATTENDANCE_KEY,(Array.isArray(list)?list:[]).map(r=>({...r,lunchBreaks:cleanLunchBreaks(r.lunchBreaks)})));
 }
 function ensureTodayAttendance(){
   if(!currentUser||currentUser.role!=='Employee')return null;
@@ -1256,21 +1269,36 @@ function renderAttendancePanel(){
   $('lunchStartBtn').classList.toggle('hidden',!!active||!!rec.shiftCloseAt);
   $('resumeShiftBtn').classList.toggle('hidden',!active||!!rec.shiftCloseAt);
 }
+let lunchActionBusy=false;
 function startLunchBreak(){
-  const rec=getTodayAttendance();if(!rec||rec.shiftCloseAt)return alert('Shift ఇప్పటికే close అయింది.');
+  if(lunchActionBusy)return;
+  lunchActionBusy=true;
+  const rec=getTodayAttendance();
+  if(!rec||rec.shiftCloseAt){lunchActionBusy=false;return alert('Shift ఇప్పటికే close అయింది.');}
   const breaks=cleanLunchBreaks(rec.lunchBreaks);
-  if(breaks.some(b=>!b.endAt))return alert('Lunch break ఇప్పటికే ప్రారంభమైంది.');
-  breaks.push({startAt:Date.now(),endAt:null});rec.lunchBreaks=breaks;
+  if(breaks.some(b=>!b.endAt)){lunchActionBusy=false;return alert('Lunch break ఇప్పటికే ప్రారంభమైంది.');}
+  breaks.push({startAt:Date.now(),endAt:null});
+  rec.lunchBreaks=breaks;
   const all=getAttendance(),i=all.findIndex(x=>x.employeeId===rec.employeeId&&x.day===rec.day);
-  if(i>=0)all[i]=rec;saveAttendance(all);renderAttendancePanel();
+  if(i>=0)all[i]=rec;
+  saveAttendance(all);
+  renderAttendancePanel();
+  lunchActionBusy=false;
 }
 function resumeShift(){
-  const rec=getTodayAttendance();if(!rec||rec.shiftCloseAt)return alert('Shift ఇప్పటికే close అయింది.');
+  if(lunchActionBusy)return;
+  lunchActionBusy=true;
+  const rec=getTodayAttendance();
+  if(!rec||rec.shiftCloseAt){lunchActionBusy=false;return alert('Shift ఇప్పటికే close అయింది.');}
   const breaks=cleanLunchBreaks(rec.lunchBreaks),active=breaks.find(b=>!b.endAt);
-  if(!active)return alert('Active lunch break లేదు.');
-  active.endAt=Math.max(Date.now(),active.startAt+1);rec.lunchBreaks=breaks;
+  if(!active){lunchActionBusy=false;return alert('Active lunch break లేదు.');}
+  active.endAt=Date.now();
+  rec.lunchBreaks=breaks;
   const all=getAttendance(),i=all.findIndex(x=>x.employeeId===rec.employeeId&&x.day===rec.day);
-  if(i>=0)all[i]=rec;saveAttendance(all);renderAttendancePanel();
+  if(i>=0)all[i]=rec;
+  saveAttendance(all);
+  renderAttendancePanel();
+  lunchActionBusy=false;
 }
 function getShiftTransactions(){
   const start=Number(currentUser?.shiftStartedAt)||0;
