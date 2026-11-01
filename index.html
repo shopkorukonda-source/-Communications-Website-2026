@@ -752,6 +752,8 @@ let currentUser=null;
 const $=id=>document.getElementById(id);
 function read(key,fallback){try{const v=localStorage.getItem(key);return v===null?fallback:JSON.parse(v)}catch(e){return fallback}}
 function write(key,value){localStorage.setItem(key,JSON.stringify(value))}
+function saveLoginSession(user){sessionStorage.setItem(KEYS.user,JSON.stringify(user))}
+function readLoginSession(){try{return JSON.parse(sessionStorage.getItem(KEYS.user)||'null')}catch(e){return null}}
 function getEmployees(){
   let emps=read(KEYS.employees,null);
   if(!emps){emps={SLV01:{name:'Bhanu Katakam',pass:'123456',shift:'09:00 AM - 03:00 PM'}};write(KEYS.employees,emps)}
@@ -780,7 +782,7 @@ function handleLogin(){
     const savedAdminPassword=localStorage.getItem('slvAdminPassword');
     const validAdminPassword=savedAdminPassword!==null?pass===savedAdminPassword:(pass==='admin123'||pass==='123456');
     if(validAdminPassword){
-      currentUser={id:'ADMIN',name:'Master Admin',role:'Admin'};write(KEYS.user,currentUser);showView('adminView');
+      currentUser={id:'ADMIN',name:'Master Admin',role:'Admin'};saveLoginSession(currentUser);showView('adminView');
     }else alert('పాస్‌వర్డ్ తప్పు!');
     return;
   }
@@ -799,11 +801,11 @@ function handleLogin(){
       const records=getAttendance(),idx=records.findIndex(x=>x.employeeId===id&&x.day===attendance.day);
       if(idx>=0)records[idx]=attendance;saveAttendance(records);
     }
-    write(KEYS.user,currentUser);showView('employeeView');
+    saveLoginSession(currentUser);showView('employeeView');
   }else alert('తప్పు యూజర్ ఐడీ లేదా పాస్‌వర్డ్!');
 }
 function requireUser(){
-  currentUser=read(KEYS.user,null);
+  currentUser=readLoginSession();
   if(!currentUser){showView('loginView');return false}
   if(currentUser.role==='Admin'){showView('adminView');return false}
   if(currentUser.role!=='Employee'){showView('loginView');return false}
@@ -819,7 +821,7 @@ function logout(){
       if(idx>=0)records[idx]=rec;saveAttendance(records);
     }
   }
-  localStorage.removeItem(KEYS.user);currentUser=null;$('loginPass').value='';showView('loginView')
+  sessionStorage.removeItem(KEYS.user);currentUser=null;$('loginPass').value='';showView('loginView')
 }
 function changeAdminPassword(){
   const current=$('currentAdminPassword').value;
@@ -1149,10 +1151,10 @@ function renderAdminAttendance(){
     const sessionList=rec.sessions||[];
     sessions.textContent='Login / Logout: '+(sessionList.length?sessionList.map((x,i)=>'#'+(i+1)+' '+formatClock(x.loginAt)+' – '+(x.logoutAt?formatClock(x.logoutAt):'Still Logged In')).join(' | '):'Login session details not recorded');
     const close=document.createElement('div');close.textContent='Shift Start: '+formatClock(rec.shiftStartAt)+' | Shift Close: '+(rec.shiftCloseAt?formatClock(rec.shiftCloseAt):'Pending');
-    const breaks=document.createElement('div');breaks.textContent='Lunch: '+((rec.lunchBreaks||[]).map(b=>formatClock(b.startAt)+' – '+(b.endAt?formatClock(b.endAt):'In Progress')).join(' | ')||'No lunch break');
+    const lunchEntries=cleanLunchBreaks(rec.lunchBreaks);const breaks=document.createElement('div');breaks.textContent='Lunch: '+(lunchEntries.map(b=>formatClock(b.startAt)+' – '+(b.endAt?formatClock(b.endAt):'In Progress')).join(' | ')||'No lunch break');
     const duration=attendanceDurations(rec,Date.now());
     const hours=document.createElement('div');hours.textContent='Lunch Duration: '+formatDuration(duration.lunch)+' | Working Hours: '+formatDuration(duration.worked);
-    const status=document.createElement('div');status.textContent=rec.shiftCloseAt?'Status: Shift Closed — Employee Login Locked':(rec.lunchBreaks||[]).some(b=>b.startAt&&!b.endAt)?'Status: Lunch Break':'Status: Shift In Progress';
+    const status=document.createElement('div');status.textContent=rec.shiftCloseAt?'Status: Shift Closed — Employee Login Locked':cleanLunchBreaks(rec.lunchBreaks).some(b=>!b.endAt)?'Status: Lunch Break':'Status: Shift In Progress';
     box.append(title,sessions,close,breaks,hours,status);
     const reopenHistory=rec.reopenHistory||[];
     if(reopenHistory.length){const audit=document.createElement('div');audit.textContent='Admin Reopen History: '+reopenHistory.map(x=>formatClock(x.at)+' by '+(x.by||'Admin')).join(' | ');box.append(audit)}
@@ -1198,14 +1200,36 @@ function getEmployeeWalletNames(){
 }
 const ATTENDANCE_KEY='slvDailyAttendance';
 function localDayKey(d=new Date()){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return y+'-'+m+'-'+day}
-function getAttendance(){return read(ATTENDANCE_KEY,[])}
-function saveAttendance(list){write(ATTENDANCE_KEY,list)}
+function cleanLunchBreaks(breaks){
+  const valid=(Array.isArray(breaks)?breaks:[])
+    .filter(b=>b&&Number(b.startAt)>0&&(!b.endAt||Number(b.endAt)>Number(b.startAt)))
+    .sort((a,b)=>Number(a.startAt)-Number(b.startAt));
+  const unique=[];
+  valid.forEach(b=>{
+    const duplicate=unique.some(x=>Number(x.startAt)===Number(b.startAt)&&Number(x.endAt||0)===Number(b.endAt||0));
+    if(!duplicate)unique.push({startAt:Number(b.startAt),endAt:b.endAt?Number(b.endAt):null});
+  });
+  // Only one active lunch break can exist at a time.
+  const active=unique.filter(b=>!b.endAt);
+  if(active.length>1){
+    const keep=active[0];
+    return unique.filter(b=>b.endAt||b===keep);
+  }
+  return unique;
+}
+function getAttendance(){
+  const records=read(ATTENDANCE_KEY,[]);
+  return records.map(r=>({...r,lunchBreaks:cleanLunchBreaks(r.lunchBreaks)}));
+}
+function saveAttendance(list){
+  write(ATTENDANCE_KEY,list.map(r=>({...r,lunchBreaks:cleanLunchBreaks(r.lunchBreaks)})));
+}
 function ensureTodayAttendance(){
   if(!currentUser||currentUser.role!=='Employee')return null;
   const day=localDayKey(),list=getAttendance();let rec=list.find(x=>x.employeeId===currentUser.id&&x.day===day);
   if(!rec){rec={employeeId:currentUser.id,employeeName:currentUser.name,day,shiftStartAt:Date.now(),lunchBreaks:[],shiftCloseAt:null};list.push(rec);saveAttendance(list)}
   currentUser.shiftStartedAt=rec.shiftStartAt;currentUser.openingCashBalance=Number(currentUser.openingCashBalance??getCashWalletBalance());
-  write(KEYS.user,currentUser);return rec;
+  saveLoginSession(currentUser);return rec;
 }
 function getTodayAttendance(){
   if(!currentUser||currentUser.role!=='Employee')return null;
@@ -1214,14 +1238,14 @@ function getTodayAttendance(){
 function attendanceDurations(rec,at=Date.now()){
   if(!rec)return {worked:0,lunch:0};
   const end=Number(rec.shiftCloseAt||at),start=Number(rec.shiftStartAt)||end;let lunch=0;
-  (rec.lunchBreaks||[]).forEach(b=>{const a=Number(b.startAt)||0,z=Number(b.endAt||((!rec.shiftCloseAt)?at:end))||a;lunch+=Math.max(0,z-a)});
+  cleanLunchBreaks(rec.lunchBreaks).forEach(b=>{const a=Number(b.startAt)||0,z=Number(b.endAt||((!rec.shiftCloseAt)?at:end))||a;lunch+=Math.max(0,z-a)});
   return {worked:Math.max(0,end-start-lunch),lunch};
 }
 function formatDuration(ms){const mins=Math.floor(Math.max(0,ms)/60000);return Math.floor(mins/60)+'h '+(mins%60)+'m'}
 function formatClock(ts){return ts?new Date(ts).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'--'}
 function renderAttendancePanel(){
   const rec=getTodayAttendance();if(!rec)return;
-  const now=Date.now(),breaks=rec.lunchBreaks||[],active=breaks.length&& !breaks[breaks.length-1].endAt?breaks[breaks.length-1]:null;
+  const now=Date.now(),breaks=cleanLunchBreaks(rec.lunchBreaks),active=breaks.find(b=>!b.endAt)||null;
   const dur=attendanceDurations(rec,now);
   $('attStart').textContent=formatClock(rec.shiftStartAt);
   $('attLunch').textContent=breaks.length?formatDuration(dur.lunch)+' ('+breaks.map(b=>formatClock(b.startAt)+'–'+(b.endAt?formatClock(b.endAt):'Now')).join(', ')+')':'Not started';
@@ -1234,13 +1258,19 @@ function renderAttendancePanel(){
 }
 function startLunchBreak(){
   const rec=getTodayAttendance();if(!rec||rec.shiftCloseAt)return alert('Shift ఇప్పటికే close అయింది.');
-  const breaks=rec.lunchBreaks||[];if(breaks.length&&!breaks[breaks.length-1].endAt)return alert('Lunch break ఇప్పటికే ప్రారంభమైంది.');
-  breaks.push({startAt:Date.now(),endAt:null});rec.lunchBreaks=breaks;const all=getAttendance();const i=all.findIndex(x=>x.employeeId===rec.employeeId&&x.day===rec.day);if(i>=0)all[i]=rec;saveAttendance(all);renderAttendancePanel();
+  const breaks=cleanLunchBreaks(rec.lunchBreaks);
+  if(breaks.some(b=>!b.endAt))return alert('Lunch break ఇప్పటికే ప్రారంభమైంది.');
+  breaks.push({startAt:Date.now(),endAt:null});rec.lunchBreaks=breaks;
+  const all=getAttendance(),i=all.findIndex(x=>x.employeeId===rec.employeeId&&x.day===rec.day);
+  if(i>=0)all[i]=rec;saveAttendance(all);renderAttendancePanel();
 }
 function resumeShift(){
   const rec=getTodayAttendance();if(!rec||rec.shiftCloseAt)return alert('Shift ఇప్పటికే close అయింది.');
-  const breaks=rec.lunchBreaks||[],last=breaks[breaks.length-1];if(!last||last.endAt)return alert('Active lunch break లేదు.');
-  last.endAt=Date.now();const all=getAttendance();const i=all.findIndex(x=>x.employeeId===rec.employeeId&&x.day===rec.day);if(i>=0)all[i]=rec;saveAttendance(all);renderAttendancePanel();
+  const breaks=cleanLunchBreaks(rec.lunchBreaks),active=breaks.find(b=>!b.endAt);
+  if(!active)return alert('Active lunch break లేదు.');
+  active.endAt=Math.max(Date.now(),active.startAt+1);rec.lunchBreaks=breaks;
+  const all=getAttendance(),i=all.findIndex(x=>x.employeeId===rec.employeeId&&x.day===rec.day);
+  if(i>=0)all[i]=rec;saveAttendance(all);renderAttendancePanel();
 }
 function getShiftTransactions(){
   const start=Number(currentUser?.shiftStartedAt)||0;
@@ -1297,7 +1327,7 @@ function submitShiftClose(){
   const record={employeeId:currentUser.id,employeeName:currentUser.name,closedAt:new Date(closedAt).toLocaleString('en-IN'),timestamp:closedAt,shiftStartAt:attendance?.shiftStartAt||null,lunchBreaks:attendance?.lunchBreaks||[],lunchDurationMs:durations.lunch,workingDurationMs:durations.worked,workingHours:formatDuration(durations.worked),openingCash:Number(currentUser.openingCashBalance)||0,shiftTransactionCount:getShiftTransactions().length,expectedCash:expected,countedCash:counted,cashDifference:cashDiff,denominations:denoms,walletResults,reason:overallReason};
   const reports=read('slvShiftCloseReports',[]);reports.push(record);write('slvShiftCloseReports',reports);
   alert('Shift Close report Adminకు పంపబడింది. Cash / Wallet tally వివరాలు సేవ్ అయ్యాయి.');
-  currentUser.shiftClosed=true;write(KEYS.user,currentUser);$('shiftClosePanel').style.display='none';renderShiftCloseReports();
+  currentUser.shiftClosed=true;saveLoginSession(currentUser);$('shiftClosePanel').style.display='none';renderShiftCloseReports();
 }
 function renderShiftCloseReports(){
   const c=$('shiftCloseReports');if(!c)return;c.innerHTML='';
@@ -1391,7 +1421,7 @@ function processCheckout(){
 }
 (function init(){
   toggleLoginInputs();
-  const saved=read(KEYS.user,null);
+  const saved=readLoginSession();
   if(saved&&saved.role==='Admin'){currentUser=saved;showView('adminView')}
   else if(saved&&saved.role==='Employee'){currentUser=saved;showView('employeeView')}
   else showView('loginView');
