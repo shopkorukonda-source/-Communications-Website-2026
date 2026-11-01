@@ -477,7 +477,7 @@ footer{padding:20px!important;color:#8988a3}
       <option value="Employee">Employee</option>
       <option value="Admin">Admin</option>
     </select>
-    <div id="empIdBox">
+    <div id="empIdBox" style="display:block">
       <label for="loginId">Employee ID</label>
       <input id="loginId" autocomplete="username" placeholder="e.g. SLV01">
     </div>
@@ -717,7 +717,14 @@ function showView(id){
   if(id==='employeeView')renderEmployee();
   if(id==='servicesView' && !$('cartContainer').children.length)addCartRow();
 }
-function toggleLoginInputs(){$('empIdBox').classList.toggle('hidden',$('loginRole').value==='Admin')}
+function toggleLoginInputs(){
+  const isAdmin=$('loginRole').value==='Admin';
+  const box=$('empIdBox');
+  box.style.display=isAdmin?'none':'block';
+  box.classList.toggle('hidden',isAdmin);
+  $('loginId').required=!isAdmin;
+  if(isAdmin) $('loginId').value='';
+}
 function handleLogin(){
   const role=$('loginRole').value,pass=$('loginPass').value.trim();
   if(!pass){alert('పాస్‌వర్డ్ ఎంటర్ చేయండి');return}
@@ -1069,7 +1076,7 @@ function openShiftClose(){
   const panel=$('shiftClosePanel');panel.style.display='block';
   const denoms=[500,200,100,50,20,10,5,2,1];
   const expected=getExpectedShiftCash();
-  panel.innerHTML='<h3>🔒 Shift Close — Cash Denomination</h3><p>Opening Cash: ₹'+(Number(currentUser.openingCashBalance)||0).toFixed(2)+' | Shift Transactions: '+getShiftTransactions().length+'</p><p><b>Expected Cash as per Opening Balance + Transactions: ₹'+expected.toFixed(2)+'</b></p><div class="denomination-grid">'+denoms.map(d=>'<label>₹'+d+' Notes / Coins<input class="denom-count" data-denom="'+d+'" type="number" min="0" step="1" value="0" placeholder="Count"></label>').join('')+'</div><div class="cash-count-total">Counted Cash: ₹<b id="countedCashTotal">0.00</b></div><div id="cashTallyResult" class="cash-tally-result"></div><h4>Wallet Reconciliation</h4><p class="muted">ప్రతి Walletలో ప్రస్తుతం ఉన్న Balance‌ను నమోదు చేసి Match అవుతుందో లేదో నిర్ధారించండి.</p><div id="shiftWalletChecks"></div><label for="shiftOverallReason">Cash / Wallet Difference ఉంటే కారణం తప్పనిసరిగా నమోదు చేయండి</label><textarea id="shiftOverallReason" rows="2" placeholder="Short / Excess / Pending transaction / Other reason"></textarea><button class="btn-green" onclick="submitShiftClose()">Submit Shift Close</button> <button class="btn-secondary" onclick="$(\\'shiftClosePanel\\').style.display=\\'none\\'">Cancel</button>';
+  panel.innerHTML='<h3>🔒 Shift Close — Cash Denomination</h3><p>Opening Cash: ₹'+(Number(currentUser.openingCashBalance)||0).toFixed(2)+' | Shift Transactions: '+getShiftTransactions().length+'</p><p><b>Expected Cash as per Opening Balance + Transactions: ₹'+expected.toFixed(2)+'</b></p><div class="denomination-grid">'+denoms.map(d=>'<label>₹'+d+' Notes / Coins<input class="denom-count" data-denom="'+d+'" type="number" min="0" step="1" value="0" placeholder="Count"></label>').join('')+'</div><div class="cash-count-total">Counted Cash: ₹<b id="countedCashTotal">0.00</b></div><div id="cashTallyResult" class="cash-tally-result"></div><h4>Wallet Reconciliation</h4><p class="muted">ప్రతి Walletలో ప్రస్తుతం ఉన్న Balance‌ను నమోదు చేసి Match అవుతుందో లేదో నిర్ధారించండి.</p><div id="shiftWalletChecks"></div><label for="shiftOverallReason">Cash / Wallet Difference ఉంటే కారణం తప్పనిసరిగా నమోదు చేయండి</label><textarea id="shiftOverallReason" rows="2" placeholder="Short / Excess / Pending transaction / Other reason"></textarea><button class="btn-green" onclick="submitShiftClose()">Submit Shift Close</button> <button class="btn-secondary" onclick="document.getElementById(\'shiftClosePanel\').style.display=\'none\'">Cancel</button>';
   panel.querySelectorAll('.denom-count').forEach(i=>i.addEventListener('input',updateDenominationTotal));
   const walletBox=$('shiftWalletChecks');getWallets().filter(w=>getEmployeeWalletNames().includes(w.name)).forEach((w,i)=>{
     const row=document.createElement('div');row.className='shift-wallet-check-row';
