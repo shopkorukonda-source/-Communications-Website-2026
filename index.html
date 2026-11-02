@@ -94,14 +94,40 @@ input:focus,select:focus,textarea:focus{border-color:#5486c8!important;box-shado
 @media(max-width:900px){.sidebar{width:74px!important;padding:17px 8px!important}.brand>div:last-child,.nav-label,.nav button .nav-text,.side-bottom{display:none!important}.nav button{justify-content:center}.brand{justify-content:center;padding:0 0 16px!important}.content{padding:20px!important}.stats{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 @media(max-width:570px){.topbar{padding:0 12px!important}.content{padding:15px!important}.admin-hero{padding:21px;display:block}.admin-hero .hero-action{margin-top:16px}.stats{grid-template-columns:1fr!important}.page-head h1{font-size:23px!important}.sidebar{width:61px!important}.two{grid-template-columns:1fr!important}}
 </style>
-</head>
+<style id="password-visibility-fix">
+#loginView #loginPass{display:block!important;visibility:visible!important;opacity:1!important;appearance:none!important;-webkit-appearance:none!important;background:#fff!important;color:#17263f!important;-webkit-text-fill-color:#17263f!important;border:1.5px solid #cad7e7!important;border-radius:11px!important;height:51px!important;padding:12px 70px 12px 15px!important;font-size:16px!important;line-height:24px!important;box-shadow:none!important;position:relative!important;z-index:1!important}
+#loginView #loginPass:focus{outline:2px solid #77a6e5!important;outline-offset:1px!important}
+#loginView #loginPass::placeholder{color:#8b99ab!important;-webkit-text-fill-color:#8b99ab!important}
+#loginView #loginPass:-webkit-autofill{-webkit-box-shadow:0 0 0 100px white inset!important;-webkit-text-fill-color:#17263f!important}
+.slv-password-wrap{position:relative!important;width:100%!important}
+#loginView .slv-eye{position:absolute!important;right:8px!important;top:8px!important;z-index:3!important;width:54px!important;height:35px!important;background:#edf3fc!important;color:#154779!important;border:0!important;border-radius:8px!important;font-size:12px!important;font-weight:700!important}
+</style><style id="slv-role-and-loader">
+.slv-role-picker{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:17px 0 20px}
+.slv-role-picker button{border:1.5px solid #d7e2f1;border-radius:11px;background:#f6f9fe;color:#405774;font-weight:750;font-size:13px;padding:14px 8px;cursor:pointer;transition:.2s}
+.slv-role-picker button.selected{background:#113f79;color:white;border-color:#113f79;box-shadow:0 5px 15px #0a3c7840}
+.slv-loader{position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#07182f,#0b3767);display:grid;place-items:center;color:white;text-align:center}
+.slv-loader.hidden{display:none!important}
+.slv-loader-inner{width:min(340px,85vw)}
+.slv-loading-mark{height:106px;width:106px;margin:0 auto 25px;border:2px solid #e3bd6b;border-radius:28px;display:grid;place-items:center;color:#f4d68d;font-size:36px;font-weight:900;letter-spacing:3px;animation:slvSpinIn 1s ease-in-out both;box-shadow:0 0 0 14px #ffffff08,0 0 45px #cda34c30}
+.slv-loading-check{display:none;font-size:55px;color:#6be3b0;animation:slvPop .4s ease-out}
+.slv-success .slv-loading-mark{display:none}
+.slv-success .slv-loading-check{display:block;margin:20px}
+.slv-loader strong{font-size:16px;letter-spacing:2px}
+.slv-loader p{font-size:12px;color:#b9cce4;margin-top:12px}
+.slv-progress{height:4px;background:#ffffff24;border-radius:9px;margin-top:25px;overflow:hidden}
+.slv-progress div{height:100%;background:linear-gradient(90deg,#b68b42,#f7d88c);animation:slvLoad 1.15s ease-out forwards}
+@keyframes slvLoad{from{width:0}to{width:100%}}
+@keyframes slvSpinIn{from{opacity:0;transform:rotate(-120deg) scale(.5)}to{opacity:1;transform:rotate(0) scale(1)}}
+@keyframes slvPop{from{transform:scale(.2)}to{transform:scale(1)}}
+</style></head>
 <body>
 <div id="loginView" class="login-screen">
  <div class="login-card">
   <div class="login-brand"><div class="brand-mark">SLV</div><h2>SLV Communications</h2><p>Digital Services & Multi-Utility Center</p></div>
+  <div class="slv-role-picker" aria-label="Choose login type"><button type="button" id="slvAdminChoice" class="selected" onclick="slvChooseRole('Admin')">♛ &nbsp; Admin Login</button><button type="button" id="slvEmployeeChoice" onclick="slvChooseRole('Employee')">♙ &nbsp; Employee Login</button></div>
   <div class="field"><label>User ID</label><input id="loginId" value="Admin" autocomplete="username"></div>
-  <div class="field" style="margin-top:13px"><label>Password</label><input id="loginPass" type="password" value="" autocomplete="current-password"></div>
-  <button class="btn" style="width:100%;margin-top:18px" onclick="login()">Login to Dashboard</button>
+  <div class="field" style="margin-top:13px"><label>Password</label><div class="slv-password-wrap"><input id="loginPass" type="password" value="" autocomplete="current-password" placeholder="Enter your password"><button type="button" class="slv-eye" onclick="const x=document.getElementById('loginPass');x.type=x.type==='password'?'text':'password';this.textContent=x.type==='password'?'Show':'Hide'">Show</button></div></div>
+  <button id="slvLoginButton" class="btn" style="width:100%;margin-top:18px" onclick="slvStartLogin()">Secure Login →</button>
   <div id="loginError" class="msg"></div>
  </div>
 </div>
@@ -1275,6 +1301,47 @@ function saveAllAdminData(){
   if(el)el.innerHTML='<div class="toast">Admin data backup downloaded. Your settings are also saved automatically in this browser.</div>';
  }catch(e){alert("Backup could not be created. Please use Settings → Download Full Backup.");}
 }
+</script>
+<div id="slvLoadingOverlay" class="slv-loader hidden" role="status" aria-live="polite"><div class="slv-loader-inner"><div id="slvLoadingMark" class="slv-loading-mark">SLV</div><div class="slv-loading-check">✓</div><strong id="slvLoadingTitle">SLV COMMUNICATIONS</strong><p id="slvLoadingText">Opening your workspace...</p><div class="slv-progress"><div></div></div></div></div>
+<script>
+let slvSelectedRole="Admin",slvLoading=false;
+function slvChooseRole(role){
+ slvSelectedRole=role;
+ document.getElementById("slvAdminChoice").classList.toggle("selected",role==="Admin");
+ document.getElementById("slvEmployeeChoice").classList.toggle("selected",role==="Employee");
+ const id=document.getElementById("loginId");id.value=role==="Admin"?"Admin":"";
+ id.placeholder=role==="Admin"?"Admin":"Employee ID (e.g. SLV01)";
+ document.getElementById("loginPass").value="";
+ document.getElementById("loginError").textContent="";
+ document.getElementById("slvLoginButton").textContent=role==="Admin"?"Login as Administrator →":"Login as Employee →";
+ if(role==="Employee")id.focus();
+}
+function slvStartLogin(){
+ if(slvLoading)return;
+ const id=document.getElementById("loginId").value.trim(),pw=document.getElementById("loginPass").value;
+ const all=employees();
+ if(!all[id]||all[id].pass!==pw||all[id].role!==slvSelectedRole){
+ document.getElementById("loginError").textContent="Incorrect "+slvSelectedRole+" ID or password.";return;
+ }
+ slvLoading=true;
+ const overlay=document.getElementById("slvLoadingOverlay");
+ document.getElementById("slvLoadingMark").textContent=slvSelectedRole==="Admin"?"SLV":"S";
+ document.getElementById("slvLoadingTitle").textContent=slvSelectedRole==="Admin"?"SLV COMMUNICATIONS":"EMPLOYEE WORKSPACE";
+ document.getElementById("slvLoadingText").textContent="Authenticating and preparing dashboard...";
+ overlay.classList.remove("hidden");
+ setTimeout(()=>{
+ try{
+ login();
+ document.getElementById("slvLoadingText").textContent="Welcome! Dashboard is ready.";
+ overlay.classList.add("slv-success");
+ setTimeout(()=>{overlay.classList.add("hidden");overlay.classList.remove("slv-success");slvLoading=false},550);
+ }catch(e){overlay.classList.add("hidden");slvLoading=false;document.getElementById("loginError").textContent="Login error: "+e.message;console.error(e)}
+ },1050);
+}
+document.addEventListener("DOMContentLoaded",()=>{
+ slvChooseRole("Admin");
+ document.getElementById("loginPass").addEventListener("keydown",e=>{if(e.key==="Enter")slvStartLogin()});
+});
 </script>
 </body>
 </html>
