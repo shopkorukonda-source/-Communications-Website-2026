@@ -505,6 +505,33 @@ button:hover{transform:translateY(-1px);box-shadow:0 7px 18px rgba(6,27,59,.16)}
 @keyframes slvSheen{0%,25%{transform:translateX(-70%)}75%,100%{transform:translateX(70%)}}
 @media(prefers-reduced-motion:reduce){.slv-loader-card *{animation-duration:.01ms!important;animation-delay:0ms!important}}
 
+
+/* ===== FINAL SLV NAVY / GOLD THEME OVERRIDE ===== */
+:root{--blue:#123765;--blue-dark:#071d3b;--green:#167b5f;--orange:#d8ad45;--bg:#eef2f7;--ink:#14243b;--muted:#64748b;--line:#dce3ed}
+html,body{min-height:100%;background:linear-gradient(135deg,#061a35 0%,#0b2d54 38%,#e9eef5 38%,#f5f7fa 100%) fixed!important;color:#14243b}
+body{font-family:Inter,"Segoe UI",Arial,sans-serif;padding:30px 18px!important}
+.app{max-width:1240px!important}
+.main-header{background:linear-gradient(115deg,#061a35 0%,#0b3260 65%,#174b78 100%)!important;border:1px solid rgba(216,173,69,.65)!important;border-radius:20px 20px 0 0!important;box-shadow:0 16px 40px rgba(3,18,39,.24)!important;color:#fff}
+.header-title{color:#fff!important;letter-spacing:2px!important}
+.sub-title{color:#e8edf6!important}
+.card{background:#fff!important;border:1px solid #dce3ed!important;border-top:0!important;box-shadow:0 18px 48px rgba(4,22,48,.14)!important}
+#loginView{max-width:540px!important;margin:38px auto!important;padding:38px!important;border:1px solid rgba(216,173,69,.55)!important;border-radius:20px!important;background:linear-gradient(145deg,#fff 0%,#f7f9fc 100%)!important;box-shadow:0 20px 55px rgba(4,22,48,.18)!important}
+#loginView h3{color:#09264a!important;text-align:center!important;font-size:25px!important}
+#loginView h3:after{margin:12px auto 0!important;background:linear-gradient(90deg,#b88925,#f0d78b)!important}
+#loginView label{color:#243b59!important}
+#loginView input,#loginView select{background:#fff!important;border:1px solid #cbd5e1!important;border-radius:10px!important}
+#loginView button{width:100%;margin-top:12px;background:linear-gradient(100deg,#09264a,#174b78)!important;color:#fff!important;border:1px solid #c9a34a!important;border-radius:11px!important;padding:14px!important;font-size:14px!important}
+button{background:linear-gradient(105deg,#123765,#1c5284)!important;color:#fff!important}
+.btn-green{background:linear-gradient(105deg,#126849,#1b9870)!important}
+.btn-red{background:linear-gradient(105deg,#a92c38,#d44c58)!important}
+.btn-orange{background:linear-gradient(105deg,#c3912d,#e5c36b)!important;color:#1c2635!important}
+.btn-secondary{background:linear-gradient(105deg,#52647c,#71839a)!important}
+.section-box,.slab-box{border-color:#dfe6ef!important}
+.tile{background:linear-gradient(145deg,#edf3fa,#dfe9f5)!important;color:#123765!important;border-color:#cbd9e9!important}
+.tile:nth-child(3n+2),.tile:nth-child(3n){background:linear-gradient(145deg,#edf3fa,#dfe9f5)!important;color:#123765!important}
+.total{background:linear-gradient(110deg,#edf3fa,#f7f9fc)!important;color:#123765!important;border-color:#d6e0eb!important}
+@media(max-width:760px){body{padding:9px 7px!important}#loginView{margin:18px auto!important;padding:24px 18px!important}.main-header{border-radius:15px 15px 0 0!important}}
+
 </style>
 </head>
 <body>
@@ -538,7 +565,7 @@ button:hover{transform:translateY(-1px);box-shadow:0 7px 18px rgba(6,27,59,.16)}
     </div>
     <label for="loginPass">Password</label>
     <input id="loginPass" type="password" autocomplete="current-password" placeholder="Enter password">
-    <button style="width:100%" onclick="handleLogin()">Login</button>
+    <button id="loginSubmitBtn" type="button" style="width:100%">Login Securely</button>
 
   </main>
 
@@ -1623,6 +1650,7 @@ function processCheckout(){
     window.toggleLoginInputs = function () {
       const admin = $('loginRole').value === 'Admin';
       $('empIdBox').style.display = 'block';
+      $('empIdBox').classList.remove('hidden');
       const label = document.querySelector('label[for="loginId"]');
       label.textContent = admin ? 'Admin Email' : 'Employee ID';
       $('loginId').placeholder = admin
@@ -1877,5 +1905,43 @@ try {
   document.head.appendChild(cdn);
 })();
 </script>
+
+<script>
+// Reliable login button binding: independent of inline-handler timing and CDN load order.
+(function(){
+ const btn=document.getElementById('loginSubmitBtn');
+ if(!btn) return;
+ btn.addEventListener('click', async function(){
+   const role=document.getElementById('loginRole').value;
+   const id=document.getElementById('loginId').value.trim();
+   const pass=document.getElementById('loginPass').value.trim();
+   if(!id || !pass){alert('Admin Email / Employee ID మరియు Password నమోదు చేయండి.');return;}
+   if(!window.slvSupabase){alert('Secure login service ఇంకా load కాలేదు. Internet connection check చేసి 5 seconds తర్వాత మళ్లీ ప్రయత్నించండి.');return;}
+   btn.disabled=true; const old=btn.textContent; btn.textContent='Signing in...';
+   try{
+     const db=window.slvSupabase;
+     const email=role==='Admin'?id.toLowerCase():`slv-${id.toLowerCase()}@employees.invalid`;
+     const {data,error}=await db.auth.signInWithPassword({email,password:pass});
+     if(error) throw error;
+     const {data:profile,error:pe}=await db.from('profiles').select('id,full_name,employee_code,role,is_active').eq('id',data.user.id).single();
+     if(pe) throw pe;
+     const expected=role==='Admin'?'admin':'employee';
+     if(!profile || profile.role!==expected || profile.is_active!==true || (role==='Employee' && profile.employee_code!==id.toUpperCase())){
+       await db.auth.signOut(); throw new Error('ఈ Login కు అనుమతి లేదు లేదా Account Active‌లో లేదు.');
+     }
+     currentUser=role==='Admin'?{id:profile.id,name:profile.full_name||'Master Admin',role:'Admin'}:{id:profile.employee_code,authId:data.user.id,name:profile.full_name||'Employee',role:'Employee',shift:(getEmployees()[profile.employee_code]||{}).shift||'09:00 AM - 05:00 PM',openingCashBalance:getCashWalletBalance()};
+     if(role==='Employee'){
+       const attendance=ensureTodayAttendance();
+       if(attendance && attendance.shiftCloseAt){currentUser=null;await db.auth.signOut();throw new Error('ఈ రోజు Shift ఇప్పటికే Close అయింది. Admin‌ను సంప్రదించండి.');}
+       if(attendance){attendance.sessions=attendance.sessions||[];attendance.sessions.push({loginAt:Date.now(),logoutAt:null});const records=getAttendance();const idx=records.findIndex(x=>x.employeeId===profile.employee_code&&x.day===attendance.day);if(idx>=0)records[idx]=attendance;saveAttendance(records);}
+     }
+     saveLoginSession(currentUser);
+     runSlvLoader(role==='Admin'?'admin':'employee',role+' Login Successful • Opening Dashboard...',1800,()=>showView(role==='Admin'?'adminView':'employeeView'));
+   }catch(err){alert((role==='Admin'?'Admin':'Employee')+' Login Failed: '+(err.message||err));}
+   finally{btn.disabled=false;btn.textContent=old;}
+ });
+})();
+</script>
+
 </body>
 </html>
