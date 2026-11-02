@@ -1366,5 +1366,30 @@ document.addEventListener("DOMContentLoaded",()=>{
  document.getElementById("loginPass").addEventListener("keydown",e=>{if(e.key==="Enter")slvStartLogin()});
 });
 </script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script id="slv-supabase-connection">
+(function(){
+  const URL="https://rxrzzxtpkxnolbsrbymi.supabase.co";
+  const KEY="sb_publishable_YoB_rYUUMsaaCGXFue9_eg_gbWfDOa3";
+  window.SLV_SUPABASE_CONFIG={url:URL,publishableKey:KEY};
+  function render(message,color){
+    let node=document.getElementById("slvCloudStatus");
+    if(!node){node=document.createElement("div");node.id="slvCloudStatus";node.style.cssText="position:fixed;right:12px;bottom:12px;z-index:99998;padding:9px 14px;border-radius:10px;background:#102e4f;color:#fff;font:12px Segoe UI,sans-serif;box-shadow:0 5px 22px #0004";document.body.appendChild(node);}
+    node.textContent=message;node.style.borderLeft="4px solid "+color;
+  }
+  async function connect(){
+    if(!window.supabase?.createClient){render("Cloud SDK unavailable — local mode","#efb454");return;}
+    try{
+      const client=window.supabase.createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+      window.slvSupabase=client;
+      const result=await client.auth.getSession();
+      if(result.error)throw result.error;
+      render(result.data.session?"Supabase connected • authenticated":"Supabase ready • sign-in required for cloud sync","#55c5a5");
+    }catch(e){console.warn("SLV Supabase:",e);render("Supabase connection error — local mode","#ed8d8d");}
+  }
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",connect);else connect();
+})();
+</script>
 </body>
 </html>
