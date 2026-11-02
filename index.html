@@ -471,9 +471,53 @@ footer{padding:20px!important;color:#8988a3}
 .attendance-actions{display:flex;gap:8px;flex-wrap:wrap}.attendance-actions button{flex:1;min-width:145px}
 @media(max-width:480px){.attendance-stats{grid-template-columns:1fr 1fr}.attendance-stats>div{padding:10px}}
 
+
+/* ===== SLV BANKING-STYLE LOADING & LOGIN ANIMATIONS ===== */
+:root{--slv-navy:#061b3b;--slv-navy2:#0b3266;--slv-gold:#d8ad45;--slv-gold2:#f5d77d}
+body{background:radial-gradient(circle at 15% 8%,#eaf1ff 0,transparent 30%),linear-gradient(135deg,#f5f7fb,#e8eef7)}
+.main-header{background:linear-gradient(115deg,#061b3b,#0b3266 68%,#174b85);border:1px solid rgba(216,173,69,.38)}
+.header-title{letter-spacing:2px}
+button{transition:transform .18s ease,box-shadow .18s ease,filter .18s ease}
+button:hover{transform:translateY(-1px);box-shadow:0 7px 18px rgba(6,27,59,.16)}
+#slvLoadingOverlay{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;padding:20px;background:radial-gradient(circle at 50% 38%,#123d70 0,#071d3d 48%,#041329 100%);color:#fff;text-align:center}
+#slvLoadingOverlay.active{display:flex}
+.slv-loader-card{width:min(430px,94vw);padding:34px 26px;border:1px solid rgba(245,215,125,.48);border-radius:26px;background:linear-gradient(145deg,rgba(15,49,91,.96),rgba(4,19,41,.98));box-shadow:0 24px 80px rgba(0,0,0,.38),inset 0 1px rgba(255,255,255,.12);overflow:hidden;position:relative}
+.slv-loader-card:before{content:"";position:absolute;inset:-70% -20%;background:linear-gradient(115deg,transparent 42%,rgba(255,255,255,.08) 50%,transparent 58%);transform:translateX(-70%);animation:slvSheen 2.4s ease-in-out infinite}
+.slv-loader-brand{font-size:46px;font-weight:900;font-style:italic;letter-spacing:-3px;color:#fff;text-shadow:0 3px 18px rgba(75,165,255,.45);position:relative}
+.slv-loader-brand:after{content:"";display:block;width:130px;height:3px;margin:7px auto 0;background:linear-gradient(90deg,transparent,var(--slv-gold),transparent)}
+.slv-loader-sub{font-size:12px;letter-spacing:4px;margin-top:7px;color:#eaf1ff;position:relative}
+.slv-loader-symbol{height:108px;display:flex;align-items:center;justify-content:center;gap:18px;margin:18px 0 10px;position:relative}
+.slv-s-letter{font-size:78px;font-weight:900;font-style:italic;line-height:1;color:#fff;text-shadow:0 0 20px #4ba8ff;animation:slvSpinIn 1.15s cubic-bezier(.2,.8,.2,1) both}
+.slv-v-mark{position:absolute;width:76px;height:38px;border-left:7px solid var(--slv-gold2);border-bottom:7px solid var(--slv-gold2);transform:rotate(-45deg) scale(0);left:calc(50% - 22px);top:37px;border-radius:2px;filter:drop-shadow(0 0 10px rgba(245,215,125,.7));animation:slvDrawV .55s ease-out .9s forwards}
+.slv-check-ring{width:82px;height:82px;border:3px solid #39d98a;border-radius:50%;display:grid;place-items:center;color:#39d98a;font-size:48px;opacity:0;transform:scale(.5);box-shadow:0 0 28px rgba(57,217,138,.25);animation:slvCheck .45s ease-out 1.45s forwards}
+.slv-progress{height:6px;background:rgba(255,255,255,.16);border-radius:20px;overflow:hidden;margin:18px 5px 12px;position:relative}
+.slv-progress span{display:block;height:100%;width:0;border-radius:20px;background:linear-gradient(90deg,#2f8cff,#f5d77d);animation:slvProgress 1.8s ease-in-out forwards}
+.slv-loader-message{font-size:14px;color:#e4edff;position:relative;min-height:20px}
+.slv-loader-card.success .slv-s-letter{animation:slvAdminSettle .75s ease-out both}
+.slv-loader-card.employee .slv-s-letter{animation:slvSpinIn 1.05s cubic-bezier(.2,.8,.2,1) both}
+.slv-loader-card.employee .slv-v-mark{display:none}
+.slv-loader-card.employee .slv-check-ring{animation-delay:1.05s}
+@keyframes slvSpinIn{0%{opacity:0;transform:rotateY(180deg) scale(.45)}70%{opacity:1;transform:rotateY(-12deg) scale(1.08)}100%{opacity:1;transform:rotateY(0) scale(1)}}
+@keyframes slvAdminSettle{0%{transform:rotateY(0) scale(1)}55%{transform:rotateY(360deg) scale(1.08)}100%{transform:rotateY(360deg) scale(1)}}
+@keyframes slvDrawV{to{transform:rotate(-45deg) scale(1)}}
+@keyframes slvCheck{to{opacity:1;transform:scale(1)}}
+@keyframes slvProgress{0%{width:0}100%{width:100%}}
+@keyframes slvSheen{0%,25%{transform:translateX(-70%)}75%,100%{transform:translateX(70%)}}
+@media(prefers-reduced-motion:reduce){.slv-loader-card *{animation-duration:.01ms!important;animation-delay:0ms!important}}
+
 </style>
 </head>
 <body>
+<div id="slvLoadingOverlay" aria-live="polite" aria-label="SLV loading">
+  <div class="slv-loader-card" id="slvLoaderCard">
+    <div class="slv-loader-brand">SLV</div>
+    <div class="slv-loader-sub">COMMUNICATIONS</div>
+    <div class="slv-loader-symbol"><span class="slv-s-letter" id="slvLoaderLetter">SLV</span><span class="slv-v-mark"></span><span class="slv-check-ring">✓</span></div>
+    <div class="slv-progress"><span></span></div>
+    <div class="slv-loader-message" id="slvLoaderMessage">Loading SLV Communications...</div>
+  </div>
+</div>
+
 <div class="app">
   <header class="main-header">
     <div class="header-title">SLV COMMUNICATIONS</div>
@@ -759,6 +803,14 @@ function getEmployees(){
   if(!emps){emps={SLV01:{name:'Bhanu Katakam',pass:'123456',shift:'09:00 AM - 03:00 PM'}};write(KEYS.employees,emps)}
   return emps;
 }
+function runSlvLoader(kind,message,duration,done){
+  const overlay=$('slvLoadingOverlay'),card=$('slvLoaderCard'),letter=$('slvLoaderLetter');
+  card.className='slv-loader-card '+(kind==='employee'?'employee':'success');
+  letter.textContent=kind==='employee'?'S':'SLV';
+  $('slvLoaderMessage').textContent=message||'Please wait...';
+  overlay.classList.add('active');
+  window.setTimeout(()=>{overlay.classList.remove('active');if(typeof done==='function')done()},duration||1900);
+}
 function showView(id){
   ['loginView','adminView','employeeView','servicesView'].forEach(v=>$(v).classList.add('hidden'));
   $(id).classList.remove('hidden');
@@ -782,7 +834,7 @@ function handleLogin(){
     const savedAdminPassword=localStorage.getItem('slvAdminPassword');
     const validAdminPassword=savedAdminPassword!==null?pass===savedAdminPassword:(pass==='admin123'||pass==='123456');
     if(validAdminPassword){
-      currentUser={id:'ADMIN',name:'Master Admin',role:'Admin'};saveLoginSession(currentUser);showView('adminView');
+      currentUser={id:'ADMIN',name:'Master Admin',role:'Admin'};saveLoginSession(currentUser);runSlvLoader('admin','Admin Login Successful • Opening Dashboard...',2050,()=>showView('adminView'));
     }else alert('పాస్‌వర్డ్ తప్పు!');
     return;
   }
@@ -801,7 +853,7 @@ function handleLogin(){
       const records=getAttendance(),idx=records.findIndex(x=>x.employeeId===id&&x.day===attendance.day);
       if(idx>=0)records[idx]=attendance;saveAttendance(records);
     }
-    saveLoginSession(currentUser);showView('employeeView');
+    saveLoginSession(currentUser);runSlvLoader('employee','Employee Login Successful • Opening Dashboard...',1850,()=>showView('employeeView'));
   }else alert('తప్పు యూజర్ ఐడీ లేదా పాస్‌వర్డ్!');
 }
 function requireUser(){
@@ -1460,7 +1512,7 @@ function processCheckout(){
   const saved=readLoginSession();
   if(saved&&saved.role==='Admin'){currentUser=saved;showView('adminView')}
   else if(saved&&saved.role==='Employee'){currentUser=saved;showView('employeeView')}
-  else showView('loginView');
+  else {showView('loginView');runSlvLoader('website','Loading SLV Communications...',1500,()=>{});}
 })();
 </script>
 <script>
