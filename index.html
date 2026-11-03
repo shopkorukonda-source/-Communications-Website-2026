@@ -684,6 +684,22 @@ body:has(#employeeView:not(.hidden)) .main-header {
   background: linear-gradient(110deg,#061b3b 0%,#0b3266 65%,#14528b 100%);
   border: 1px solid rgba(216,173,69,.25);
 }
+
+/* Pending application drawer and payment validation */
+.slv-pending-floating{position:fixed;right:18px;bottom:18px;z-index:990;background:linear-gradient(110deg,#09294d,#145fa5);border:1px solid #b6d5ff;box-shadow:0 12px 35px #071e3d44}
+.slv-pending-floating span{background:#fff;color:#103e70;border-radius:30px;padding:3px 9px;margin-left:6px}
+.slv-pending-shade{position:fixed;inset:0;background:#061b3b88;z-index:1090;display:none}
+.slv-pending-shade.open{display:block}
+.slv-pending-drawer{position:fixed;right:0;top:0;bottom:0;width:min(460px,95vw);z-index:1091;background:#fff;padding:22px;overflow-y:auto;box-shadow:-15px 0 45px #071e3d44;transform:translateX(105%);transition:transform .2s}
+.slv-pending-drawer.open{transform:translateX(0)}
+.slv-pending-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+.slv-pending-item{padding:15px;margin:12px 0;border:1px solid #dbe5f3;border-radius:12px;background:#f8fbff;line-height:1.8;font-size:13px}
+.slv-payment-preview{border:1px solid #d6e1ee;background:#fff;padding:16px;border-radius:12px;margin:12px 0;line-height:1.9;color:#23364d}
+.slv-payment-preview.bad{background:#fff0f0;border-color:#d94343;color:#b42318}
+.slv-payment-preview.good{background:#edfdf4;border-color:#19a06e;color:#126c4a}
+.slv-payment-preview.neutral{background:#fff;border-color:#d6e1ee;color:#23364d}
+.slv-payment-preview b{font-size:17px}
+@media(max-width:600px){.slv-pending-floating{bottom:10px;right:10px;font-size:11px}.slv-pending-drawer{padding:14px}}
 </style>
 <style id="slvPersonalGreetingStyle">
 .slv-personal-greeting{display:flex;flex-direction:column;gap:7px;margin:14px 0 18px;padding:19px 22px;border:1px solid #dce9fb;border-left:5px solid #1e6bc4;border-radius:14px;background:linear-gradient(105deg,#f0f6ff,#fff);box-shadow:0 5px 16px rgba(17,54,101,.05)}
@@ -1029,10 +1045,20 @@ body:has(#employeeView:not(.hidden)) .main-header {
       <label for="slvTxQty">Quantity</label><input id="slvTxQty" type="number" min="1" max="10000" step="1" value="1" oninput="slvTxUpdatePreview()">
       <label for="slvTxCash">Cash Received ₹</label><input id="slvTxCash" type="number" min="0" step="0.01" value="0" oninput="slvTxUpdatePreview()">
       <label for="slvTxUpi">UPI Received ₹</label><input id="slvTxUpi" type="number" min="0" step="0.01" value="0" oninput="slvTxUpdatePreview()">
-      <p id="slvTxPreview" class="muted">Select a cloud service to view its rate and cost.</p>
+      <label for="slvTxMode">Application Processing</label>
+      <select id="slvTxMode" onchange="slvTxUpdatePreview()"><option value="now">✓ Complete Now — Cost Debit Now</option><option value="later">⏳ Complete Later — Add to Pending</option></select>
+      <div id="slvTxPreview" class="slv-payment-preview" aria-live="polite">Select a cloud service.</div>
       <button type="button" class="btn-green" style="width:100%" id="slvTxSave" onclick="slvTxSave()">☁️ Save Cloud Transaction</button>
       <p id="slvTxStatus" role="status" style="font-weight:bold"></p>
     </section>
+    <button type="button" class="slv-pending-floating" onclick="slvPendingOpen()">⏳ Pending Applications <span id="slvPendingCount">—</span></button>
+    <div id="slvPendingShade" class="slv-pending-shade" onclick="slvPendingClose()"></div>
+    <aside id="slvPendingDrawer" class="slv-pending-drawer" role="dialog" aria-modal="true" aria-label="Pending Applications" aria-hidden="true">
+      <div class="slv-pending-head"><strong>⏳ Pending Applications</strong><button type="button" class="btn-secondary btn-small" onclick="slvPendingClose()">✕ Close</button></div>
+      <p class="muted">Completion సమయంలో మాత్రమే linked processing wallet నుంచి debit అవుతుంది.</p>
+      <button type="button" class="btn-secondary btn-small" onclick="slvPendingRefresh()">↻ Refresh</button>
+      <div id="slvPendingList" aria-live="polite">Open to load applications.</div>
+    </aside>
     <div id="cartContainer" style="display:none"></div>
     <button class="btn-orange" style="display:none" onclick="addCartRow()">+ Add Service</button>
     <div class="total" style="display:none">Grand Total: ₹<span id="grandTotal">0.00</span></div>
@@ -2488,13 +2514,14 @@ try {
 </script>
 
 <script>
-/* Cloud-only employee checkout. Never mutate browser-local wallet balances. */
+/* Cloud-only employee checkout and pending applications. Wallet accounting stays in Supabase RPCs. */
 (function(){
  const el=id=>document.getElementById(id);
- let services=[], busy=false, pendingRequest=null;
+ let services=[],busy=false,pendingRequest=null,pendingBusy=false;
  const money=n=>'₹'+Number(n||0).toFixed(2);
+ const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const status=(message,error=false)=>{el('slvTxStatus').textContent=message;el('slvTxStatus').style.color=error?'#c5221f':'#137333'};
- const decimal=(v)=>/^\d+(?:\.\d{1,2})?$/.test(String(v).trim());
+ const decimal=v=>/^\d+(?:\.\d{1,2})?$/.test(String(v).trim());
  async function employeeDb(){
   const db=window.slvSupabase;if(!db)throw Error('Supabase connection unavailable');
   const a=await db.auth.getUser();if(a.error||!a.data?.user)throw Error('Cloud employee login required');
@@ -2514,48 +2541,92 @@ try {
    if(r.error)throw r.error;services=r.data||[];
    const select=el('slvTxService');select.replaceChildren();select.add(new Option('— Select Service —',''));
    services.forEach(s=>select.add(new Option(s.service_name+' • '+money(s.customer_rate),s.id)));
-   select.onchange=()=>{pendingRequest=null;window.slvTxUpdatePreview()};
+   select.onchange=()=>window.slvTxUpdatePreview();
    status(services.length+' cloud service(s) loaded');window.slvTxUpdatePreview();
+   window.slvPendingRefresh().catch(()=>{});
   }catch(e){status(e.message||String(e),true)}
  };
- window.slvTxUpdatePreview=()=>{
+ function amounts(){
   const service=services.find(s=>s.id===el('slvTxService').value);
-  const qty=Number(el('slvTxQty').value),cash=Number(el('slvTxCash').value),upi=Number(el('slvTxUpi').value);
-  el('slvTxPreview').textContent=service?'Standard rate: '+money(service.customer_rate*qty)+' | Processing cost: '+money(service.internal_cost*qty)+' | Received: '+money(cash+upi)+' | Estimated profit: '+money(cash+upi-service.internal_cost*qty):'Select a cloud service.';
+  const qRaw=el('slvTxQty').value,cRaw=el('slvTxCash').value,uRaw=el('slvTxUpi').value;
+  const qty=Number(qRaw),cash=Number(cRaw),upi=Number(uRaw);
+  const due=service?Math.round(Number(service.customer_rate)*qty*100)/100:0;
+  const valid=!!service&&Number.isInteger(qty)&&qty>=1&&qty<=10000&&decimal(cRaw)&&decimal(uRaw)&&cash>=0&&upi>=0&&Number.isFinite(due)&&due>0&&upi<=due;
+  const paid=Math.round((cash+upi)*100)/100;
+  const change=Math.round((paid-due)*100)/100;
+  return {service,qty,cash,upi,due,paid,change,valid,netCash:Math.round((due-upi)*100)/100};
+ }
+ window.slvTxUpdatePreview=()=>{
+  const a=amounts(),preview=el('slvTxPreview'),button=el('slvTxSave');
+  const mode=el('slvTxMode').value;
+  if(!a.service){preview.className='slv-payment-preview neutral';preview.textContent='Select a cloud service to see the automatic rate.';button.disabled=true;return}
+  const label=!a.valid?'Invalid amount / quantity':a.change<0?'❌ Payment short by '+money(-a.change):a.change>0?'✓ Return change '+money(a.change):'✓ Exact payment — no change';
+  preview.className='slv-payment-preview '+(!a.valid||a.change<0?'bad':a.change>0?'good':'neutral');
+  preview.innerHTML='<div>Unit Rate: <b>'+money(a.service.customer_rate)+'</b> × '+esc(a.qty)+'</div>'+
+   '<div>Customer Bill: <b>'+money(a.due)+'</b></div><div>Received: <b>'+money(a.paid)+'</b></div>'+
+   '<div>Change to return: <b>'+money(Math.max(0,a.change))+'</b></div><strong>'+label+'</strong>'+
+   '<div style="font-size:12px">'+(mode==='later'?'⏳ Processing cost '+money(a.service.internal_cost*a.qty)+' debited only after completion.':'✓ Processing cost '+money(a.service.internal_cost*a.qty)+' debited immediately.')+'</div>';
+  button.disabled=busy||!a.valid||a.change<0;
+  button.textContent=mode==='later'?'⏳ Save as Pending Application':'✓ Complete Now & Save';
  };
- // A stable request ID is retained after uncertain network errors to prevent double posting.
  window.slvTxSave=async()=>{
   if(busy)return;
-  const service=services.find(s=>s.id===el('slvTxService').value);
-  const name=el('slvTxCustomer').value.trim(),mobile=el('slvTxMobile').value.trim();
-  const qtyRaw=el('slvTxQty').value,cashRaw=el('slvTxCash').value,upiRaw=el('slvTxUpi').value;
-  const qty=Number(qtyRaw),cash=Number(cashRaw),upi=Number(upiRaw);
-  if(!service||!name||!Number.isInteger(qty)||qty<1||qty>10000||!decimal(cashRaw)||!decimal(upiRaw)||cash+upi<=0){status('Enter a service, customer name, valid quantity and positive Cash/UPI payment.',true);return}
-  if(!confirm('Cloud Save: '+service.service_name+' | Cash '+money(cash)+' | UPI '+money(upi)+' | Cost '+money(service.internal_cost*qty)+'?'))return;
-  const payload=JSON.stringify([service.id,name,mobile,qty,cash,upi]);
-  if(pendingRequest&&pendingRequest.payload!==payload){status('Previous save may have reached server. Retry unchanged values first, or refresh after checking Cloud Transactions.',true);return}
+  const a=amounts(),name=el('slvTxCustomer').value.trim(),mobile=el('slvTxMobile').value.trim(),mode=el('slvTxMode').value;
+  if(!a.valid||a.change<0||!name){status('Customer name, valid quantity and full payment required. UPI cannot exceed the bill.',true);return}
+  // Cash received may include change; only the net cash retained is credited.
+  const payload=JSON.stringify([a.service.id,name,mobile,a.qty,a.netCash,a.upi,mode]);
+  if(pendingRequest&&pendingRequest.payload!==payload){status('Uncertain previous save: retry unchanged values, or verify Cloud Transactions before new entry.',true);return}
+  if(!confirm((mode==='later'?'Save PENDING':'Complete NOW')+' • '+a.service.service_name+' × '+a.qty+' • Bill '+money(a.due)+' • Change '+money(Math.max(0,a.change))+'?'))return;
   if(!pendingRequest)pendingRequest={payload,id:crypto.randomUUID()};
   busy=true;el('slvTxSave').disabled=true;
   const overlay=el('slvLoadingOverlay'),card=el('slvLoaderCard');
   try{
    const db=await employeeDb();
    if(overlay&&card){card.className='slv-loader-card slv-transaction-loading';el('slvLoaderLetter').textContent='₹';el('slvLoaderMessage').textContent='Saving cloud transaction...';overlay.classList.add('active')}
-   const response=await db.rpc('slv_post_auto_wallet',{
-    p_request_id:pendingRequest.id,p_service_id:service.id,p_customer_name:name,p_customer_mobile:mobile,
-    p_quantity:qty,p_cash_amount:cash,p_upi_amount:upi
-   });
+   const rpc=mode==='later'?'slv_save_pending_application':'slv_post_auto_wallet';
+   const response=await db.rpc(rpc,{p_request_id:pendingRequest.id,p_service_id:a.service.id,p_customer_name:name,p_customer_mobile:mobile,p_quantity:a.qty,p_cash_amount:a.netCash,p_upi_amount:a.upi});
    if(response.error)throw response.error;
-   const txId=response.data;
    pendingRequest=null;
-   status('Cloud Transaction Saved ✓ ID: '+txId);
+   status((mode==='later'?'Pending Application Saved ✓':'Completed Transaction Saved ✓')+' ID: '+response.data);
    el('slvTxCustomer').value='';el('slvTxMobile').value='';el('slvTxQty').value='1';el('slvTxCash').value='0';el('slvTxUpi').value='0';
    window.slvTxUpdatePreview();
-   if(typeof window.slvShowTransactionSuccess==='function')window.slvShowTransactionSuccess(cash+upi,1);
-  }catch(e){
-   status('Not confirmed: '+(e.message||String(e))+'. Retry with unchanged values; do not start another transaction until verified.',true);
-  }finally{if(overlay)overlay.classList.remove('active');busy=false;el('slvTxSave').disabled=false}
+   if(typeof window.slvShowTransactionSuccess==='function')window.slvShowTransactionSuccess(a.due,1);
+   window.slvPendingRefresh().catch(()=>{});
+  }catch(e){status('Not confirmed: '+(e.message||String(e))+'. Retry unchanged values; verify cloud records before changing details.',true)}
+  finally{overlay?.classList.remove('active');busy=false;window.slvTxUpdatePreview()}
  };
- // No automatic submit, avoiding duplicate charges.
+ window.slvPendingOpen=()=>{el('slvPendingShade').classList.add('open');el('slvPendingDrawer').classList.add('open');el('slvPendingDrawer').setAttribute('aria-hidden','false');window.slvPendingRefresh()};
+ window.slvPendingClose=()=>{el('slvPendingShade').classList.remove('open');el('slvPendingDrawer').classList.remove('open');el('slvPendingDrawer').setAttribute('aria-hidden','true')};
+ window.slvPendingRefresh=async()=>{
+  if(pendingBusy)return;pendingBusy=true;
+  const list=el('slvPendingList');list.textContent='Loading pending applications…';
+  try{
+   const db=await employeeDb();
+   const r=await db.from('transactions').select('id,service_name,customer_name,customer_mobile,quantity,customer_amount,internal_cost,created_at,application_status').eq('application_status','pending').order('created_at',{ascending:false}).limit(200);
+   if(r.error)throw r.error;
+   const rows=r.data||[];el('slvPendingCount').textContent=String(rows.length)+(rows.length===200?'+':'');
+   list.replaceChildren();if(!rows.length){list.textContent='No pending applications.';return}
+   rows.forEach(t=>{
+    const card=document.createElement('div');card.className='slv-pending-item';
+    card.innerHTML='<strong>'+esc(t.service_name)+'</strong> — '+esc(t.quantity)+' application(s)<div>Customer: '+esc(t.customer_name)+'</div><div>Mobile: '+esc(t.customer_mobile||'—')+'</div><div>Collected: '+money(t.customer_amount)+'</div><div>Processing debit on completion: '+money(t.internal_cost)+'</div><small>'+esc(new Date(t.created_at).toLocaleString('en-IN'))+'</small>';
+    const btn=document.createElement('button');btn.className='btn-green';btn.textContent='✓ Complete Application';btn.onclick=()=>window.slvPendingComplete(t.id,t.service_name,t.internal_cost);
+    card.appendChild(btn);list.appendChild(card);
+   });
+  }catch(e){list.textContent='Unable to load pending applications: '+(e.message||String(e));el('slvPendingCount').textContent='!'}
+  finally{pendingBusy=false}
+ };
+ window.slvPendingComplete=async(id,service,cost)=>{
+  if(pendingBusy)return;
+  if(!confirm('Complete '+service+'? Processing wallet will be debited '+money(cost)+' once.'))return;
+  pendingBusy=true;
+  try{
+   const db=await employeeDb();
+   const r=await db.rpc('slv_complete_pending_application',{p_transaction_id:id});
+   if(r.error)throw r.error;
+   status('Pending application completed ✓');
+  }catch(e){alert('Completion not confirmed: '+(e.message||String(e))+'; refresh and verify before retrying.')}
+  finally{pendingBusy=false;await window.slvPendingRefresh()}
+ };
 })();
 </script>
 <script>
