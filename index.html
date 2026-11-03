@@ -505,9 +505,25 @@ button:hover{transform:translateY(-1px);box-shadow:0 7px 18px rgba(6,27,59,.16)}
 @keyframes slvSheen{0%,25%{transform:translateX(-70%)}75%,100%{transform:translateX(70%)}}
 @media(prefers-reduced-motion:reduce){.slv-loader-card *{animation-duration:.01ms!important;animation-delay:0ms!important}}
 
+
+/* SLV premium transaction motion — visual-only, no accounting changes */
+@keyframes slvTxEnter{from{opacity:0;transform:translateY(15px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes slvTxCheck{0%{transform:scale(.35) rotate(-30deg);opacity:0}65%{transform:scale(1.12) rotate(4deg);opacity:1}100%{transform:scale(1) rotate(0);opacity:1}}
+@keyframes slvTxPulse{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.3)}50%{box-shadow:0 0 0 14px rgba(34,197,94,0)}}
+.slv-tx-enter{animation:slvTxEnter .42s ease both}
+.slv-tx-success{position:fixed;inset:0;z-index:100005;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(4,18,42,.86);backdrop-filter:blur(9px)}
+.slv-tx-success.active{display:flex}
+.slv-tx-success-card{width:min(420px,95vw);padding:35px 25px;text-align:center;border:1px solid rgba(214,181,92,.6);border-radius:24px;background:linear-gradient(155deg,#102d54,#071a35);color:#fff;box-shadow:0 24px 70px rgba(0,0,0,.4);animation:slvTxEnter .38s ease both}
+.slv-tx-success-check{width:92px;height:92px;margin:0 auto 18px;display:grid;place-items:center;border:3px solid #42e59d;border-radius:50%;font-size:49px;color:#42e59d;animation:slvTxCheck .55s ease both,slvTxPulse 1.5s ease .5s 2}
+.slv-tx-success-card h3{color:#fff;font-size:22px;margin:8px 0}
+.slv-tx-success-card p{color:#cbdcf2;font-size:13px;line-height:1.6}
+.slv-tx-success-amount{font-size:32px;font-weight:900;color:#f5d77d;margin:14px 0}
+.slv-tx-success-line{height:5px;border-radius:5px;background:linear-gradient(90deg,#3388ff,#f5d77d,#42e59d);margin:19px 0 0}
+@media(prefers-reduced-motion:reduce){.slv-tx-enter,.slv-tx-success-card,.slv-tx-success-check{animation:none!important}}
 </style>
 </head>
 <body>
+<div id="slvTxSuccess" class="slv-tx-success" role="status" aria-live="polite" aria-label="Transaction successful"><div class="slv-tx-success-card"><div class="slv-tx-success-check">✓</div><h3>Transaction Successful</h3><p>SLV Communications • Payment Recorded</p><div class="slv-tx-success-amount" id="slvTxSuccessAmount">₹0.00</div><p id="slvTxSuccessCount">Wallet balances updated</p><div class="slv-tx-success-line"></div></div></div>
 <div id="slvLoadingOverlay" aria-live="polite" aria-label="SLV loading">
   <div class="slv-loader-card" id="slvLoaderCard">
     <div class="slv-loader-brand">SLV</div>
@@ -622,6 +638,18 @@ button:hover{transform:translateY(-1px);box-shadow:0 7px 18px rgba(6,27,59,.16)}
       <select id="srvWallet"></select>
       <button class="btn-orange" onclick="saveService()">+ Save Service Rule</button>
       <div id="servicesAdminList"></div>
+      <div id="slvCloudServiceMap" class="section-box" style="margin-top:18px;border:1px solid #d3dff8;background:#f8fbff">
+        <h4>☁️ Cloud Service → Wallet Mapping (Admin)</h4>
+        <p class="muted">Supabase services and cloud wallets only. Existing browser-local services and balances are not changed.</p>
+        <button type="button" onclick="slvMapRefresh()">↻ Load Cloud Services & Wallets</button>
+        <label for="slvMapService">Cloud Service</label><select id="slvMapService"></select>
+        <label for="slvMapCash">Cash collection wallet</label><select id="slvMapCash"></select>
+        <label for="slvMapUpi">UPI collection wallet</label><select id="slvMapUpi"></select>
+        <label for="slvMapCost">Service cost debit wallet</label><select id="slvMapCost"></select>
+        <button type="button" class="btn-green" onclick="slvMapSave()">Save Cloud Mapping</button>
+        <p id="slvMapStatus" class="muted" role="status">Load cloud data to begin.</p>
+      </div>
+
     </div>
 
     <div id="adminWallets" class="section-box admin-section" style="border-left:4px solid #137333">
@@ -633,6 +661,21 @@ button:hover{transform:translateY(-1px);box-shadow:0 7px 18px rgba(6,27,59,.16)}
         <select id="wLogo"><option>💼</option><option>⚡</option><option>📄</option><option>🏛️</option></select>
       </div>
       <button class="btn-green" onclick="saveWallet()">+ Add Wallet</button>
+
+      <div id="slvCloudWalletPanel" class="section-box" style="border:1px solid #d3dff8;background:#f8fbff;margin:18px 0">
+        <h4>☁️ Cloud Wallet Management — Admin</h4>
+        <p class="muted">Supabase wallets only. Existing browser-local wallets and balances remain unchanged. Do not re-enter an existing balance without checking it.</p>
+        <div class="row"><button type="button" onclick="slvCloudRefresh()">↻ Refresh Cloud Wallets</button></div>
+        <p id="slvCloudStatus" class="muted" role="status">Login as Supabase Admin, then refresh.</p>
+        <label for="slvCloudName">Wallet Name</label><input id="slvCloudName" maxlength="100" placeholder="e.g. Axis Bank">
+        <div class="row">
+          <select id="slvCloudType" aria-label="Wallet Type"><option value="bank">Bank</option><option value="cash">Cash</option><option value="upi">UPI</option><option value="service">Service Wallet</option><option value="other">Other</option></select>
+          <input id="slvCloudOpening" type="number" min="0" step="0.01" value="0" placeholder="Opening balance ₹" aria-label="Opening balance">
+        </div>
+        <button type="button" class="btn-green" onclick="slvCloudCreate()">+ Add Cloud Wallet</button>
+        <div id="slvCloudList"></div>
+      </div>
+      <p class="muted">Below: older browser-local wallet controls (not synced with Supabase). Use Cloud Wallet Management above for new shared wallets.</p>
       <div id="walletsAdminList"></div>
       <hr>
       <h4>Wallet Load / Manual Debit</h4>
@@ -1504,8 +1547,9 @@ function processCheckout(){
   }
   write('slvMasterWallets',wallets);write('slvWalletTransactions',history);write(KEYS.transactions,txs);renderMonthlyTarget();renderCashWallet();
   $('msg').style.color='#137333';$('msg').textContent='Transaction విజయవంతంగా పూర్తయింది. Wallet balance debit అయింది! ✓';
+  slvShowTransactionSuccess(total,newTransactions.length);
   $('cartContainer').innerHTML='';$('grandTotal').textContent='0.00';
-  setTimeout(()=>showView('employeeView'),1200);
+  setTimeout(()=>showView('employeeView'),1750);
 }
 (function init(){
   toggleLoginInputs();
@@ -1675,7 +1719,7 @@ function processCheckout(){
           };
 
           saveLoginSession(currentUser);
-          showView('adminView');
+          runSlvLoader('admin','Admin Login Successful • Opening Dashboard...',2100,()=>showView('adminView'));
 
         } catch (error) {
           alert('Admin Login Failed: ' + error.message);
@@ -1746,7 +1790,7 @@ try {
   }
 
   saveLoginSession(currentUser);
-  showView('employeeView');
+  runSlvLoader('employee','Employee Login Successful • Opening Dashboard...',1850,()=>showView('employeeView'));
 
 } catch (error) {
   alert('Employee Login Failed: ' + error.message);
@@ -1875,6 +1919,142 @@ try {
   };
 
   document.head.appendChild(cdn);
+})();
+</script>
+<script>
+/* SLV cloud wallets: Supabase admin RPC only. Does not change localStorage. */
+(function(){
+  const node=id=>document.getElementById(id);
+  const fmt=value=>'₹'+Number(value||0).toFixed(2);
+  const status=message=>{const n=node('slvCloudStatus');if(n)n.textContent=message};
+  let pending=false;
+  async function adminDb(){
+    const db=window.slvSupabase;
+    if(!db)throw Error('Supabase connection is not ready. Check internet.');
+    const auth=await db.auth.getUser();
+    if(auth.error||!auth.data?.user)throw Error('Supabase Admin login required.');
+    const result=await db.from('profiles').select('role,is_active').eq('id',auth.data.user.id).single();
+    if(result.error||result.data?.role!=='admin'||result.data?.is_active!==true)throw Error('Active Admin permission required.');
+    return db;
+  }
+  async function guarded(action){
+    if(pending)return;
+    pending=true;
+    try{await action()}catch(error){status('Error: '+(error.message||String(error)))}finally{pending=false}
+  }
+  async function rpc(db,name,params){const response=await db.rpc(name,params);if(response.error)throw response.error;return response.data}
+  async function refresh(){
+    const db=await adminDb();
+    const response=await db.from('wallets').select('id,wallet_name,wallet_type,balance,is_active').is('owner_user_id',null).order('wallet_name');
+    if(response.error)throw response.error;
+    const list=node('slvCloudList');list.replaceChildren();
+    for(const wallet of response.data||[]){
+      const row=document.createElement('div');row.className='emp-row';row.style.flexWrap='wrap';
+      const info=document.createElement('div');info.style.flex='1';
+      info.textContent=wallet.wallet_name+' ('+wallet.wallet_type+') • '+fmt(wallet.balance)+(wallet.is_active?'':' • Archived');row.append(info);
+      const button=(label,callback)=>{const b=document.createElement('button');b.type='button';b.className='btn-small';b.textContent=label;b.onclick=()=>guarded(callback);row.append(b)};
+      button('Rename',async()=>{
+        const name=prompt('New wallet name',wallet.wallet_name);if(name===null)return;
+        if(!name.trim()||name.trim().length>100)throw Error('Enter a valid wallet name.');
+        const db=await adminDb();await rpc(db,'slv_manage_wallet',{p_action:'rename',p_wallet_id:wallet.id,p_name:name.trim(),p_type:null,p_opening_balance:null});await refresh();
+      });
+      if(wallet.is_active)button('Credit / Debit',async()=>{
+        const rawType=prompt('Enter CREDIT or DEBIT','CREDIT');if(rawType===null)return;
+        const type=rawType.trim().toUpperCase();if(!['CREDIT','DEBIT'].includes(type))throw Error('Use CREDIT or DEBIT.');
+        const raw=prompt('Amount ₹');if(raw===null)return;
+        if(!/^\d+(\.\d{1,2})?$/.test(raw)||Number(raw)<=0)throw Error('Enter a positive amount with up to 2 decimals.');
+        const description=prompt('Reason / reference','');if(description===null)return;
+        if(!confirm(type+' '+fmt(raw)+' for '+wallet.wallet_name+'?'))return;
+        const db=await adminDb();await rpc(db,'slv_admin_wallet_adjust',{p_wallet_id:wallet.id,p_entry_type:type,p_amount:Number(raw),p_description:description});await refresh();
+      });
+      button(wallet.is_active?'Archive':'Restore',async()=>{
+        const action=wallet.is_active?'archive':'restore';
+        if(!confirm(action.toUpperCase()+' '+wallet.wallet_name+'?'))return;
+        const db=await adminDb();await rpc(db,'slv_manage_wallet',{p_action:action,p_wallet_id:wallet.id,p_name:null,p_type:null,p_opening_balance:null});await refresh();
+      });
+      list.append(row);
+    }
+    status((response.data||[]).length+' cloud wallet(s) loaded. Browser-local balances are unchanged.');
+  }
+  window.slvCloudRefresh=()=>guarded(refresh);
+  window.slvCloudCreate=()=>guarded(async()=>{
+    const name=node('slvCloudName').value.trim(),type=node('slvCloudType').value,raw=node('slvCloudOpening').value;
+    if(!name||name.length>100||!/^\d+(\.\d{1,2})?$/.test(raw))throw Error('Valid wallet name and opening balance required.');
+    if(!confirm('Create cloud wallet '+name+' with '+fmt(raw)+' opening balance? Existing local balances will NOT be imported.'))return;
+    const db=await adminDb();await rpc(db,'slv_manage_wallet',{p_action:'create',p_wallet_id:null,p_name:name,p_type:type,p_opening_balance:Number(raw)});
+    node('slvCloudName').value='';node('slvCloudOpening').value='0';await refresh();
+  });
+})();
+</script>
+<script>
+/* Presentation-only success animation; triggered AFTER existing checkout writes finish. */
+(function(){
+ let closeTimer;
+ window.slvShowTransactionSuccess=function(amount,count){
+  const overlay=document.getElementById('slvTxSuccess');if(!overlay)return;
+  document.getElementById('slvTxSuccessAmount').textContent='₹'+Number(amount||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+  document.getElementById('slvTxSuccessCount').textContent=count+' service transaction'+(count===1?'':'s')+' recorded';
+  overlay.classList.add('active');clearTimeout(closeTimer);
+  closeTimer=setTimeout(()=>overlay.classList.remove('active'),1600);
+ };
+ const original=window.renderTransactions;
+ if(typeof original==='function'){
+  window.renderTransactions=function(){const result=original.apply(this,arguments);
+   const container=document.querySelector('#adminView .admin-section#adminTransactions');
+   if(container)container.querySelectorAll('.tx-row').forEach((row,i)=>{row.classList.remove('slv-tx-enter');row.style.animationDelay=Math.min(i,12)*45+'ms';row.classList.add('slv-tx-enter')});
+   return result;
+  };
+ }
+})();
+</script>
+<script>
+/* Cloud service mapping: admin-only Supabase RPC, no local balance mutations. */
+(function(){
+ const el=id=>document.getElementById(id);
+ let busy=false, services=[], wallets=[], mappings=[];
+ const status=msg=>{if(el('slvMapStatus'))el('slvMapStatus').textContent=msg};
+ async function admin(){
+  const db=window.slvSupabase;
+  if(!db)throw Error('Supabase connection not ready');
+  const a=await db.auth.getUser();if(a.error||!a.data?.user)throw Error('Please log in as cloud Admin');
+  const p=await db.from('profiles').select('role,is_active').eq('id',a.data.user.id).single();
+  if(p.error||p.data?.role!=='admin'||p.data?.is_active!==true)throw Error('Active Admin required');
+  return db;
+ }
+ async function run(fn){if(busy)return;busy=true;try{await fn()}catch(e){status('Error: '+(e.message||String(e)))}finally{busy=false}}
+ function fill(id,options){const select=el(id);select.replaceChildren();const none=new Option('— Not mapped —','');select.add(none);options.forEach(o=>select.add(new Option(o.label,o.id)))}
+ function apply(){const id=el('slvMapService').value;const m=mappings.find(x=>x.service_id===id)||{};
+  for(const [field,key] of [['slvMapCash','cash_wallet_id'],['slvMapUpi','upi_wallet_id'],['slvMapCost','cost_wallet_id']])el(field).value=m[key]||'';
+ }
+ window.slvMapRefresh=()=>run(async()=>{
+  const db=await admin();
+  const [s,w,m]=await Promise.all([
+   db.from('services').select('id,service_name,customer_rate,internal_cost,is_active').eq('is_active',true).order('service_name'),
+   db.from('wallets').select('id,wallet_name,balance,is_active').is('owner_user_id',null).eq('is_active',true).order('wallet_name'),
+   db.from('slv_service_wallet_map').select('service_id,cash_wallet_id,upi_wallet_id,cost_wallet_id')
+  ]);
+  for(const result of [s,w,m])if(result.error)throw result.error;
+  services=s.data||[];wallets=w.data||[];mappings=m.data||[];
+  fill('slvMapService',services.map(x=>({id:x.id,label:x.service_name+' • Rate ₹'+x.customer_rate+' / Cost ₹'+x.internal_cost})));
+  const opts=wallets.map(x=>({id:x.id,label:x.wallet_name+' • ₹'+Number(x.balance||0).toFixed(2)}));
+  for(const id of ['slvMapCash','slvMapUpi','slvMapCost'])fill(id,opts);
+  el('slvMapService').onchange=apply;
+  if(services.length)el('slvMapService').value=services[0].id;
+  apply();status(services.length+' services, '+wallets.length+' active wallets loaded. Mapping changes only after Save.');
+ });
+ window.slvMapSave=()=>run(async()=>{
+  const id=el('slvMapService').value;if(!id||!services.some(x=>x.id===id))throw Error('Select a cloud service');
+  const ids=['slvMapCash','slvMapUpi','slvMapCost'].map(k=>el(k).value||null);
+  if(!ids.some(Boolean))throw Error('Map at least one wallet');
+  if(ids.some(x=>x&&!wallets.some(w=>w.id===x)))throw Error('Refresh wallets and select active wallets');
+  const name=services.find(x=>x.id===id).service_name;
+  if(!confirm('Save cloud wallet mapping for '+name+'? This does not process a transaction.'))return;
+  const db=await admin();const res=await db.rpc('slv_set_service_wallet_map',{
+   p_service_id:id,p_cash_wallet_id:ids[0],p_upi_wallet_id:ids[1],p_cost_wallet_id:ids[2]
+  });if(res.error)throw res.error;
+  mappings=mappings.filter(x=>x.service_id!==id);mappings.push({service_id:id,cash_wallet_id:ids[0],upi_wallet_id:ids[1],cost_wallet_id:ids[2]});
+  status('Saved cloud mapping for '+name+'. Employee checkout is STILL local and must not be used as a cloud transaction.');
+ });
 })();
 </script>
 </body>
