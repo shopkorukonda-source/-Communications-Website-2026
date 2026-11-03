@@ -3279,9 +3279,26 @@ body.slv-service-modal-open{overflow:hidden}
 
  function renderHistory(){
   const tally=read('slvLocalTallyHistory');$('slvTallyHistory').textContent=tally.length?tally.slice(0,8).map(t=>new Date(t.at).toLocaleString('en-IN')+' • '+(t.note||'Count')+' • '+t.items.length+' wallets • Difference '+money(t.items.reduce((s,x)=>s+x.difference,0))).join(' | '):'No local tally records';
-  if(admin())window.slvExchangeLoadCloud();
+  // History is loaded when the admin opens this section, after authentication.
  }
  document.addEventListener('DOMContentLoaded',renderHistory);
+ // Refresh from Supabase whenever the reconciliation section becomes visible.
+ const reconcile=document.getElementById('adminReconcile');
+ if(reconcile){
+  let lastOpen=false;
+  const observer=new MutationObserver(()=>{
+   const opened=reconcile.classList.contains('active-admin-section') && !document.getElementById('adminView')?.classList.contains('hidden');
+   if(opened && !lastOpen)window.slvExchangeLoadCloud();
+   lastOpen=opened;
+  });
+  observer.observe(reconcile,{attributes:true,attributeFilter:['class']});
+  const adminView=document.getElementById('adminView');
+  if(adminView)observer.observe(adminView,{attributes:true,attributeFilter:['class']});
+ }
+ // Also refresh when returning to the tab while reconciliation is open.
+ document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden && reconcile?.classList.contains('active-admin-section') && !document.getElementById('adminView')?.classList.contains('hidden'))window.slvExchangeLoadCloud();
+ });
 })();
 </script>
 
