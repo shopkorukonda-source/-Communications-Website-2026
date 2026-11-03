@@ -1055,7 +1055,17 @@ function getEmployees(){
   if(!emps){emps={SLV01:{name:'Bhanu Katakam',pass:'123456',shift:'09:00 AM - 03:00 PM'}};write(KEYS.employees,emps)}
   return emps;
 }
+let slvAuthWatchdog=null;
 function slvAuthLoaderStart(kind,message){
+  clearTimeout(slvAuthWatchdog);
+  slvAuthWatchdog=setTimeout(()=>{
+    const o=document.getElementById('slvLoadingOverlay');
+    if(o?.classList.contains('active')){
+      o.classList.remove('active');
+      const m=document.getElementById('slvLoginFeedback');
+      if(m){m.textContent='Login is taking longer than expected. Check internet connection; do not submit again until the request finishes.';m.style.display='block';}
+    }
+  },12000);
   const overlay=document.getElementById('slvLoadingOverlay');
   const card=document.getElementById('slvLoaderCard');
   if(!overlay||!card)return;
@@ -1065,6 +1075,7 @@ function slvAuthLoaderStart(kind,message){
   overlay.classList.add('active');
 }
 function slvAuthLoaderStop(){
+  clearTimeout(slvAuthWatchdog);
   const overlay=document.getElementById('slvLoadingOverlay');
   if(overlay)overlay.classList.remove('active');
 }
@@ -1076,7 +1087,9 @@ function runSlvLoader(kind,message,duration,done){
   overlay.classList.remove('active');
   void overlay.offsetWidth;
   overlay.classList.add('active');
-  window.setTimeout(()=>{overlay.classList.remove('active');if(typeof done==='function')done()},duration||1900);
+  window.setTimeout(()=>{
+    try{if(typeof done==='function')done()}finally{overlay.classList.remove('active')}
+  },Math.min(duration||1900,650));
 }
 /* Personalized greeting: local presentation only, no database writes. */
 function slvShowPersonalGreeting(viewId){
@@ -1148,7 +1161,7 @@ function handleLogin(){
       const records=getAttendance(),idx=records.findIndex(x=>x.employeeId===id&&x.day===attendance.day);
       if(idx>=0)records[idx]=attendance;saveAttendance(records);
     }
-    saveLoginSession(currentUser);runSlvLoader('employee','Employee Login Successful • Opening Dashboard...',1850,()=>showView('employeeView'));
+    saveLoginSession(currentUser);runSlvLoader('employee','Employee Login Successful • Opening Dashboard...',550,()=>showView('employeeView'));
   }else alert('తప్పు యూజర్ ఐడీ లేదా పాస్‌వర్డ్!');
 }
 function requireUser(){
@@ -1850,7 +1863,7 @@ function processCheckout(){
   const saved=readLoginSession();
   if(saved&&saved.role==='Admin'){currentUser=saved;showView('adminView')}
   else if(saved&&saved.role==='Employee'){currentUser=saved;showView('employeeView')}
-  else {showView('loginView');runSlvLoader('website','Loading SLV Communications...',1500,()=>{});}
+  else {showView('loginView');runSlvLoader('website','Loading SLV Communications...',550,()=>{});}
 })();
 </script>
 <script>
@@ -2016,7 +2029,7 @@ function processCheckout(){
 
           saveLoginSession(currentUser);
           slvAuthLoaderStop();
-          runSlvLoader('admin','Admin Login Successful • Opening Dashboard...',2100,()=>showView('adminView'));
+          runSlvLoader('admin','Admin Login Successful • Opening Dashboard...',550,()=>showView('adminView'));
 
         } catch (error) {
           slvAuthLoaderStop();
@@ -2093,7 +2106,7 @@ try {
 
   saveLoginSession(currentUser);
   slvAuthLoaderStop();
-  runSlvLoader('employee','Employee Login Successful • Opening Dashboard...',1850,()=>showView('employeeView'));
+  runSlvLoader('employee','Employee Login Successful • Opening Dashboard...',550,()=>showView('employeeView'));
 
 } catch (error) {
   slvAuthLoaderStop();
@@ -2619,5 +2632,112 @@ if(typeof original==='function')window.renderAdmin=function(){const result=origi
   setTimeout(()=>clearInterval(boot),30000);
 })();
 </script>
+
+<style>
+/* SLV action-specific loaders — presentation only; no financial state mutations. */
+.slv-loader-card[data-action] .slv-loader-symbol:before{content:attr(data-symbol)!important;display:block!important;position:relative;z-index:2;font-size:52px;font-weight:900;color:#f5d77d;animation:slvActionFloat 1s ease-in-out infinite}
+.slv-loader-card[data-action] .slv-loader-symbol:after{content:""!important;display:block!important;position:absolute;width:105px;height:105px;border:5px solid rgba(75,161,255,.15);border-top-color:var(--slv-action-color,#40d5ff);border-right-color:#f5d77d;border-radius:50%;animation:slvRingRotate 1s linear infinite}
+.slv-loader-card[data-action] .slv-s-letter,.slv-loader-card[data-action] .slv-v-mark,.slv-loader-card[data-action] .slv-check-ring{display:none!important}
+.slv-loader-card[data-action] .slv-progress span{width:38%;animation:slvTxProgress 1.1s linear infinite;background:linear-gradient(90deg,var(--slv-action-color,#40d5ff),#f5d77d)}
+@keyframes slvActionFloat{50%{transform:translateY(-6px) scale(1.06)}}
+#slvActionNotice{position:fixed;right:18px;bottom:18px;z-index:9990;background:#09284f;color:#fff;border:1px solid #d8ad45;border-radius:13px;padding:12px 18px;box-shadow:0 10px 32px #001a3955;font-size:13px;max-width:min(350px,90vw);pointer-events:none;opacity:0;transform:translateY(8px);transition:opacity .2s,transform .2s}
+#slvActionNotice.visible{opacity:1;transform:translateY(0)}
+@media(prefers-reduced-motion:reduce){.slv-loader-card[data-action] .slv-loader-symbol:before,.slv-loader-card[data-action] .slv-loader-symbol:after{animation:none!important}}
+</style>
+<div id="slvActionNotice" role="status" aria-live="polite"></div>
+<script>
+/* Unique visual indicators for actions. Never show a success tick before a server confirms success. */
+(function(){
+ const modes={
+  wallet:{symbol:'💼',color:'#2dd4bf',message:'Updating cloud wallets…'},
+  mapping:{symbol:'🔗',color:'#a78bfa',message:'Loading service wallet mapping…'},
+  services:{symbol:'🛠',color:'#60a5fa',message:'Loading cloud services…'},
+  settings:{symbol:'⚙',color:'#fbbf24',message:'Saving cloud settings…'},
+  report:{symbol:'📊',color:'#38bdf8',message:'Preparing report…'},
+  shift:{symbol:'🕘',color:'#f59e0b',message:'Checking shift…'},
+  gps:{symbol:'📍',color:'#34d399',message:'Checking shop location…'},
+  transaction:{symbol:'₹',color:'#4ade80',message:'Saving cloud transaction…'},
+  dashboard:{symbol:'▦',color:'#60a5fa',message:'Opening dashboard…'}
+ };
+ let owner=0, noticeTimer;
+ const el=id=>document.getElementById(id);
+ function show(mode){
+   const data=modes[mode]||modes.dashboard,overlay=el('slvLoadingOverlay'),card=el('slvLoaderCard');
+   if(!overlay||!card)return 0;
+   const token=++owner;
+   card.className='slv-loader-card';card.dataset.action=mode;card.dataset.symbol=data.symbol;
+   card.style.setProperty('--slv-action-color',data.color);
+   const message=el('slvLoaderMessage');if(message)message.textContent=data.message;
+   overlay.classList.add('active');return token;
+ }
+ function hide(token){if(token!==owner)return;const overlay=el('slvLoadingOverlay'),card=el('slvLoaderCard');overlay?.classList.remove('active');if(card){delete card.dataset.action;delete card.dataset.symbol;}}
+ function notice(message){const box=el('slvActionNotice');if(!box)return;box.textContent=message;box.classList.add('visible');clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>box.classList.remove('visible'),850)}
+ // Wrap only async cloud functions. Existing server-side success/error handling remains authoritative.
+ function wrapAsync(name,mode){
+   const original=window[name];if(typeof original!=='function'||original.__slvActionWrapped)return;
+   const wrapped=function(...args){
+     const token=show(mode);let result;
+     try{result=original.apply(this,args)}catch(e){hide(token);throw e}
+     if(result&&typeof result.then==='function')return Promise.resolve(result).finally(()=>hide(token));
+     hide(token);return result;
+   };
+   wrapped.__slvActionWrapped=true;window[name]=wrapped;
+ }
+ // Cloud refresh uses a guarded wrapper that may return immediately while its async operation continues;
+ // avoid misleading completion visuals on that specific function.
+ ['slvTxLoadServices','slvMapRefresh','slvMapSave','slvSaveShiftRules','slvLoadShiftRules','slvSetShopGps','slvVerifyShiftStart'].forEach(name=>wrapAsync(name,
+   /Map/.test(name)?'mapping':/Services/.test(name)?'services':/Gps/.test(name)?'gps':/ShiftStart/.test(name)?'shift':'settings'));
+ // Cloud wallet and checkout already manage their own real-operation loaders.
+ // Navigation gets a lightweight, nonblocking indicator rather than a blocking artificial delay.
+ const oldMenu=window.adminMenuGo;
+ if(typeof oldMenu==='function')window.adminMenuGo=function(section,...args){const labels={adminSettings:'⚙ Shop Settings',adminServices:'🛠 Services',adminWallets:'💼 Wallets',adminTarget:'🎯 Monthly Target',adminEmployees:'👥 Employees',adminAttendance:'🕘 Attendance',adminLeaves:'🌴 Leave Requests',adminTransactions:'📊 Transactions'};const r=oldMenu.call(this,section,...args);notice('Opening '+(labels[section]||'Dashboard')+'…');return r};
+ const oldEmployeeMenu=window.employeeMenuGo;
+ if(typeof oldEmployeeMenu==='function')window.employeeMenuGo=function(section,...args){const r=oldEmployeeMenu.call(this,section,...args);notice(section==='servicesView'?'💼 Opening services…':'▦ Opening dashboard…');return r};
+})();
+</script>
+
+
+<style>
+/* SLV animated error notification — separate from successful transaction animations */
+#slvErrorLayer{position:fixed;inset:0;z-index:110010;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(5,16,38,.65);backdrop-filter:blur(5px)}
+#slvErrorLayer.show{display:flex}
+.slv-error-panel{width:min(420px,100%);padding:28px 25px 24px;border-radius:22px;background:#fff;text-align:center;box-shadow:0 26px 85px rgba(0,0,0,.27);border-top:5px solid #e04455;animation:slvErrorEnter .33s cubic-bezier(.2,.8,.25,1) both}
+.slv-error-symbol{width:78px;height:78px;border:4px solid #e04455;border-radius:50%;display:grid;place-items:center;margin:0 auto 15px;color:#d82f47;font-size:44px;font-weight:800;animation:slvErrorShake .48s ease .16s both;background:#fff2f4}
+.slv-error-panel h3{color:#a92235;font-size:21px;margin:0 0 10px}
+#slvErrorText{color:#35425b;font-size:14px;line-height:1.6;overflow-wrap:anywhere;white-space:pre-wrap}
+.slv-error-panel button{width:100%;margin:20px 0 0;background:linear-gradient(105deg,#ba263d,#e04455);font-size:14px;min-height:44px}
+@keyframes slvErrorEnter{from{opacity:0;transform:translateY(18px) scale(.93)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes slvErrorShake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}
+@media(prefers-reduced-motion:reduce){.slv-error-panel,.slv-error-symbol{animation:none}}
+</style>
+<div id="slvErrorLayer" role="alertdialog" aria-modal="true" aria-labelledby="slvErrorHeading" aria-describedby="slvErrorText">
+ <div class="slv-error-panel"><div class="slv-error-symbol" aria-hidden="true">!</div><h3 id="slvErrorHeading">Action Failed</h3><div id="slvErrorText"></div><button type="button" id="slvErrorDismiss">OK, Got it</button></div>
+</div>
+<script>
+(function(){
+ const layer=document.getElementById('slvErrorLayer'), message=document.getElementById('slvErrorText'), dismiss=document.getElementById('slvErrorDismiss');
+ const nativeAlert=window.alert.bind(window);
+ let lastFocus=null;
+ function isError(text){
+   return /error|failed|failure|invalid|incorrect|denied|unauthori[sz]ed|forbidden|not found|not allowed|timed? ?out|network|offline|insufficient|cannot|could not|unable|wrong|mismatch|already exists|already closed|missing|required|must|negative|తప్పు|లోపం|విఫలం|కుదరలేదు|లేదు|కాదు|సరిపడా|నింపండి|నమోదు చేయండి|ఎంచుకోండి|అనుమతి లేదు|మ్యాచ్|చేయలేరు|మూసివేయబడింది|ఆగిపోయింది/i.test(text);
+ }
+ function showError(text){
+   // Stop any visual spinner; never claim a failed operation succeeded.
+   document.getElementById('slvLoadingOverlay')?.classList.remove('active');
+   lastFocus=document.activeElement;
+   message.textContent=String(text||'Something went wrong. Please try again.');
+   layer.classList.remove('show');void layer.offsetWidth;layer.classList.add('show');
+   dismiss.focus();
+ }
+ function closeError(){layer.classList.remove('show');if(lastFocus&&typeof lastFocus.focus==='function')lastFocus.focus();}
+ dismiss.addEventListener('click',closeError);
+ layer.addEventListener('click',e=>{if(e.target===layer)closeError()});
+ document.addEventListener('keydown',e=>{if(layer.classList.contains('show')&&e.key==='Escape'){e.preventDefault();closeError()}});
+ window.slvShowError=showError;
+ // Existing alert calls stay intact for successes. Error alerts receive the animated dialog.
+ window.alert=function(value){const text=String(value??'');if(isError(text))showError(text);else nativeAlert(text)};
+})();
+</script>
+
 </body>
 </html>
