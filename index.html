@@ -2268,7 +2268,7 @@ try {
         await new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,90)));
       }
       await action();
-    }catch(error){status('Error: '+(error.message||String(error)))}
+    }catch(error){const msg='Wallet action failed: '+(error.message||String(error));status(msg);console.error('[SLV cloud wallet]',error);if(typeof window.slvShowError==='function')window.slvShowError(msg);else alert(msg)}
     finally{if(overlay)overlay.classList.remove('active');pending=false}
   }
   async function rpc(db,name,params){const response=await db.rpc(name,params);if(response.error)throw response.error;return response.data}
@@ -2277,8 +2277,8 @@ try {
     const response=await db.from('wallets').select('id,wallet_name,wallet_type,balance,is_active').is('owner_user_id',null).order('wallet_name');
     if(response.error)throw response.error;
     const logoRes=await db.from('slv_wallet_branding').select('wallet_id,logo_data');
-    if(logoRes.error)throw Error('Wallet logo setup required: Run the supplied SQL first. '+logoRes.error.message);
-    const logoById=new Map((logoRes.data||[]).map(x=>[x.wallet_id,x.logo_data]));
+    // Logos are optional: missing branding table must never block wallet balances.
+    const logoById=new Map((logoRes.error?[]:(logoRes.data||[])).map(x=>[x.wallet_id,x.logo_data]));
     const list=node('slvCloudList');list.replaceChildren();
     for(const wallet of response.data||[]){
       const row=document.createElement('div');row.className='emp-row';row.style.flexWrap='wrap';
@@ -2309,15 +2309,21 @@ try {
         const db=await adminDb();const result=await db.from('slv_wallet_branding').delete().eq('wallet_id',wallet.id);
         if(result.error)throw result.error;await refresh();
       });
-      if(wallet.is_active)button('Credit / Debit',async()=>{
+      if(wallet.is_active){const creditButton=document.createElement('button');creditButton.type='button';creditButton.className='btn-small';creditButton.textContent='Credit / Debit';creditButton.onclick=async()=>{try{
         const rawType=prompt('Enter CREDIT or DEBIT','CREDIT');if(rawType===null)return;
         const type=rawType.trim().toUpperCase();if(!['CREDIT','DEBIT'].includes(type))throw Error('Use CREDIT or DEBIT.');
         const raw=prompt('Amount ₹');if(raw===null)return;
         if(!/^\d+(\.\d{1,2})?$/.test(raw)||Number(raw)<=0)throw Error('Enter a positive amount with up to 2 decimals.');
         const description=prompt('Reason / reference','');if(description===null)return;
         if(!confirm(type+' '+fmt(raw)+' for '+wallet.wallet_name+'?'))return;
-        const db=await adminDb();await rpc(db,'slv_admin_wallet_adjust',{p_wallet_id:wallet.id,p_entry_type:type,p_amount:Number(raw),p_description:description});await refresh();
-      });
+        await guarded(async()=>{
+          status('Saving '+type+' '+fmt(raw)+' to Supabase...');
+          const db=await adminDb();
+          await rpc(db,'slv_admin_wallet_adjust',{p_wallet_id:wallet.id,p_entry_type:type,p_amount:Number(raw),p_description:description});
+          await refresh();
+          status(type+' '+fmt(raw)+' saved successfully for '+wallet.wallet_name+'.');
+        });
+      }catch(error){const msg='Wallet input error: '+(error.message||String(error));status(msg);alert(msg)} };row.append(creditButton);}
       button(wallet.is_active?'Archive':'Restore',async()=>{
         const action=wallet.is_active?'archive':'restore';
         if(!confirm(action.toUpperCase()+' '+wallet.wallet_name+'?'))return;
