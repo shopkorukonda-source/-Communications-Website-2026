@@ -760,7 +760,7 @@ body:has(#employeeView:not(.hidden)) .main-header {
       <div class="slv-clock" data-mode="digital" aria-label="Live India date and time"><div class="slv-clock-face" aria-hidden="true"><i class="slv-clock-hand slv-clock-hour"></i><i class="slv-clock-hand slv-clock-minute"></i><i class="slv-clock-hand slv-clock-second"></i><i class="slv-clock-dot"></i></div><div><div class="slv-clock-date">Loading date...</div><div class="slv-clock-time">--:--:--</div></div><select class="slv-clock-style" aria-label="Choose clock model" title="Change clock model"><option value="digital">Digital</option><option value="analog">Analog</option><option value="compact">Compact</option></select></div>
       <button class="btn-secondary btn-small" onclick="logout()">Logout</button>
     </div>
-    <div class="slv-admin-shortcuts"><button type="button" onclick="adminMenuGo('adminServices')">🛠 Services</button><button type="button" onclick="adminMenuGo('adminWallets')">💼 Wallets</button><button type="button" onclick="adminMenuGo('adminReconcile')">🧮 Real Cash & Tally</button><select aria-label="Leave and shift reports" onchange="if(this.value){adminMenuGo(this.value);this.value=''}"><option value="">🌴 Leaves & Shifts ▾</option><option value="adminLeaves">Leave Requests</option><option value="adminAttendance">Attendance & Shifts</option></select></div><div id="adminWalletTopStrip" class="admin-wallet-top-strip" aria-label="All wallet balances">
+    <div class="slv-admin-shortcuts"><button type="button" onclick="adminMenuGo('adminServices')">🛠 Services</button><button type="button" onclick="adminMenuGo('adminWallets')">💼 Wallets</button><button type="button" onclick="adminMenuGo('adminEmployees');slvLoadCloudAssignments()">👥 Assign Employee Wallet</button><button type="button" onclick="adminMenuGo('adminReconcile')">🧮 Real Cash & Tally</button><select aria-label="Leave and shift reports" onchange="if(this.value){adminMenuGo(this.value);this.value=''}"><option value="">🌴 Leaves & Shifts ▾</option><option value="adminLeaves">Leave Requests</option><option value="adminAttendance">Attendance & Shifts</option></select></div><div id="adminWalletTopStrip" class="admin-wallet-top-strip" aria-label="All wallet balances">
       <div class="wallet-strip-heading">💼 Live Wallet Balances</div>
       <div id="adminWalletTopCards" class="admin-wallet-top-cards"></div>
     </div>
@@ -963,6 +963,17 @@ body:has(#employeeView:not(.hidden)) .main-header {
       </div>
       <button class="btn-green" onclick="addEmployee()">+ Add Employee</button>
       <div id="empListContainer"></div>
+      <div class="section-box" id="slvCloudAssignments" style="border:2px solid #cbdcf8;margin-top:18px">
+        <h4>☁️ Supabase Employee Wallet Assignment</h4>
+        <p class="muted">Cloud Employee & Wallet ఎంచుకుని Assign / Remove చేయండి. పై Local Wallet Access వేరు; అది Supabaseని మార్చదు.</p>
+        <button type="button" onclick="slvLoadCloudAssignments()">🔄 Load Cloud Employees & Wallets</button>
+        <label for="slvCloudEmployee">Cloud Employee</label><select id="slvCloudEmployee" onchange="slvRenderCloudAssignments()"><option value="">Load first</option></select>
+        <label for="slvCloudWallet">Cloud Wallet</label><select id="slvCloudWallet"><option value="">Load first</option></select>
+        <div class="row"><button type="button" class="btn-green" onclick="slvChangeCloudAssignment('add')">+ Assign Wallet</button><button type="button" class="btn-red" onclick="slvChangeCloudAssignment('remove')">Remove Wallet Assignment</button></div>
+        <div id="slvCloudAssignStatus" class="muted" role="status">Not loaded</div>
+        <div id="slvCloudAssignedList" class="muted"></div>
+      </div>
+
     </div>
 
     <div id="adminAttendance" class="section-box admin-section">
@@ -3207,6 +3218,65 @@ body.slv-service-modal-open{overflow:hidden}
   const ex=read('slvLocalExchangeHistory');$('slvExchangeHistory').textContent=ex.length?ex.slice(0,8).map(t=>new Date(t.at).toLocaleString('en-IN')+' • '+t.type+' • '+money(t.given)+' • '+t.note).join(' | '):'No exchanges recorded';
  }
  document.addEventListener('DOMContentLoaded',renderHistory);
+})();
+</script>
+
+<script>
+/* Cloud employee wallet assignment. RLS must enforce admin-only writes. */
+(function(){
+let employees=[],wallets=[],assignments=[];
+const el=id=>document.getElementById(id);
+const status=t=>{el('slvCloudAssignStatus').textContent=t};
+async function adminClient(){
+ const db=window.slvSupabase;if(!db)throw Error('Supabase connection not ready');
+ const {data:{user},error}=await db.auth.getUser();if(error||!user)throw Error('Supabase login required');
+ const p=await db.from('profiles').select('role,is_active').eq('id',user.id).single();
+ if(p.error||p.data?.role!=='admin'||p.data?.is_active!==true)throw Error('Active Supabase Admin required');
+ return db;
+}
+async function query(db,table,fields='*'){
+ const r=await db.from(table).select(fields);if(r.error)throw r.error;return r.data||[];
+}
+window.slvLoadCloudAssignments=async function(){
+ try{
+  status('Loading from Supabase…');const db=await adminClient();
+  [employees,wallets,assignments]=await Promise.all([query(db,'profiles'),query(db,'wallets'),query(db,'slv_employee_wallet_assignments')]);
+  employees=employees.filter(x=>x.role==='employee'&&x.is_active!==false);
+  const ep=el('slvCloudEmployee'),wp=el('slvCloudWallet'),previous=ep.value;
+  ep.replaceChildren(new Option('Select Employee',''));
+  employees.forEach(x=>ep.add(new Option(x.full_name||x.employee_code||x.id,x.id)));
+  ep.value=employees.some(x=>x.id===previous)?previous:'';
+  wp.replaceChildren(new Option('Select Wallet',''));
+  wallets.forEach(x=>wp.add(new Option(x.name||x.wallet_name||x.id,x.id)));
+  status('Loaded '+employees.length+' cloud employees, '+wallets.length+' wallets, '+assignments.length+' assignments.');
+  window.slvRenderCloudAssignments();
+ }catch(e){status('Error: '+e.message)}
+};
+window.slvRenderCloudAssignments=function(){
+ const id=el('slvCloudEmployee').value,root=el('slvCloudAssignedList');root.replaceChildren();
+ if(!id){root.textContent='Select an employee to see assigned wallets.';return}
+ const rows=assignments.filter(x=>x.employee_user_id===id);
+ if(!rows.length){root.textContent='No cloud wallet assignments found.';return}
+ const h=document.createElement('p');h.textContent='Currently assigned wallets:';root.append(h);
+ rows.forEach(x=>{const w=wallets.find(z=>z.id===x.wallet_id);const p=document.createElement('div');p.textContent='✓ '+(w?.name||w?.wallet_name||x.wallet_id);root.append(p)})
+};
+window.slvChangeCloudAssignment=async function(mode){
+ const employee=el('slvCloudEmployee').value,wallet=el('slvCloudWallet').value;
+ if(!employee||!wallet){status('Select both Employee and Wallet.');return}
+ const existing=assignments.find(x=>x.employee_user_id===employee&&x.wallet_id===wallet);
+ if(mode==='add'&&existing){status('This wallet is already assigned.');return}
+ if(mode==='remove'&&!existing){status('No matching assignment to remove.');return}
+ if(mode==='remove'&&!confirm('Remove this wallet assignment?'))return;
+ try{
+  status('Saving in Supabase…');const db=await adminClient();
+  let r;
+  if(mode==='add')r=await db.from('slv_employee_wallet_assignments').insert({employee_user_id:employee,wallet_id:wallet});
+  else r=await db.from('slv_employee_wallet_assignments').delete().eq('employee_user_id',employee).eq('wallet_id',wallet).select();
+  if(r.error)throw r.error;
+  if(mode==='remove'&&(!r.data||!r.data.length))throw Error('No rows deleted. Check RLS / existing assignment.');
+  await window.slvLoadCloudAssignments();status(mode==='add'?'Wallet assignment saved to Supabase ✓':'Wallet assignment removed from Supabase ✓');
+ }catch(e){status('Save failed: '+e.message)}
+};
 })();
 </script>
 </body>
