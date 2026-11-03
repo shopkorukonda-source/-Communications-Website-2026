@@ -1390,7 +1390,8 @@ function postCashWalletTxn(){
 }
 function renderWallets(){
   const wallets=getWallets(),list=$('walletsAdminList'),txnSel=$('walletTxnSelect'),srvSel=$('srvWallet');
-  list.innerHTML='';txnSel.innerHTML='';srvSel.innerHTML='';
+  list.innerHTML='';txnSel.innerHTML='';
+  // Cloud owns the service wallet dropdown; do not overwrite it with local wallets.
   wallets.forEach((w,i)=>{
     const row=document.createElement('div');row.className='emp-row';
     const info=document.createElement('div');const name=document.createElement('b');name.textContent=(w.logo||'💼')+' '+w.name;
@@ -1398,7 +1399,7 @@ function renderWallets(){
     info.append(name,bal);
     const del=document.createElement('button');del.className='btn-red btn-small';del.textContent='Delete';del.onclick=()=>deleteWallet(i);
     row.append(info,del);list.append(row);
-    [txnSel,srvSel].forEach(sel=>{const op=document.createElement('option');op.value=w.name;op.textContent=w.name+' (₹'+Number(w.balance||0).toFixed(2)+')';sel.append(op)});
+    {const op=document.createElement('option');op.value=w.name;op.textContent=w.name+' (₹'+Number(w.balance||0).toFixed(2)+')';txnSel.append(op)};
   });
   if(!wallets.length){list.textContent='No wallets added yet.'}
   renderAdminWalletTopCards(wallets);
@@ -3577,6 +3578,17 @@ window.slvChangeCloudAssignment=async function(mode){
    const db=await adminDb();
    const r=await db.from('services').select('id,category,service_name,customer_rate,internal_cost,is_active,settings').order('service_name');
    if(r.error)throw r.error;rows=r.data||[];
+   // Read cloud wallets for display only. Financial mapping is saved exclusively
+   // through slvMapSave / slv_set_service_wallet_map (UUID based).
+   const walletSelect=$('srvWallet');
+   if(walletSelect){
+     const previous=walletSelect.value;
+     walletSelect.replaceChildren(new Option('— Choose cloud wallet (mapping saved below) —',''));
+     const wr=await db.from('wallets').select('id,wallet_name,is_active').is('owner_user_id',null).eq('is_active',true).order('wallet_name');
+     if(wr.error)throw wr.error;
+     (wr.data||[]).forEach(w=>walletSelect.add(new Option(w.wallet_name,w.id)));
+     if([...walletSelect.options].some(o=>o.value===previous))walletSelect.value=previous;
+   }
    const target=$('servicesAdminList');if(!target)return;target.replaceChildren();
    rows.forEach((s,i)=>{
      const row=document.createElement('div');row.className='emp-row';
@@ -3632,7 +3644,7 @@ window.slvChangeCloudAssignment=async function(mode){
      window.cancelServiceEdit();
      await refresh();
      try{await window.slvMapRefresh?.()}catch(e){console.warn('Wallet mapping refresh:',e)}
-     alert('Service saved in Supabase Cloud. Please configure Cloud Service → Wallet Mapping before employee transactions.');
+     alert('Service saved in Supabase Cloud. The wallet dropdown above is a preview only. To save a wallet link, use Cloud Service → Wallet Mapping below and press Save Cloud Mapping.');
    }catch(e){showError(e)}finally{busy=false}
  };
  const oldMenu=window.adminMenuGo;
