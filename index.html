@@ -3432,7 +3432,7 @@ window.slvChangeCloudAssignment=async function(mode){
 })();
 </script>
 <script>
-/* SLV Leaves: cloud-only workflow. Does not mutate legacy browser leave storage. */
+/* SLV Leaves: cloud-only workflow. Build: leave-type-normalized-20261103. Does not mutate legacy browser leave storage. */
 (function(){
  const $id=id=>document.getElementById(id);
  let pending=false;
@@ -3451,14 +3451,18 @@ window.slvChangeCloudAssignment=async function(mode){
  function line(parent,first,second){const row=document.createElement('div');row.className='leave-row';const a=document.createElement('div');a.textContent=first;const b=document.createElement('b');b.textContent=second;row.append(a,b);parent.append(row);return row;}
  window.applyLeave=async function(){
    if(pending)return;
-   const from=$id('leaveDate')?.value,to=$id('leaveToDate')?.value||from,reason=$id('leaveReason')?.value.trim(),type=$id('leaveType')?.value||'paid';
+   const from=$id('leaveDate')?.value,to=$id('leaveToDate')?.value||from,reason=$id('leaveReason')?.value.trim();
+   const rawType=String($id('leaveType')?.value||'').trim().toLowerCase();
+   const typeMap={'paid':'paid','paid leave':'paid','unpaid':'unpaid','unpaid leave':'unpaid','split':'split','split leave':'split','split leave (paid + unpaid)':'split'};
+   const type=typeMap[rawType];
+   if(!type)return alert('Invalid Leave Type: '+rawType+'. Please refresh the latest website.');
    if(!from||!to||to<from)return alert('Valid From Date and To Date select చేయండి');
    if(!reason)return alert('Leave reason enter చేయండి');
    pending=true;
    try{
      const {db,user}=await identity(false);
      const {error}=await db.from('leave_requests').insert({employee_user_id:user.id,from_date:from,to_date:to,leave_type:type,reason,status:'pending'});
-     if(error)throw error;
+     if(error)throw Error(error.message+' (sent leave_type='+type+')');
      $id('leaveDate').value='';$id('leaveToDate').value='';$id('leaveReason').value='';
      await window.slvLoadMyCloudLeaves();
      alert('Leave request saved in Supabase Cloud');
