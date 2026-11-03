@@ -760,7 +760,7 @@ body:has(#employeeView:not(.hidden)) .main-header {
       <div class="slv-clock" data-mode="digital" aria-label="Live India date and time"><div class="slv-clock-face" aria-hidden="true"><i class="slv-clock-hand slv-clock-hour"></i><i class="slv-clock-hand slv-clock-minute"></i><i class="slv-clock-hand slv-clock-second"></i><i class="slv-clock-dot"></i></div><div><div class="slv-clock-date">Loading date...</div><div class="slv-clock-time">--:--:--</div></div><select class="slv-clock-style" aria-label="Choose clock model" title="Change clock model"><option value="digital">Digital</option><option value="analog">Analog</option><option value="compact">Compact</option></select></div>
       <button class="btn-secondary btn-small" onclick="logout()">Logout</button>
     </div>
-    <div id="adminWalletTopStrip" class="admin-wallet-top-strip" aria-label="All wallet balances">
+    <div class="slv-admin-shortcuts"><button type="button" onclick="adminMenuGo('adminServices')">🛠 Services</button><button type="button" onclick="adminMenuGo('adminWallets')">💼 Wallets</button><button type="button" onclick="adminMenuGo('adminReconcile')">🧮 Real Cash & Tally</button><select aria-label="Leave and shift reports" onchange="if(this.value){adminMenuGo(this.value);this.value=''}"><option value="">🌴 Leaves & Shifts ▾</option><option value="adminLeaves">Leave Requests</option><option value="adminAttendance">Attendance & Shifts</option></select></div><div id="adminWalletTopStrip" class="admin-wallet-top-strip" aria-label="All wallet balances">
       <div class="wallet-strip-heading">💼 Live Wallet Balances</div>
       <div id="adminWalletTopCards" class="admin-wallet-top-cards"></div>
     </div>
@@ -770,6 +770,7 @@ body:has(#employeeView:not(.hidden)) .main-header {
       <button class="side-menu-link" onclick="adminMenuGo('adminSettings')">⚙️ Shop Settings</button>
       <button class="side-menu-link" onclick="adminMenuGo('adminServices')">🛠️ Services & Profit Rules</button>
       <button class="side-menu-link" onclick="adminMenuGo('adminWallets')">💼 Wallet Management</button>
+      <button class="side-menu-link" onclick="adminMenuGo('adminReconcile')">🧮 Real Cash & Wallet Tally</button>
       <button class="side-menu-link" onclick="adminMenuGo('adminTarget')">🎯 Monthly Target Wallet</button>
       <button class="side-menu-link" onclick="adminMenuGo('adminEmployees')">👥 Employees & Wallet Access</button>
       <button class="side-menu-link" onclick="adminMenuGo('adminAttendance')">📅 Employee Attendance & Shift Reports</button>
@@ -915,6 +916,23 @@ body:has(#employeeView:not(.hidden)) .main-header {
       <div id="cashWalletHistory" class="muted"></div>
     </div>
 
+    <div id="adminReconcile" class="section-box admin-section" style="border-left:4px solid #178367">
+      <h4>🧮 Real Cash & Wallet Tally</h4>
+      <p class="muted">Business wallet balance vs actual counted balance. This is a local reconciliation record on this browser only. It does not adjust Supabase balances or profit.</p>
+      <button type="button" onclick="slvTallyLoad()">↻ Refresh Business Wallets</button>
+      <div id="slvTallyRows" aria-live="polite"></div>
+      <label for="slvTallyNote">Count / Reconciliation Note</label><input id="slvTallyNote" placeholder="e.g. End of day physical count">
+      <button type="button" class="btn-green" onclick="slvTallySave()">Save Local Tally Snapshot</button>
+      <p id="slvTallyStatus" class="muted" role="status"></p>
+      <h4 style="margin-top:18px">💵 Notes / Coins Exchange Register</h4>
+      <p class="muted">Equal value notes-to-change exchanges have zero profit. Register only; do not credit cash a second time.</p>
+      <label>Exchange Type</label><select id="slvExchangeType"><option>Big Notes → Small Notes</option><option>Notes → Coins</option><option>Coins → Notes</option></select>
+      <div class="row"><div><label>Cash Given ₹</label><input id="slvExchangeGiven" type="number" min="0.01" step="0.01" placeholder="Given"></div><div><label>Cash Received ₹</label><input id="slvExchangeReceived" type="number" min="0.01" step="0.01" placeholder="Received"></div></div>
+      <label>Denomination / Reference</label><input id="slvExchangeNote" placeholder="₹500 × 4 → ₹100 × 20">
+      <button type="button" onclick="slvExchangeSave()">Save Local Exchange Entry</button>
+      <div id="slvExchangeHistory" class="muted"></div>
+      <h4 style="margin-top:18px">🗂 Local Tally History</h4><div id="slvTallyHistory" class="muted"></div>
+    </div>
     <div id="adminTarget" class="section-box admin-section target-wallet-section">
       <h4>🎯 Monthly Target Wallet — Service Profit</h4>
       <p class="muted">ప్రతి Serviceలో Admin నమోదు చేసిన Profit ఆధారంగా Daily Income మరియు Monthly Target లెక్కించబడతాయి.</p>
@@ -988,7 +1006,7 @@ body:has(#employeeView:not(.hidden)) .main-header {
       <button class="side-menu-link side-logout" onclick="logout()">🚪 Logout</button>
     </aside>
     <div id="holidayAlert" class="banner">🚨 HOLIDAY: <span id="holidayText"></span></div>
-    <div class="slab-box"><b>🕒 Assigned Shift:</b> <span id="shiftInfo" style="color:#1a73e8">Loading...</span></div>
+    <div class="slab-box slv-extra-employee"><b>🕒 Assigned Shift:</b> <span id="shiftInfo" style="color:#1a73e8">Loading...</span></div>
     <section id="attendancePanel" class="section-box attendance-panel">
       <h4>🕘 Today's Attendance & Shift</h4>
       <div class="attendance-stats">
@@ -1004,11 +1022,11 @@ body:has(#employeeView:not(.hidden)) .main-header {
       </div>
       <p class="muted">Shift Start login సమయంలో ఆటోమేటిక్‌గా నమోదు అవుతుంది. Shift Close కోసం కింద Cash Tally పూర్తి చేయండి.</p>
     </section>
-    <div class="slab-box" style="background:#e6f4ea;border-color:#34a853;margin-top:10px">
+    <div class="slab-box slv-extra-employee" style="background:#e6f4ea;border-color:#34a853;margin-top:10px">
       <b id="drawerTitle">💵 Cash Drawer:</b>
       <div style="font-size:22px;font-weight:bold;color:#137333">₹ <span id="drawerCash">0</span></div>
     </div>
-    <h3 style="margin-top:18px">⚡ Quick Access</h3>
+    <h3 style="margin-top:18px">⚡ Quick Actions</h3>
     <div class="cash-wallet-employee-card">
       <span>💵 Live Cash Wallet</span>
       <strong>₹<b id="employeeCashWalletBalance">0.00</b></strong>
@@ -1016,17 +1034,17 @@ body:has(#employeeView:not(.hidden)) .main-header {
     </div>
     <div class="grid">
       <div class="tile" onclick="showView('servicesView')"><span>💼</span>Services Counter</div>
-      <div class="tile" onclick="toggleEmployeeMenu(true)"><span>☰</span>My Menu & Wallets</div>
+      <div class="tile" onclick="document.getElementById('slvLeaveDetails').open=true;document.getElementById('slvLeaveDetails').scrollIntoView({behavior:'smooth'})"><span>🌴</span>Apply Leave</div>
     </div>
     <button class="btn-orange shift-close-trigger" onclick="openShiftClose()">🔒 Shift Off / Cash Tally</button>
     <div id="shiftClosePanel" class="shift-close-panel" style="display:none"></div>
-    <h3 style="margin-top:18px">🌴 Apply for Leave</h3>
+    <details id="slvLeaveDetails" class="section-box"><summary style="cursor:pointer;font-weight:800">🌴 Apply for Leave</summary>
     <label for="leaveDate">Leave Date</label>
     <input id="leaveDate" type="date" required>
     <label for="leaveReason">Reason for leave</label>
     <input id="leaveReason" placeholder="Reason for leave">
-    <button class="btn-green" onclick="applyLeave()">Submit Leave</button>
-    <div class="section-box">
+    <button class="btn-green" onclick="applyLeave()">Submit Leave</button></details>
+    <div class="section-box slv-extra-employee">
       <h4>📢 Shop Announcement</h4>
       <div id="employeeHolidayText" class="muted">No current announcement.</div>
     </div>
@@ -1038,12 +1056,12 @@ body:has(#employeeView:not(.hidden)) .main-header {
     <section id="slvCloudCheckout" class="section-box" style="margin:12px 0">
       <h3>☁️ Cloud Service Checkout</h3>
       <p class="muted">Supabase wallet mapping ఆధారంగా transaction save అవుతుంది. ఒకసారి ఒక Service మాత్రమే.</p>
-      <label for="slvTxService">Cloud Service</label><select id="slvTxService"><option value="">Load services first</option></select>
+      <label for="slvServiceSearch">🔎 Search Service</label><div class="slv-service-picker"><input id="slvServiceSearch" type="search" autocomplete="off" placeholder="Type service name (PAN, Xerox, Aadhaar...)" aria-controls="slvServiceSuggestions" aria-expanded="false"><div id="slvServiceSuggestions" class="slv-service-suggestions" role="listbox" hidden></div></div><label for="slvTxService" class="slv-native-service-label">Selected Service</label><select id="slvTxService" aria-label="Selected Cloud Service"><option value="">Load services first</option></select>
       <button type="button" class="btn-secondary btn-small" onclick="slvTxLoadServices()">↻ Load Cloud Services</button>
-      <label for="slvTxCustomer">Customer Name</label><input id="slvTxCustomer" maxlength="120" placeholder="Customer name" autocomplete="off">
-      <label for="slvTxMobile">Customer Mobile (optional)</label><input id="slvTxMobile" inputmode="numeric" maxlength="15" placeholder="Mobile number" autocomplete="off">
+      <input id="slvTxCustomer" type="hidden" value="Walk-in Customer">
+      <input id="slvTxMobile" type="hidden" value="">
       <label for="slvTxQty">Quantity</label><input id="slvTxQty" type="number" min="1" max="10000" step="1" value="1" oninput="slvTxUpdatePreview()">
-      <label for="slvTxCash">Cash Received ₹</label><input id="slvTxCash" type="number" min="0" step="0.01" value="0" oninput="slvTxUpdatePreview()">
+      <div class="slv-payment-shortcuts"><button type="button" class="btn-small" onclick="slvPaymentQuick('cash')">💵 Cash</button><button type="button" class="btn-small" onclick="slvPaymentQuick('upi')">📱 UPI</button><button type="button" class="btn-small" onclick="slvPaymentQuick('split')">Cash + UPI</button></div><label for="slvTxCash">Cash Received ₹</label><input id="slvTxCash" type="number" min="0" step="0.01" value="0" oninput="slvTxUpdatePreview()">
       <label for="slvTxUpi">UPI Received ₹</label><input id="slvTxUpi" type="number" min="0" step="0.01" value="0" oninput="slvTxUpdatePreview()">
       <label for="slvTxMode">Application Processing</label>
       <select id="slvTxMode" onchange="slvTxUpdatePreview()"><option value="now">✓ Complete Now — Cost Debit Now</option><option value="later">⏳ Complete Later — Add to Pending</option></select>
@@ -1597,10 +1615,9 @@ function cleanLunchBreaks(breaks){
   const valid=source
     .filter(b=>{
       if(!b||!Number.isFinite(Number(b.startAt))||Number(b.startAt)<=0)return false;
-      // Keep an active break; completed breaks shorter than 60 seconds are
-      // treated as accidental taps and excluded from attendance reports.
+      // Keep even short completed breaks so a second lunch cannot be started.
       if(!b.endAt)return true;
-      return Number(b.endAt)-Number(b.startAt)>=60000;
+      return Number(b.endAt)>=Number(b.startAt);
     })
     .map(b=>({startAt:Number(b.startAt),endAt:b.endAt?Number(b.endAt):null}))
     .sort((a,b)=>a.startAt-b.startAt);
@@ -1665,7 +1682,7 @@ function renderAttendancePanel(){
   $('attHours').textContent=formatDuration(dur.worked);
   const status=$('attStatus');status.className='attendance-status'+(active?' on-break':rec.shiftCloseAt?' closed':'');
   status.textContent=rec.shiftCloseAt?'Shift Closed':active?'Lunch Break In Progress':'Shift In Progress';
-  $('lunchStartBtn').classList.toggle('hidden',!!active||!!rec.shiftCloseAt);
+  $('lunchStartBtn').classList.toggle('hidden',!!active||!!rec.shiftCloseAt||!!rec.lunchUsed||breaks.length>0);
   $('resumeShiftBtn').classList.toggle('hidden',!active||!!rec.shiftCloseAt);
 }
 let lunchActionBusy=false;
@@ -1675,8 +1692,9 @@ function startLunchBreak(){
   const rec=getTodayAttendance();
   if(!rec||rec.shiftCloseAt){lunchActionBusy=false;return alert('Shift ఇప్పటికే close అయింది.');}
   const breaks=cleanLunchBreaks(rec.lunchBreaks);
-  if(breaks.some(b=>!b.endAt)){lunchActionBusy=false;return alert('Lunch break ఇప్పటికే ప్రారంభమైంది.');}
+  if(rec.lunchUsed||breaks.length>0){lunchActionBusy=false;return alert('ఈ రోజు Lunch Break ఇప్పటికే ఉపయోగించారు. మళ్లీ ప్రారంభించలేరు.');}
   breaks.push({startAt:Date.now(),endAt:null});
+  rec.lunchUsed=true;
   rec.lunchBreaks=breaks;
   const all=getAttendance(),i=all.findIndex(x=>x.employeeId===rec.employeeId&&x.day===rec.day);
   if(i>=0)all[i]=rec;
@@ -1692,6 +1710,7 @@ function resumeShift(){
   const breaks=cleanLunchBreaks(rec.lunchBreaks),active=breaks.find(b=>!b.endAt);
   if(!active){lunchActionBusy=false;return alert('Active lunch break లేదు.');}
   active.endAt=Date.now();
+  rec.lunchUsed=true;
   rec.lunchBreaks=breaks;
   const all=getAttendance(),i=all.findIndex(x=>x.employeeId===rec.employeeId&&x.day===rec.day);
   if(i>=0)all[i]=rec;
@@ -2572,7 +2591,7 @@ try {
  window.slvTxSave=async()=>{
   if(busy)return;
   const a=amounts(),name=el('slvTxCustomer').value.trim(),mobile=el('slvTxMobile').value.trim(),mode=el('slvTxMode').value;
-  if(!a.valid||a.change<0||!name){status('Customer name, valid quantity and full payment required. UPI cannot exceed the bill.',true);return}
+  if(!a.valid||a.change<0||!name){status('Valid quantity and full payment required. UPI cannot exceed the bill.',true);return}
   // Cash received may include change; only the net cash retained is credited.
   const payload=JSON.stringify([a.service.id,name,mobile,a.qty,a.netCash,a.upi,mode]);
   if(pendingRequest&&pendingRequest.payload!==payload){status('Uncertain previous save: retry unchanged values, or verify Cloud Transactions before new entry.',true);return}
@@ -2588,7 +2607,7 @@ try {
    if(response.error)throw response.error;
    pendingRequest=null;
    status((mode==='later'?'Pending Application Saved ✓':'Completed Transaction Saved ✓')+' ID: '+response.data);
-   el('slvTxCustomer').value='';el('slvTxMobile').value='';el('slvTxQty').value='1';el('slvTxCash').value='0';el('slvTxUpi').value='0';
+   el('slvTxCustomer').value='Walk-in Customer';el('slvTxMobile').value='';el('slvTxQty').value='1';el('slvTxCash').value='0';el('slvTxUpi').value='0';
    window.slvTxUpdatePreview();
    if(typeof window.slvShowTransactionSuccess==='function')window.slvShowTransactionSuccess(a.due,1);
    window.slvPendingRefresh().catch(()=>{});
@@ -2881,5 +2900,314 @@ if(typeof original==='function')window.renderAdmin=function(){const result=origi
  </div>
 </div>
 <div id="slvWalletSavedToast" role="status" aria-live="polite"></div>
+
+<script>
+/* UI-only improvements: existing Supabase RPC and wallet posting are unchanged. */
+window.slvPaymentQuick = function(mode){
+ const select=document.getElementById('slvTxService');
+ const qty=Number(document.getElementById('slvTxQty').value)||0;
+ const text=select.options[select.selectedIndex]?.textContent||'';
+ const matched=text.match(/₹\s*([\d,.]+)/);
+ const rate=matched?Number(matched[1].replace(/,/g,'')):0;
+ const due=Math.round(rate*qty*100)/100;
+ if(!Number.isFinite(due)||due<=0){alert('Select a service and valid quantity first');return}
+ const cash=document.getElementById('slvTxCash'),upi=document.getElementById('slvTxUpi');
+ if(mode==='cash'){cash.value=due.toFixed(2);upi.value='0'}
+ else if(mode==='upi'){cash.value='0';upi.value=due.toFixed(2)}
+ else {cash.value='0';upi.value='0';upi.focus()}
+ if(typeof window.slvTxUpdatePreview==='function')window.slvTxUpdatePreview();
+};
+</script>
+<style>
+/* Simplified employee view, without removing existing shift and leave actions. */
+#employeeView .slv-extra-employee{display:none!important}
+#employeeView .cash-wallet-employee-card{margin:12px 0 16px}
+#employeeView .grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+#employeeView .tile{min-height:92px;padding:16px 9px}
+#employeeView .tile span{font-size:24px}
+#slvCloudCheckout{max-width:640px;margin:12px auto!important}
+#slvCloudCheckout label{margin-top:13px}
+.slv-payment-shortcuts{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0 5px}
+.slv-payment-shortcuts button{flex:1;min-width:90px;margin:0;background:#143c72}
+#slvLeaveDetails summary{padding:5px 0}
+@media(max-width:420px){#employeeView .grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+</style>
+
+<style>
+/* Compact three-column shift strip immediately above services */
+#employeeView #attendancePanel{padding:10px 12px!important;margin:9px 0 7px!important;border-radius:12px}
+#employeeView #attendancePanel h4{font-size:12px!important;margin:0 0 6px!important;padding:0!important;border:0!important}
+#employeeView .attendance-stats{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:5px!important;margin:5px 0!important}
+#employeeView .attendance-stats>div{min-width:0;padding:7px 5px!important;gap:3px!important;border-radius:8px;text-align:center}
+#employeeView .attendance-stats small{font-size:9px!important;line-height:1.2}
+#employeeView .attendance-stats b{font-size:11px!important;overflow-wrap:anywhere;line-height:1.3}
+#employeeView #attStatus{font-size:10px!important;padding:5px 7px!important;margin:6px 0!important}
+#employeeView .attendance-actions{gap:5px!important}
+#employeeView .attendance-actions button{min-width:0!important;flex:1;padding:7px 5px!important;font-size:10px!important}
+#employeeView #attendancePanel>p{display:none}
+#employeeView h3{margin:9px 0 6px!important;font-size:13px!important}
+#employeeView .cash-wallet-employee-card{margin:5px 0 8px!important;padding:9px 12px!important}
+#employeeView .cash-wallet-employee-card strong{font-size:18px!important}
+#employeeView .tile{min-height:66px!important;padding:9px 6px!important;font-size:12px!important}
+#employeeView .tile span{font-size:19px!important;margin-bottom:2px!important}
+#employeeView .shift-close-trigger{margin:9px 0!important;padding:9px!important}
+.slv-service-picker{position:relative}
+#slvServiceSearch{margin-bottom:3px}
+.slv-service-suggestions{position:absolute;top:100%;left:0;right:0;z-index:100;background:#fff;border:1px solid #c9d8eb;border-radius:11px;box-shadow:0 12px 30px rgba(10,36,76,.17);max-height:260px;overflow-y:auto;padding:4px}
+.slv-service-suggestions[hidden]{display:none!important}
+.slv-service-option{display:block;width:100%;background:#fff!important;color:#16345b!important;text-align:left;padding:11px 12px;margin:0;border-radius:7px;box-shadow:none!important;font-size:13px}
+.slv-service-option:hover,.slv-service-option:focus{background:#eaf2ff!important;transform:none!important}
+.slv-native-service-label,#slvTxService{display:none!important}
+</style>
+<script>
+/* Search UI uses existing service select, preserving cloud checkout and Supabase logic. */
+(function(){
+ const input=document.getElementById('slvServiceSearch');
+ const list=document.getElementById('slvServiceSuggestions');
+ const select=document.getElementById('slvTxService');
+ if(!input||!list||!select)return;
+ const close=()=>{list.hidden=true;input.setAttribute('aria-expanded','false')};
+ const choices=()=>Array.from(select.options).filter(o=>o.value);
+ function show(){
+   const term=input.value.trim().toLocaleLowerCase();
+   const matches=choices().filter(o=>o.textContent.toLocaleLowerCase().includes(term)).slice(0,35);
+   list.replaceChildren();
+   if(!matches.length){const empty=document.createElement('div');empty.className='muted';empty.style.padding='12px';empty.textContent=choices().length?'No matching services':'Load cloud services first';list.append(empty)}
+   matches.forEach(o=>{
+     const b=document.createElement('button');b.type='button';b.className='slv-service-option';b.setAttribute('role','option');b.textContent=o.textContent;
+     b.addEventListener('click',()=>{select.value=o.value;input.value=o.textContent;close();select.dispatchEvent(new Event('change',{bubbles:true}));});list.append(b);
+   });
+   list.hidden=false;input.setAttribute('aria-expanded','true');
+ }
+ input.addEventListener('input',()=>{select.value='';if(typeof window.slvTxUpdatePreview==='function')window.slvTxUpdatePreview();show()});
+ input.addEventListener('focus',show);
+ input.addEventListener('keydown',e=>{
+   if(e.key==='Escape')close();
+   if(e.key==='Enter'&&!list.hidden){const first=list.querySelector('button');if(first){e.preventDefault();first.click()}}
+ });
+ document.addEventListener('pointerdown',e=>{if(!e.target.closest('.slv-service-picker'))close()});
+ const observer=new MutationObserver(()=>{const selected=select.options[select.selectedIndex];if(selected&&selected.value)input.value=selected.textContent;else if(!input.matches(':focus'))input.value='';if(!list.hidden)show()});
+ observer.observe(select,{childList:true});
+})();
+</script>
+
+<style>
+#slvLunchTransactionLock{display:none;padding:13px 15px;margin:12px 0;border:1px solid #f2cb83;border-radius:12px;background:#fff8e8;color:#8a5100;font-weight:700;font-size:13px}
+#slvLunchTransactionLock.active{display:block}
+#slvEmployeeTxSection.slv-lunch-locked{opacity:.58}
+</style>
+<script>
+/* UI-only lunch gate; existing employeeDb() still validates before every cloud save. */
+(function(){
+ function isOnLunch(){
+  try{
+   if(!window.currentUser && typeof currentUser==='undefined')return false;
+   const rec=getTodayAttendance();
+   return !!(rec && !rec.shiftCloseAt && cleanLunchBreaks(rec.lunchBreaks).some(b=>!b.endAt));
+  }catch(e){return false}
+ }
+ function updateLunchGate(){
+  const save=document.getElementById('slvTxSave');
+  if(!save)return;
+  const locked=isOnLunch();
+  let notice=document.getElementById('slvLunchTransactionLock');
+  if(!notice){
+   notice=document.createElement('div');notice.id='slvLunchTransactionLock';
+   notice.setAttribute('role','status');
+   notice.textContent='🍱 Lunch Break Active — Transactions చేయాలంటే ముందుగా Resume Shift నొక్కండి.';
+   const search=document.getElementById('slvServiceSearch');
+   (search?.closest('.section-box')||search?.parentElement||save.parentElement).prepend(notice);
+  }
+  notice.classList.toggle('active',locked);
+  const ids=['slvServiceSearch','slvTxService','slvTxQty','slvTxCash','slvTxUpi','slvTxMode','slvTxSave'];
+  ids.forEach(id=>{const e=document.getElementById(id);if(e){
+   if(locked){e.disabled=true;e.dataset.slvLunchDisabled='1'}
+   else if(e.dataset.slvLunchDisabled==='1'){e.disabled=false;delete e.dataset.slvLunchDisabled}
+  }});
+  if(!locked && typeof window.slvTxUpdatePreview==='function')window.slvTxUpdatePreview();
+  if(locked)save.disabled=true;
+ }
+ function wrap(name){
+  const original=window[name];if(typeof original!=='function')return;
+  window[name]=function(...args){const r=original.apply(this,args);queueMicrotask(updateLunchGate);return r};
+ }
+ window.addEventListener('DOMContentLoaded',()=>{
+  wrap('startLunchBreak');wrap('resumeShift');wrap('renderAttendancePanel');
+  const originalSave=window.slvTxSave;
+  if(typeof originalSave==='function')window.slvTxSave=function(...args){
+   if(isOnLunch()){updateLunchGate();alert('Lunch Breakలో Transactions చేయలేరు. ముందుగా Resume Shift నొక్కండి.');return}
+   return originalSave.apply(this,args);
+  };
+  updateLunchGate();
+  document.addEventListener('click',()=>queueMicrotask(updateLunchGate));
+ });
+})();
+</script>
+
+<!-- Centered service billing popup: existing cloud checkout remains unchanged. -->
+<style>
+#slvServiceModalBackdrop{position:fixed;inset:0;background:rgba(3,18,41,.72);backdrop-filter:blur(5px);z-index:11000;display:none}
+#slvServiceModalBackdrop.active{display:block}
+#servicesView.slv-centered-popup{position:fixed!important;display:block!important;top:50%;left:50%;transform:translate(-50%,-50%);width:min(560px,calc(100vw - 24px));max-height:min(88dvh,850px);overflow-y:auto;overscroll-behavior:contain;z-index:11001;margin:0!important;padding:17px!important;border-radius:18px!important;box-shadow:0 26px 90px rgba(0,0,0,.4)!important;background:#fff}
+#servicesView.slv-centered-popup .topbar{position:sticky;top:-17px;z-index:5;background:#fff;padding:10px 2px 13px;margin:0;border-bottom:1px solid #e4eaf3}
+#servicesView.slv-centered-popup #slvCloudCheckout{margin:8px 0!important;padding:14px!important}
+#servicesView.slv-centered-popup #slvCloudCheckout h3{font-size:17px;margin-bottom:5px}
+#servicesView.slv-centered-popup #slvCloudCheckout .muted{font-size:11px}
+#servicesView.slv-centered-popup #slvCloudCheckout label{margin-top:8px}
+#servicesView.slv-centered-popup #slvCloudCheckout input,#servicesView.slv-centered-popup #slvCloudCheckout select{padding:10px;margin-bottom:5px}
+body.slv-service-modal-open{overflow:hidden}
+@media(max-width:520px){#servicesView.slv-centered-popup{max-height:92dvh;padding:12px!important}#servicesView.slv-centered-popup .topbar{top:-12px}}
+</style>
+<div id="slvServiceModalBackdrop" aria-hidden="true"></div>
+<script>
+(function(){
+ const oldShow=window.showView;
+ if(typeof oldShow!=='function')return;
+ function closeModal(){
+  const panel=document.getElementById('servicesView');
+  panel?.classList.remove('slv-centered-popup');
+  document.getElementById('slvServiceModalBackdrop')?.classList.remove('active');
+  document.body.classList.remove('slv-service-modal-open');
+  panel?.setAttribute('aria-modal','false');
+ }
+ window.showView=function(id){
+  if(id!=='servicesView'){
+   closeModal();
+   return oldShow.apply(this,arguments);
+  }
+  // Keep the employee dashboard visible behind the popup.
+  const employee=document.getElementById('employeeView');
+  if(employee?.classList.contains('hidden'))oldShow.call(this,'employeeView');
+  const panel=document.getElementById('servicesView');
+  panel.classList.remove('hidden');
+  panel.classList.add('slv-centered-popup');
+  panel.setAttribute('role','dialog');
+  panel.setAttribute('aria-modal','true');
+  panel.setAttribute('aria-label','Service Billing');
+  document.getElementById('slvServiceModalBackdrop').classList.add('active');
+  document.body.classList.add('slv-service-modal-open');
+  if(typeof window.slvTxLoadServices==='function')window.slvTxLoadServices();
+  if(typeof window.slvUpdateLunchGate==='function')window.slvUpdateLunchGate();
+  setTimeout(()=>document.getElementById('slvServiceSearch')?.focus(),80);
+ };
+ document.getElementById('slvServiceModalBackdrop').addEventListener('click',()=>window.showView('employeeView'));
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('servicesView')?.classList.contains('slv-centered-popup'))window.showView('employeeView')});
+})();
+</script>
+
+<!-- Lunch break service-access warning: UI guard; cloud save guard remains intact. -->
+<style>
+#slvLunchWarningBackdrop{position:fixed;inset:0;z-index:12000;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(3,18,41,.75);backdrop-filter:blur(5px)}
+#slvLunchWarningBackdrop.active{display:flex}
+.slv-lunch-warning-card{width:min(410px,100%);padding:27px 22px;text-align:center;background:#fff;border-radius:19px;box-shadow:0 22px 75px rgba(0,0,0,.28)}
+.slv-lunch-warning-icon{font-size:42px;margin-bottom:8px}
+.slv-lunch-warning-card h3{color:#163b6c;margin:0 0 9px}
+.slv-lunch-warning-card p{font-size:14px;color:#52647a;line-height:1.65;margin:0 0 18px}
+.slv-lunch-warning-actions{display:flex;gap:9px;justify-content:center}
+.slv-lunch-warning-actions button{flex:1;margin:0}
+</style>
+<div id="slvLunchWarningBackdrop" role="alertdialog" aria-modal="true" aria-labelledby="slvLunchWarningTitle" aria-describedby="slvLunchWarningDescription">
+ <div class="slv-lunch-warning-card">
+  <div class="slv-lunch-warning-icon" aria-hidden="true">🍱</div>
+  <h3 id="slvLunchWarningTitle">Lunch Break Active</h3>
+  <p id="slvLunchWarningDescription">మీరు ప్రస్తుతం Lunch Breakలో ఉన్నారు. Services ఉపయోగించాలంటే ముందుగా <b>Resume Shift</b> చేయాలి.</p>
+  <div class="slv-lunch-warning-actions">
+   <button type="button" class="btn-secondary" id="slvLunchWarningClose">OK</button>
+   <button type="button" class="btn-green" id="slvLunchWarningResume">▶ Resume Shift</button>
+  </div>
+ </div>
+</div>
+<script>
+(function(){
+ const warning=document.getElementById('slvLunchWarningBackdrop');
+ const showService=window.showView;
+ if(typeof showService!=='function')return;
+ function onLunch(){
+  try{const rec=getTodayAttendance();return !!(rec&&!rec.shiftCloseAt&&cleanLunchBreaks(rec.lunchBreaks).some(b=>!b.endAt))}catch(e){return false}
+ }
+ function hideWarning(){warning.classList.remove('active')}
+ window.showView=function(id){
+  if(id==='servicesView'&&onLunch()){
+   const panel=document.getElementById('servicesView');
+   if(panel?.classList.contains('slv-centered-popup'))showService.call(this,'employeeView');
+   warning.classList.add('active');
+   document.getElementById('slvLunchWarningResume').focus();
+   return;
+  }
+  hideWarning();
+  return showService.apply(this,arguments);
+ };
+ document.getElementById('slvLunchWarningClose').addEventListener('click',hideWarning);
+ document.getElementById('slvLunchWarningResume').addEventListener('click',()=>{
+  hideWarning();
+  if(!onLunch())return;
+  if(typeof window.resumeShift==='function')window.resumeShift();
+  if(!onLunch()&&typeof window.slvUpdateLunchGate==='function')window.slvUpdateLunchGate();
+ });
+ warning.addEventListener('click',e=>{if(e.target===warning)hideWarning()});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&warning.classList.contains('active')){e.stopImmediatePropagation();hideWarning()}},true);
+})();
+</script>
+<style>
+.slv-admin-shortcuts{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 6px}
+.slv-admin-shortcuts button,.slv-admin-shortcuts select{flex:1 1 135px;min-width:0;margin:0;padding:10px;font-size:12px}
+.slv-tally-line{display:grid;grid-template-columns:minmax(120px,2fr) 1fr 1fr 1fr;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #e9edf4;font-size:12px}
+.slv-tally-line input{margin:0;min-width:0;padding:9px}
+.slv-tally-line strong{overflow-wrap:anywhere}
+@media(max-width:570px){.slv-tally-line{grid-template-columns:1fr 1fr;gap:5px}.slv-tally-line strong{grid-column:1/-1}}
+</style>
+<script>
+(function(){
+ const $=id=>document.getElementById(id), money=n=>'₹'+Number(n).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+ const read=k=>{try{return JSON.parse(localStorage.getItem(k)||'[]')}catch{return []}};
+ const write=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+ let currentWallets=[];
+ function admin(){return !!(window.currentUser?.role==='Admin'||(typeof currentUser!=='undefined'&&currentUser?.role==='Admin'))}
+ window.slvTallyLoad=async function(){
+  const status=$('slvTallyStatus');if(!admin()){status.textContent='Admin login required.';return}
+  try{
+   const db=window.slvSupabase;if(!db)throw Error('Cloud connection not ready');
+   const auth=await db.auth.getUser();if(!auth.data?.user)throw Error('Cloud login required');
+   const profile=await db.from('profiles').select('role,is_active').eq('id',auth.data.user.id).single();
+   if(profile.error||profile.data?.role!=='admin'||profile.data?.is_active!==true)throw Error('Cloud admin access required');
+   const r=await db.from('wallets').select('id,wallet_name,balance').is('owner_user_id',null).eq('is_active',true).order('wallet_name');
+   if(r.error)throw r.error;currentWallets=r.data||[];
+   const wrap=$('slvTallyRows');wrap.replaceChildren();
+   for(const w of currentWallets){
+    const line=document.createElement('div');line.className='slv-tally-line';
+    const name=document.createElement('strong');name.textContent=w.wallet_name;
+    const business=document.createElement('span');business.textContent='Business: '+money(w.balance);
+    const actual=document.createElement('input');actual.type='number';actual.min='0';actual.step='0.01';actual.placeholder='Real ₹';actual.dataset.wallet=w.id;actual.setAttribute('aria-label','Real balance for '+w.wallet_name);
+    const diff=document.createElement('span');diff.textContent='Enter real balance';
+    actual.addEventListener('input',()=>{const v=Number(actual.value);diff.textContent=actual.value!==''&&Number.isFinite(v)?'Difference: '+money(v-Number(w.balance)):'Enter real balance';diff.style.color=v-Number(w.balance)===0?'#137333':'#b45309'});
+    line.append(name,business,actual,diff);wrap.append(line);
+   }
+   status.textContent='Cloud balances loaded. Actual entries are not saved until Save Local Tally Snapshot.';
+  }catch(e){status.textContent='Cannot load cloud balances: '+e.message}
+ };
+ window.slvTallySave=function(){
+  if(!admin())return alert('Admin login required');
+  if(!currentWallets.length)return alert('Refresh Business Wallets first');
+  const rows=[...$('slvTallyRows').querySelectorAll('input[data-wallet]')];
+  if(rows.some(x=>x.value.trim()===''||!Number.isFinite(Number(x.value))||Number(x.value)<0))return alert('Enter actual balance for every wallet');
+  const items=rows.map(x=>{const w=currentWallets.find(w=>w.id===x.dataset.wallet);return {wallet_id:w.id,name:w.wallet_name,business:Number(w.balance),real:Number(x.value),difference:Number((Number(x.value)-Number(w.balance)).toFixed(2))}});
+  const history=read('slvLocalTallyHistory');history.unshift({at:new Date().toISOString(),note:$('slvTallyNote').value.trim(),items});write('slvLocalTallyHistory',history.slice(0,150));
+  $('slvTallyStatus').textContent='Local tally saved on this browser only. Cloud balances and profit unchanged.';renderHistory();
+ };
+ window.slvExchangeSave=function(){
+  if(!admin())return alert('Admin login required');
+  const g=Number($('slvExchangeGiven').value),r=Number($('slvExchangeReceived').value);
+  if(!(g>0&&r>0&&Number.isFinite(g)&&Number.isFinite(r)))return alert('Enter valid given and received amounts');
+  if(Math.abs(g-r)>0.001)return alert('Given and received amounts differ. Reconcile shortage/extra separately; this register records equal-value exchanges only.');
+  const history=read('slvLocalExchangeHistory');history.unshift({at:new Date().toISOString(),type:$('slvExchangeType').value,given:g,received:r,note:$('slvExchangeNote').value.trim()});write('slvLocalExchangeHistory',history.slice(0,150));
+  $('slvExchangeGiven').value='';$('slvExchangeReceived').value='';$('slvExchangeNote').value='';renderHistory();alert('Exchange recorded locally. No wallet or profit balance changed.');
+ };
+ function renderHistory(){
+  const tally=read('slvLocalTallyHistory');$('slvTallyHistory').textContent=tally.length?tally.slice(0,8).map(t=>new Date(t.at).toLocaleString('en-IN')+' • '+(t.note||'Count')+' • '+t.items.length+' wallets • Difference '+money(t.items.reduce((s,x)=>s+x.difference,0))).join(' | '):'No local tally records';
+  const ex=read('slvLocalExchangeHistory');$('slvExchangeHistory').textContent=ex.length?ex.slice(0,8).map(t=>new Date(t.at).toLocaleString('en-IN')+' • '+t.type+' • '+money(t.given)+' • '+t.note).join(' | '):'No exchanges recorded';
+ }
+ document.addEventListener('DOMContentLoaded',renderHistory);
+})();
+</script>
 </body>
 </html>
