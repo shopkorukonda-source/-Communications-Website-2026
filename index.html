@@ -848,6 +848,23 @@ body:has(#employeeView:not(.hidden)) .main-header {
       <select id="srvWallet"></select>
       <button class="btn-orange" onclick="saveService()">+ Save Service Rule</button>
       <div id="servicesAdminList"></div>
+      <div id="slvBillSlabAdmin" class="section-box" style="border:1px solid #d6e5fa;background:#f7fbff;margin-top:18px">
+        <h4>⚡ Current Bill Payment — Portal Charge Slabs</h4>
+        <p class="muted">Cloud Admin మాత్రమే Slabs Add / Edit / Delete చేయగలరు. Amount ranges overlap కాకూడదు. Employeeకి editing access లేదు.</p>
+        <div class="row">
+          <div><label for="slvBillFrom">Bill From (₹)</label><input id="slvBillFrom" type="number" min="0" step="0.01" placeholder="1.00"></div>
+          <div><label for="slvBillTo">Bill To (₹)</label><input id="slvBillTo" type="number" min="0" step="0.01" placeholder="1000.00"></div>
+          <div><label for="slvBillFee">Portal Charge (₹)</label><input id="slvBillFee" type="number" min="0" step="0.01" placeholder="5.00"></div>
+        </div>
+        <div class="row">
+          <button type="button" class="btn-green" id="slvBillSave">+ Add Slab</button>
+          <button type="button" class="btn-secondary" id="slvBillCancel" style="display:none">Cancel Edit</button>
+          <button type="button" class="btn-secondary" id="slvBillReload">↻ Refresh Slabs</button>
+        </div>
+        <p id="slvBillStatus" class="muted" role="status">Cloud Admin login తర్వాత Refresh Slabs నొక్కండి.</p>
+        <div id="slvBillRows" style="overflow-x:auto"></div>
+      </div>
+
       <div id="slvCloudServiceMap" class="section-box" style="margin-top:18px;border:1px solid #d3dff8;background:#f8fbff">
         <h4>☁️ Cloud Service → Wallet Mapping (Admin)</h4>
         <p class="muted">Supabase services and cloud wallets only. Existing browser-local services and balances are not changed.</p>
@@ -3649,6 +3666,114 @@ window.slvChangeCloudAssignment=async function(mode){
  };
  const oldMenu=window.adminMenuGo;
  if(typeof oldMenu==='function')window.adminMenuGo=function(section,...args){const v=oldMenu.call(this,section,...args);if(section==='adminServices')refresh().catch(showError);return v};
+})();
+</script>
+<script>
+/* SLV Current Bill Payment — admin-only cloud slab management. No local accounting changes. */
+(function(){
+ 'use strict';
+ const SERVICE_ID='4ed0f512-7431-4362-ae53-c134946c0fcd';
+ const $=id=>document.getElementById(id);
+ let editing=null, busy=false;
+ function status(msg){$('slvBillStatus').textContent=msg;}
+ function fmt(v){return '₹'+Number(v).toFixed(2);}
+ async function adminDb(){
+   const db=window.slvSupabase;
+   if(!db)throw Error('Cloud connection not ready.');
+   const {data,error}=await db.auth.getUser();
+   if(error||!data?.user)throw Error('Supabase Cloud login required.');
+   const p=await db.from('profiles').select('role,is_active').eq('id',data.user.id).single();
+   if(p.error||p.data?.role!=='admin'||p.data?.is_active!==true)throw Error('Active Cloud Admin required.');
+   return db;
+ }
+ function clear(){
+   editing=null;
+   ['slvBillFrom','slvBillTo','slvBillFee'].forEach(id=>$(id).value='');
+   $('slvBillSave').textContent='+ Add Slab';
+   $('slvBillCancel').style.display='none';
+ }
+ async function refresh(){
+   const db=await adminDb();
+   const {data,error}=await db.from('slv_bill_slabs')
+     .select('id,min_amount,max_amount,portal_charge,is_active')
+     .eq('service_id',SERVICE_ID).order('min_amount');
+   if(error)throw error;
+   const wrap=$('slvBillRows');wrap.replaceChildren();
+   if(!data?.length){status('Slabs లేవు. పై Formలో మొదటి Slab Add చేయండి.');return;}
+   const table=document.createElement('table');
+   const head=document.createElement('thead');
+   const hr=document.createElement('tr');
+   ['From','To','Portal Charge','Actions'].forEach(label=>{const th=document.createElement('th');th.textContent=label;hr.append(th)});
+   head.append(hr);table.append(head);
+   const body=document.createElement('tbody');
+   for(const slab of data){
+     const tr=document.createElement('tr');
+     for(const value of [fmt(slab.min_amount),fmt(slab.max_amount),fmt(slab.portal_charge)]){
+       const td=document.createElement('td');td.textContent=value;tr.append(td);
+     }
+     const actions=document.createElement('td');
+     const edit=document.createElement('button');edit.type='button';edit.className='btn-small';edit.textContent='Edit';
+     edit.onclick=()=>{
+       editing=slab.id;
+       $('slvBillFrom').value=slab.min_amount;
+       $('slvBillTo').value=slab.max_amount;
+       $('slvBillFee').value=slab.portal_charge;
+       $('slvBillSave').textContent='Save Changes';
+       $('slvBillCancel').style.display='inline-block';
+       $('slvBillFrom').focus();
+     };
+     const del=document.createElement('button');del.type='button';del.className='btn-red btn-small';del.textContent='Delete';
+     del.onclick=async()=>{
+       if(busy||!confirm('Delete slab '+fmt(slab.min_amount)+' – '+fmt(slab.max_amount)+'?'))return;
+       busy=true;
+       try{
+         const db=await adminDb();
+         const {error}=await db.rpc('slv_manage_bill_slab',{
+           p_action:'delete',p_service_id:SERVICE_ID,p_slab_id:slab.id,
+           p_min_amount:null,p_max_amount:null,p_portal_charge:null
+         });
+         if(error)throw error;
+         clear();await refresh();status('Slab deleted from Supabase.');
+       }catch(e){status('Error: '+e.message)}finally{busy=false}
+     };
+     actions.append(edit,del);tr.append(actions);body.append(tr);
+   }
+   table.append(body);wrap.append(table);
+   status(data.length+' slab(s) loaded from Supabase.');
+ }
+ function parseMoney(id){
+   const raw=$(id).value.trim();
+   if(!/^(?:\d+)(?:\.\d{1,2})?$/.test(raw))throw Error('Enter a valid amount (maximum 2 decimal places).');
+   const n=Number(raw);
+   if(!Number.isSafeInteger(Math.round(n*100))||n>9999999999.99)throw Error('Amount too large.');
+   return n;
+ }
+ async function save(){
+   if(busy)return;
+   let min,max,fee;
+   try{min=parseMoney('slvBillFrom');max=parseMoney('slvBillTo');fee=parseMoney('slvBillFee');
+     if(max<min)throw Error('To amount must be greater than or equal to From amount.');
+   }catch(e){status('Error: '+e.message);return;}
+   busy=true;
+   try{
+     const db=await adminDb();
+     const {error}=await db.rpc('slv_manage_bill_slab',{
+       p_action:editing?'edit':'add',p_service_id:SERVICE_ID,p_slab_id:editing,
+       p_min_amount:min,p_max_amount:max,p_portal_charge:fee
+     });
+     if(error)throw error;
+     clear();await refresh();status('Slab saved in Supabase successfully.');
+   }catch(e){status('Error: '+e.message)}finally{busy=false}
+ }
+ $('slvBillSave').addEventListener('click',save);
+ $('slvBillCancel').addEventListener('click',clear);
+ $('slvBillReload').addEventListener('click',()=>refresh().catch(e=>status('Error: '+e.message)));
+ const original=window.adminMenuGo;
+ if(typeof original==='function')window.adminMenuGo=function(section,...args){
+   const result=original.call(this,section,...args);
+   if(section==='adminServices')refresh().catch(e=>status('Error: '+e.message));
+   return result;
+ };
 })();
 </script>
 </body>
