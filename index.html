@@ -3559,5 +3559,85 @@ window.slvChangeCloudAssignment=async function(mode){
  const leaveDetails=$id('slvLeaveDetails');if(leaveDetails)leaveDetails.addEventListener('toggle',()=>{if(leaveDetails.open)window.slvLoadMyCloudLeaves();});
 })();
 </script>
+<script>
+/* SLV CLOUD SERVICE ADMIN PATCH v1: existing UI, cloud-authoritative writes */
+(function(){
+ const $=id=>document.getElementById(id);
+ let rows=[],editingId=null,busy=false;
+ const money=n=>Number(n).toFixed(2);
+ const showError=e=>alert('Cloud Service: '+(e?.message||String(e)));
+ async function adminDb(){
+   const db=window.slvSupabase;if(!db)throw Error('Cloud connection not ready. Try again.');
+   const auth=await db.auth.getUser();if(auth.error||!auth.data?.user)throw Error('Cloud login required.');
+   const p=await db.from('profiles').select('role,is_active').eq('id',auth.data.user.id).single();
+   if(p.error||p.data?.role!=='admin'||p.data?.is_active!==true)throw Error('Active Cloud Admin required.');
+   return db;
+ }
+ async function refresh(){
+   const db=await adminDb();
+   const r=await db.from('services').select('id,category,service_name,customer_rate,internal_cost,is_active,settings').order('service_name');
+   if(r.error)throw r.error;rows=r.data||[];
+   const target=$('servicesAdminList');if(!target)return;target.replaceChildren();
+   rows.forEach((s,i)=>{
+     const row=document.createElement('div');row.className='emp-row';
+     const info=document.createElement('div');info.style.flex='1';
+     info.textContent=s.service_name+' • Rate ₹'+money(s.customer_rate)+' • Profit ₹'+money(Number(s.customer_rate)-Number(s.internal_cost))+' • Cost ₹'+money(s.internal_cost)+(s.is_active?'':' • Inactive');
+     const edit=document.createElement('button');edit.className='btn-small';edit.textContent='Edit';edit.onclick=()=>window.editService(i);
+     const toggle=document.createElement('button');toggle.className='btn-red btn-small';toggle.textContent=s.is_active?'Deactivate':'Activate';
+     toggle.onclick=async()=>{
+       if(!confirm((s.is_active?'Deactivate ':'Activate ')+s.service_name+'?'))return;
+       try{const db=await adminDb();const r=await db.from('services').update({is_active:!s.is_active}).eq('id',s.id).select('id');if(r.error)throw r.error;if(!r.data?.length)throw Error('No row updated. Check RLS permissions.');await refresh();await window.slvMapRefresh?.()}catch(e){showError(e)}
+     };
+     row.append(info,edit,toggle);target.append(row);
+   });
+ }
+ window.renderServicesAdmin=function(){refresh().catch(showError)};
+ window.editService=function(i){
+   const s=rows[i];if(!s)return;editingId=s.id;
+   $('srvName').value=s.service_name;
+   $('srvType').value='Fixed';$('srvValue').value=s.customer_rate;
+   $('srvProfitType').value='Fixed';$('srvProfit').value=(Number(s.customer_rate)-Number(s.internal_cost)).toFixed(2);
+   $('srvProfitSlabs').value='';window.toggleProfitRuleFields?.();
+   const b=document.querySelector('[onclick="saveService()"]');if(b)b.textContent='Update Service';
+   $('srvName').scrollIntoView({behavior:'smooth',block:'center'});
+ };
+ window.cancelServiceEdit=function(){
+   editingId=null;window.editingServiceIndex=null;
+   ['srvName','srvValue','srvProfit','srvProfitSlabs'].forEach(id=>$(id).value='');
+   $('srvType').value='Fixed';$('srvProfitType').value='Fixed';window.toggleProfitRuleFields?.();
+   const b=document.querySelector('[onclick="saveService()"]');if(b)b.textContent='+ Save Service Rule';
+ };
+ window.saveService=async function(){
+   if(busy)return;
+   const name=$('srvName').value.trim(),rateRaw=$('srvValue').value.trim(),profitRaw=$('srvProfit').value.trim();
+   const rate=Number(rateRaw),profit=Number(profitRaw);
+   if(!name||name.length>150)return alert('Valid Service Name required.');
+   if($('srvType').value!=='Fixed'||$('srvProfitType').value!=='Fixed')return alert('Cloud auto-cost supports Fixed Fee + Fixed Profit only. Slab/Percentage service rules need a separate implementation.');
+   if(!rateRaw||!profitRaw||![rate,profit].every(Number.isFinite)||rate<=0||profit<0||profit>rate)return alert('Rate must be positive, Profit between ₹0 and Rate.');
+   if([rate,profit].some(v=>Math.abs(v*100-Math.round(v*100))>0.000001))return alert('Use at most two decimal places.');
+   const cost=Math.round((rate-profit)*100)/100;
+   if(!confirm((editingId?'Update':'Add')+' '+name+'? Rate ₹'+money(rate)+'; Profit ₹'+money(profit)+'; Internal Cost ₹'+money(cost)+'. Set cloud wallet mapping separately.'))return;
+   busy=true;
+   try{
+     const db=await adminDb();
+     let payload={service_name:name,customer_rate:Math.round(rate*100)/100,internal_cost:cost,is_active:true};
+     if(editingId){
+       const existing=rows.find(x=>x.id===editingId);if(!existing)throw Error('Selected service not found. Refresh list.');
+       payload={...payload,category:existing.category,settings:{...(existing.settings||{}),slv_fixed_profit:Math.round(profit*100)/100}};
+     }else{
+       payload={...payload,category:'Fixed',settings:{slv_fixed_profit:Math.round(profit*100)/100}};
+     }
+     const q=editingId?db.from('services').update(payload).eq('id',editingId):db.from('services').insert(payload);
+     const r=await q.select('id');if(r.error)throw r.error;if(!r.data?.length)throw Error('Save not confirmed. Verify Admin INSERT/UPDATE RLS policy.');
+     window.cancelServiceEdit();
+     await refresh();
+     try{await window.slvMapRefresh?.()}catch(e){console.warn('Wallet mapping refresh:',e)}
+     alert('Service saved in Supabase Cloud. Please configure Cloud Service → Wallet Mapping before employee transactions.');
+   }catch(e){showError(e)}finally{busy=false}
+ };
+ const oldMenu=window.adminMenuGo;
+ if(typeof oldMenu==='function')window.adminMenuGo=function(section,...args){const v=oldMenu.call(this,section,...args);if(section==='adminServices')refresh().catch(showError);return v};
+})();
+</script>
 </body>
 </html>
