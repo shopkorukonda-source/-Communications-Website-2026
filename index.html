@@ -1212,7 +1212,7 @@ function handleLogin(){
     }
     if(attendance){
       attendance.sessions=attendance.sessions||[];
-      attendance.sessions.push({loginAt:Date.now(),logoutAt:null});
+      if(!attendance.sessions.some(x=>x&&x.loginAt&&!x.logoutAt))attendance.sessions.push({loginAt:Date.now(),logoutAt:null});
       const records=getAttendance(),idx=records.findIndex(x=>x.employeeId===id&&x.day===attendance.day);
       if(idx>=0)records[idx]=attendance;saveAttendance(records);
     }
@@ -1237,7 +1237,7 @@ function logout(){
     const rec=getTodayAttendance();
     if(rec){
       const sessions=rec.sessions||[],last=sessions[sessions.length-1];
-      if(last&&!last.logoutAt)last.logoutAt=Date.now();
+      sessions.forEach(x=>{if(x&&x.loginAt&&!x.logoutAt)x.logoutAt=Date.now();});
       const records=getAttendance(),idx=records.findIndex(x=>x.employeeId===rec.employeeId&&x.day===rec.day);
       if(idx>=0)records[idx]=rec;saveAttendance(records);
     }
@@ -1620,7 +1620,7 @@ function getEmployeeWalletNames(){
   return Array.isArray(emp.wallets)?emp.wallets:getWallets().map(w=>w.name);
 }
 const ATTENDANCE_KEY='slvDailyAttendance';
-function localDayKey(d=new Date()){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return y+'-'+m+'-'+day}
+function localDayKey(d=new Date()){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(d)}
 function cleanLunchBreaks(breaks){
   const source=Array.isArray(breaks)?breaks:[];
   const valid=source
@@ -1677,9 +1677,35 @@ function getTodayAttendance(){
 }
 function attendanceDurations(rec,at=Date.now()){
   if(!rec)return {worked:0,lunch:0};
-  const end=Number(rec.shiftCloseAt||at),start=Number(rec.shiftStartAt)||end;let lunch=0;
-  cleanLunchBreaks(rec.lunchBreaks).forEach(b=>{const a=Number(b.startAt)||0,z=Number(b.endAt||((!rec.shiftCloseAt)?at:end))||a;lunch+=Math.max(0,z-a)});
-  return {worked:Math.max(0,end-start-lunch),lunch};
+  const limit=Math.max(0,Math.min(Number(rec.shiftCloseAt)||at,at));
+  const sessions=Array.isArray(rec.sessions)?rec.sessions:[];
+  const work=sessions.map(x=>[Number(x.loginAt),x.logoutAt?Number(x.logoutAt):limit])
+    .filter(([a,b])=>Number.isFinite(a)&&Number.isFinite(b)&&a>0&&b>a)
+    .map(([a,b])=>[a,Math.min(b,limit)]);
+  // Legacy records without sessions cannot be reconstructed accurately.
+  const breaks=cleanLunchBreaks(rec.lunchBreaks).map(x=>[Number(x.startAt),x.endAt?Number(x.endAt):limit])
+    .filter(([a,b])=>a>0&&b>a).map(([a,b])=>[a,Math.min(b,limit)]);
+  const unionMs=(intervals)=>{
+    const sorted=intervals.filter(([a,b])=>b>a).sort((a,b)=>a[0]-b[0]);
+    let total=0,lo=null,hi=null;
+    for(const [a,b] of sorted){
+      if(lo===null){lo=a;hi=b;continue;}
+      if(a<=hi)hi=Math.max(hi,b);
+      else{total+=hi-lo;lo=a;hi=b;}
+    }
+    return total+(lo===null?0:hi-lo);
+  };
+  const boundaries=[...new Set([...work,...breaks].flat())].sort((a,b)=>a-b);
+  let worked=0,lunch=0;
+  for(let i=0;i<boundaries.length-1;i++){
+    const a=boundaries[i],b=boundaries[i+1];
+    if(b<=a)continue;
+    const inWork=work.some(([x,y])=>x<=a&&y>=b);
+    const inBreak=breaks.some(([x,y])=>x<=a&&y>=b);
+    if(inWork&&inBreak)lunch+=b-a;
+    else if(inWork)worked+=b-a;
+  }
+  return {worked,lunch:unionMs(breaks)};
 }
 function formatDuration(ms){const mins=Math.floor(Math.max(0,ms)/60000);return Math.floor(mins/60)+'h '+(mins%60)+'m'}
 function formatClock(ts){return ts?new Date(ts).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'--'}
@@ -1797,7 +1823,7 @@ async function submitShiftClose(){
   const breaks=draft.lunchBreaks||[],last=breaks[breaks.length-1];
   if(last&&!last.endAt)last.endAt=closedAt;
   const sessions=draft.sessions||[],activeSession=sessions[sessions.length-1];
-  if(activeSession&&!activeSession.logoutAt)activeSession.logoutAt=closedAt;
+  sessions.forEach(x=>{if(x&&x.loginAt&&!x.logoutAt)x.logoutAt=closedAt;});
   draft.sessions=sessions;
   draft.shiftCloseHistory=draft.shiftCloseHistory||[];
   draft.shiftCloseHistory.push({closedAt,by:currentUser.name||currentUser.id});
@@ -1997,7 +2023,7 @@ function processCheckout(){
         employee_user_id: profileId,
         work_date: rec.day,
         login_at: rec.shiftStartAt ? new Date(rec.shiftStartAt).toISOString() : null,
-        logout_at: lastSession?.logoutAt ? new Date(lastSession.logoutAt).toISOString() : null,
+        logout_at: sessions.some(x=>x&&x.loginAt&&!x.logoutAt) ? null : (lastSession?.logoutAt ? new Date(lastSession.logoutAt).toISOString() : null),
         lunch_breaks: breaks,
         shift_status: rec.shiftCloseAt ? 'closed' : activeBreak ? 'on_break' : 'open',
         total_work_minutes: Math.floor(duration.worked / 60000),
@@ -2173,7 +2199,7 @@ try {
 
   if (attendance) {
     attendance.sessions = attendance.sessions || [];
-    attendance.sessions.push({
+    if(!attendance.sessions.some(x=>x&&x.loginAt&&!x.logoutAt))attendance.sessions.push({
       loginAt: Date.now(),
       logoutAt: null
     });
