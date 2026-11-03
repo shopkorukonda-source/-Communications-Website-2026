@@ -1050,7 +1050,7 @@ body:has(#employeeView:not(.hidden)) .main-header {
     <button class="btn-orange shift-close-trigger" onclick="openShiftClose()">🔒 Shift Off / Cash Tally</button>
     <div id="shiftClosePanel" class="shift-close-panel" style="display:none"></div>
     <details id="slvLeaveDetails" class="section-box"><summary style="cursor:pointer;font-weight:800">🌴 Apply for Leave</summary>
-    <label for="leaveType">Leave Type</label><select id="leaveType"><option value="Casual">Casual</option><option value="Sick">Sick</option><option value="Other">Other</option></select><label for="leaveDate">From Date</label>
+    <label for="leaveType">Leave Type</label><select id="leaveType"><option value="paid">Paid Leave</option><option value="unpaid">Unpaid Leave</option><option value="split">Split Leave (Paid + Unpaid)</option></select><label for="leaveDate">From Date</label>
     <input id="leaveDate" type="date" required>
     <label for="leaveToDate">To Date</label><input id="leaveToDate" type="date"><label for="leaveReason">Reason for leave</label>
     <input id="leaveReason" placeholder="Reason for leave">
@@ -3451,7 +3451,7 @@ window.slvChangeCloudAssignment=async function(mode){
  function line(parent,first,second){const row=document.createElement('div');row.className='leave-row';const a=document.createElement('div');a.textContent=first;const b=document.createElement('b');b.textContent=second;row.append(a,b);parent.append(row);return row;}
  window.applyLeave=async function(){
    if(pending)return;
-   const from=$id('leaveDate')?.value,to=$id('leaveToDate')?.value||from,reason=$id('leaveReason')?.value.trim(),type=$id('leaveType')?.value||'Casual';
+   const from=$id('leaveDate')?.value,to=$id('leaveToDate')?.value||from,reason=$id('leaveReason')?.value.trim(),type=$id('leaveType')?.value||'paid';
    if(!from||!to||to<from)return alert('Valid From Date and To Date select చేయండి');
    if(!reason)return alert('Leave reason enter చేయండి');
    pending=true;
