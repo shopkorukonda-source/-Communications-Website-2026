@@ -843,15 +843,16 @@ body:has(#employeeView:not(.hidden)) .main-header {
     <div id="adminWallets" class="section-box admin-section" style="border-left:4px solid #137333">
       <h4>💼 Wallet Management</h4>
       <p class="muted">Opening Balance, Load, Manual Debit, Current Balance మరియు Wallet History.</p>
-      <input id="wName" placeholder="Wallet Name (e.g. MeeSeva Wallet)">
-      <div class="row">
+      <input id="wName" class="slv-legacy-wallet-input" placeholder="Wallet Name (e.g. MeeSeva Wallet)">
+      <div class="row slv-legacy-wallet-input">
         <input id="wBal" type="number" min="0" placeholder="Opening Balance (₹)">
         <select id="wLogo"><option>💼</option><option>⚡</option><option>📄</option><option>🏛️</option></select>
       </div>
-      <button class="btn-green" onclick="saveWallet()">+ Add Wallet</button>
+      <button class="btn-green" onclick="saveWallet()" style="display:none">+ Add Wallet (Local Only)</button>
 
       <div id="slvCloudWalletPanel" class="section-box" style="border:1px solid #d3dff8;background:#f8fbff;margin:18px 0">
         <h4>☁️ Cloud Wallet Management — Admin</h4>
+        <p class="muted">Rename, Change Logo (PNG/JPG/WebP up to 80 KB), Credit / Debit with reason, Archive / Restore. All changes are saved in Supabase.</p>
         <p class="muted">Supabase wallets only. Existing browser-local wallets and balances remain unchanged. Do not re-enter an existing balance without checking it.</p>
         <div class="row"><button type="button" onclick="slvCloudRefresh()">↻ Refresh Cloud Wallets</button></div>
         <p id="slvCloudStatus" class="muted" role="status">Login as Supabase Admin, then refresh.</p>
@@ -863,18 +864,18 @@ body:has(#employeeView:not(.hidden)) .main-header {
         <button type="button" class="btn-green" onclick="slvCloudCreate()">+ Add Cloud Wallet</button>
         <div id="slvCloudList"></div>
       </div>
-      <p class="muted">Below: older browser-local wallet controls (not synced with Supabase). Use Cloud Wallet Management above for new shared wallets.</p>
-      <div id="walletsAdminList"></div>
+      <p class="muted">Shared wallets are managed in Supabase above. Older local wallet controls are disabled here to prevent unsynced changes.</p>
+      <div id="walletsAdminList" class="slv-legacy-wallet-input"></div>
       <hr>
-      <h4>Wallet Load / Manual Debit</h4>
-      <select id="walletTxnSelect"></select>
-      <div class="row">
+      <h4 class="slv-legacy-wallet-input">Wallet Load / Manual Debit (Local Only)</h4>
+      <select id="walletTxnSelect" class="slv-legacy-wallet-input"></select>
+      <div class="row slv-legacy-wallet-input">
         <select id="walletTxnType"><option value="Load">Load (+)</option><option value="Debit">Manual Debit (-)</option></select>
         <input id="walletTxnAmount" type="number" min="0.01" step="0.01" placeholder="Amount ₹">
       </div>
-      <input id="walletTxnNote" placeholder="Bank source / Reference / Note">
-      <button onclick="postWalletTxn()">Save Wallet Transaction</button>
-      <div id="walletHistory" class="muted"></div>
+      <input class="slv-legacy-wallet-input" id="walletTxnNote" placeholder="Bank source / Reference / Note">
+      <button class="slv-legacy-wallet-input" onclick="postWalletTxn()">Save Wallet Transaction (Local Only)</button>
+      <div id="walletHistory" class="muted slv-legacy-wallet-input"></div>
       <hr>
       <h4>💵 Cash Wallet — Cash IN / Cash OUT</h4>
       <div class="cash-wallet-summary">
@@ -2229,16 +2230,38 @@ try {
     const db=await adminDb();
     const response=await db.from('wallets').select('id,wallet_name,wallet_type,balance,is_active').is('owner_user_id',null).order('wallet_name');
     if(response.error)throw response.error;
+    const logoRes=await db.from('slv_wallet_branding').select('wallet_id,logo_data');
+    if(logoRes.error)throw Error('Wallet logo setup required: Run the supplied SQL first. '+logoRes.error.message);
+    const logoById=new Map((logoRes.data||[]).map(x=>[x.wallet_id,x.logo_data]));
     const list=node('slvCloudList');list.replaceChildren();
     for(const wallet of response.data||[]){
       const row=document.createElement('div');row.className='emp-row';row.style.flexWrap='wrap';
       const info=document.createElement('div');info.style.flex='1';
+      const logo=logoById.get(wallet.id);
+      if(logo){const img=document.createElement('img');img.src=logo;img.alt='';img.style.cssText='width:44px;height:44px;object-fit:contain;border-radius:9px;margin-right:10px';row.append(img)}
       info.textContent=wallet.wallet_name+' ('+wallet.wallet_type+') • '+fmt(wallet.balance)+(wallet.is_active?'':' • Archived');row.append(info);
       const button=(label,callback)=>{const b=document.createElement('button');b.type='button';b.className='btn-small';b.textContent=label;b.onclick=()=>guarded(callback);row.append(b)};
       button('Rename',async()=>{
         const name=prompt('New wallet name',wallet.wallet_name);if(name===null)return;
         if(!name.trim()||name.trim().length>100)throw Error('Enter a valid wallet name.');
         const db=await adminDb();await rpc(db,'slv_manage_wallet',{p_action:'rename',p_wallet_id:wallet.id,p_name:name.trim(),p_type:null,p_opening_balance:null});await refresh();
+      });
+      button('Change Logo',async()=>{
+        const input=document.createElement('input');input.type='file';input.accept='image/png,image/jpeg,image/webp';
+        input.onchange=async()=>{
+          const file=input.files?.[0];if(!file)return;
+          if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>80000){status('Logo must be PNG/JPG/WebP, maximum 80 KB.');return}
+          try{
+            const data=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(Error('File read failed'));r.readAsDataURL(file)});
+            const db=await adminDb();const result=await db.from('slv_wallet_branding').upsert({wallet_id:wallet.id,logo_data:data},{onConflict:'wallet_id'});
+            if(result.error)throw result.error;await refresh();
+          }catch(e){status('Logo save failed: '+(e.message||String(e)))}
+        };input.click();
+      });
+      if(logo)button('Remove Logo',async()=>{
+        if(!confirm('Remove logo for '+wallet.wallet_name+'?'))return;
+        const db=await adminDb();const result=await db.from('slv_wallet_branding').delete().eq('wallet_id',wallet.id);
+        if(result.error)throw result.error;await refresh();
       });
       if(wallet.is_active)button('Credit / Debit',async()=>{
         const rawType=prompt('Enter CREDIT or DEBIT','CREDIT');if(rawType===null)return;
@@ -2256,9 +2279,19 @@ try {
       });
       list.append(row);
     }
-    status((response.data||[]).length+' cloud wallet(s) loaded. Browser-local balances are unchanged.');
+    if(typeof window.renderAdminWalletTopCards==='function'){
+      window.renderAdminWalletTopCards((response.data||[]).filter(w=>w.is_active).map(w=>({name:w.wallet_name,balance:w.balance,logo:'💼'})));
+      const chips=node('adminWalletTopCards')?.querySelectorAll('.admin-wallet-chip')||[];
+      (response.data||[]).filter(w=>w.is_active).forEach((w,i)=>{
+        const logo=logoById.get(w.id);if(!logo||!chips[i])return;
+        const img=document.createElement('img');img.src=logo;img.alt='';img.style.cssText='width:36px;height:36px;object-fit:contain;border-radius:8px';
+        chips[i].prepend(img);
+      });
+    }
+    status((response.data||[]).length+' cloud wallet(s) loaded from Supabase.');
   }
   window.slvCloudRefresh=()=>guarded(refresh);
+  window.slvCloudRefreshSilent=async()=>{try{await refresh()}catch(e){status('Cloud wallet loading failed: '+(e.message||String(e)));const cards=node('adminWalletTopCards');if(cards)cards.textContent='Cloud wallets unavailable — retry Refresh Cloud Wallets.'}};
   window.slvCloudCreate=()=>guarded(async()=>{
     const name=node('slvCloudName').value.trim(),type=node('slvCloudType').value,raw=node('slvCloudOpening').value;
     if(!name||name.length>100||!/^\d+(\.\d{1,2})?$/.test(raw))throw Error('Valid wallet name and opening balance required.');
@@ -2494,6 +2527,27 @@ window.slvVerifyShiftStart=async function(db){const r=await fetchRules(db);if(r.
 // Admin UI refresh on first entry; avoids local-only config being mistaken for cloud settings.
 const original=window.renderAdmin;
 if(typeof original==='function')window.renderAdmin=function(){const result=original.apply(this,arguments);window.slvLoadShiftRules(false).catch(()=>{});return result};
+})();
+</script>
+
+<style>
+/* Legacy browser-only wallet controls must not be confused with Supabase wallets. */
+#adminWallets .slv-legacy-wallet-input{display:none!important}
+</style>
+<script>
+(function(){
+ const oldShow=window.showView;
+ if(typeof oldShow!=='function')return;
+ window.showView=function(view){
+   const result=oldShow.apply(this,arguments);
+   if(view==='adminView'){
+     const cards=document.getElementById('adminWalletTopCards');
+     if(cards)cards.textContent='Loading wallets from Supabase…';
+     // The cloud auth session may still be restoring; load once after this view opens.
+     Promise.resolve().then(()=>window.slvCloudRefreshSilent?.());
+   }
+   return result;
+ };
 })();
 </script>
 </body>
