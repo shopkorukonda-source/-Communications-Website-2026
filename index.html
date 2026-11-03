@@ -2271,6 +2271,26 @@ try {
     }catch(error){const msg='Wallet action failed: '+(error.message||String(error));status(msg);console.error('[SLV cloud wallet]',error);if(typeof window.slvShowError==='function')window.slvShowError(msg);else alert(msg)}
     finally{if(overlay)overlay.classList.remove('active');pending=false}
   }
+  // Amount-entry dialog is shown before any server write; closing it never posts money.
+  function askWalletAmount(wallet){
+    return new Promise(resolve=>{
+      const modal=node('slvWalletAmountModal');
+      const form=node('slvWalletAmountForm');
+      const name=node('slvWalletAmountName');
+      const amount=node('slvWalletAmountValue');
+      const reason=node('slvWalletAmountReason');
+      const type=node('slvWalletAmountType');
+      name.textContent=wallet.wallet_name+' • Current balance '+fmt(wallet.balance);
+      amount.value='';reason.value='';type.value='CREDIT';
+      let finished=false;
+      function finish(value){if(finished)return;finished=true;modal.classList.remove('active');modal.setAttribute('aria-hidden','true');form.removeEventListener('submit',submit);node('slvWalletAmountCancel').removeEventListener('click',cancel);modal.removeEventListener('click',outside);document.removeEventListener('keydown',escape);resolve(value)}
+      function cancel(){finish(null)}
+      function outside(e){if(e.target===modal)cancel()}
+      function escape(e){if(e.key==='Escape')cancel()}
+      function submit(e){e.preventDefault();const raw=amount.value.trim();if(!/^\d+(\.\d{1,2})?$/.test(raw)||Number(raw)<=0){amount.setCustomValidity('Enter a positive amount (up to 2 decimals)');amount.reportValidity();return}amount.setCustomValidity('');finish({type:type.value,amount:Number(raw),description:reason.value.trim()})}
+      modal.classList.add('active');modal.setAttribute('aria-hidden','false');form.addEventListener('submit',submit);node('slvWalletAmountCancel').addEventListener('click',cancel);modal.addEventListener('click',outside);document.addEventListener('keydown',escape);setTimeout(()=>amount.focus(),100);
+    });
+  }
   async function rpc(db,name,params){const response=await db.rpc(name,params);if(response.error)throw response.error;return response.data}
   async function refresh(){
     const db=await adminDb();
@@ -2309,21 +2329,29 @@ try {
         const db=await adminDb();const result=await db.from('slv_wallet_branding').delete().eq('wallet_id',wallet.id);
         if(result.error)throw result.error;await refresh();
       });
-      if(wallet.is_active){const creditButton=document.createElement('button');creditButton.type='button';creditButton.className='btn-small';creditButton.textContent='Credit / Debit';creditButton.onclick=async()=>{try{
-        const rawType=prompt('Enter CREDIT or DEBIT','CREDIT');if(rawType===null)return;
-        const type=rawType.trim().toUpperCase();if(!['CREDIT','DEBIT'].includes(type))throw Error('Use CREDIT or DEBIT.');
-        const raw=prompt('Amount ₹');if(raw===null)return;
-        if(!/^\d+(\.\d{1,2})?$/.test(raw)||Number(raw)<=0)throw Error('Enter a positive amount with up to 2 decimals.');
-        const description=prompt('Reason / reference','');if(description===null)return;
-        if(!confirm(type+' '+fmt(raw)+' for '+wallet.wallet_name+'?'))return;
-        await guarded(async()=>{
-          status('Saving '+type+' '+fmt(raw)+' to Supabase...');
-          const db=await adminDb();
-          await rpc(db,'slv_admin_wallet_adjust',{p_wallet_id:wallet.id,p_entry_type:type,p_amount:Number(raw),p_description:description});
-          await refresh();
-          status(type+' '+fmt(raw)+' saved successfully for '+wallet.wallet_name+'.');
-        });
-      }catch(error){const msg='Wallet input error: '+(error.message||String(error));status(msg);alert(msg)} };row.append(creditButton);}
+      if(wallet.is_active){
+        const creditButton=document.createElement('button');creditButton.type='button';creditButton.className='btn-small slv-wallet-amount-button';creditButton.textContent='＋ Add / − Debit Amount';
+        creditButton.onclick=async()=>{
+          const entry=await askWalletAmount(wallet);if(!entry)return;
+          if(!confirm(entry.type+' '+fmt(entry.amount)+' for '+wallet.wallet_name+'?'))return;
+          await guarded(async()=>{
+            status('Saving '+entry.type+' '+fmt(entry.amount)+' to Supabase...');
+            const db=await adminDb();
+            const before=await db.from('wallets').select('balance').eq('id',wallet.id).single();
+            if(before.error)throw before.error;
+            await rpc(db,'slv_admin_wallet_adjust',{p_wallet_id:wallet.id,p_entry_type:entry.type,p_amount:entry.amount,p_description:entry.description});
+            // Read back the server value: an RPC success alone does not prove the wallet changed.
+            const after=await db.from('wallets').select('balance').eq('id',wallet.id).single();
+            if(after.error)throw after.error;
+            const expected=Math.round((Number(before.data.balance)+(entry.type==='CREDIT'?entry.amount:-entry.amount))*100);
+            const actual=Math.round(Number(after.data.balance)*100);
+            if(actual!==expected){await refresh();throw Error('Server returned a different balance. Expected '+fmt(expected/100)+', received '+fmt(actual/100)+'. Check Supabase wallet RPC/permissions before retrying. Do not submit twice.');}
+            await refresh();
+            status('✓ '+entry.type+' '+fmt(entry.amount)+' saved. New balance '+fmt(after.data.balance));
+            const success=node('slvWalletSavedToast');if(success){success.textContent='✓ '+wallet.wallet_name+' updated: '+fmt(after.data.balance);success.classList.add('active');setTimeout(()=>success.classList.remove('active'),2500)}
+          });
+        };row.append(creditButton);
+      }
       button(wallet.is_active?'Archive':'Restore',async()=>{
         const action=wallet.is_active?'archive':'restore';
         if(!confirm(action.toUpperCase()+' '+wallet.wallet_name+'?'))return;
@@ -2745,5 +2773,35 @@ if(typeof original==='function')window.renderAdmin=function(){const result=origi
 })();
 </script>
 
+
+<style>
+#slvWalletAmountModal{position:fixed;inset:0;z-index:100110;background:rgba(3,17,39,.78);backdrop-filter:blur(7px);display:none;align-items:center;justify-content:center;padding:16px}
+#slvWalletAmountModal.active{display:flex}
+.slv-wallet-amount-card{width:min(445px,100%);padding:26px;border:1px solid #d8ad45;border-radius:22px;background:linear-gradient(150deg,#0b2c56,#061b3b);box-shadow:0 25px 75px #0008;color:#fff;animation:slvWalletAmountIn .32s cubic-bezier(.2,.85,.3,1) both}
+@keyframes slvWalletAmountIn{from{opacity:0;transform:translateY(25px) scale(.93)}to{opacity:1;transform:translateY(0) scale(1)}}
+.slv-wallet-amount-icon{width:76px;height:76px;border-radius:22px;margin:0 auto 14px;display:grid;place-items:center;font-size:40px;background:#1d5596;border:1px solid #d8ad45;animation:slvAmountPulse 1.8s ease-in-out infinite}
+@keyframes slvAmountPulse{50%{box-shadow:0 0 0 11px #2a7bd02a;transform:scale(1.045)}}
+.slv-wallet-amount-card h3{color:#fff;text-align:center;margin-bottom:7px}
+.slv-wallet-amount-card p{color:#c9dbf2;text-align:center;font-size:12px;line-height:1.5}
+.slv-wallet-amount-card label{color:#e1ecfc;font-size:12px}
+.slv-wallet-amount-card input,.slv-wallet-amount-card select{background:#fff;color:#102b4e;border:1px solid #a8c7ef;width:100%}
+.slv-wallet-amount-actions{display:flex;gap:10px;margin-top:16px}.slv-wallet-amount-actions button{flex:1}
+#slvWalletSavedToast{position:fixed;z-index:100120;bottom:24px;left:50%;transform:translate(-50%,25px);background:#0e694c;color:#fff;border-radius:13px;padding:14px 22px;opacity:0;pointer-events:none;transition:.25s;box-shadow:0 12px 35px #0005}
+#slvWalletSavedToast.active{opacity:1;transform:translate(-50%,0)}
+@media(prefers-reduced-motion:reduce){.slv-wallet-amount-card,.slv-wallet-amount-icon{animation:none!important}}
+</style>
+<div id="slvWalletAmountModal" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Wallet amount entry">
+ <div class="slv-wallet-amount-card">
+  <div class="slv-wallet-amount-icon">₹</div>
+  <h3>Wallet Amount Update</h3><p id="slvWalletAmountName"></p>
+  <form id="slvWalletAmountForm">
+   <label for="slvWalletAmountType">Transaction Type</label><select id="slvWalletAmountType"><option value="CREDIT">＋ Credit (Add Amount)</option><option value="DEBIT">− Debit (Remove Amount)</option></select>
+   <label for="slvWalletAmountValue">Enter Amount (₹)</label><input id="slvWalletAmountValue" type="number" inputmode="decimal" min="0.01" step="0.01" required placeholder="0.00">
+   <label for="slvWalletAmountReason">Reason / Reference</label><input id="slvWalletAmountReason" type="text" maxlength="200" placeholder="Optional reason">
+   <div class="slv-wallet-amount-actions"><button id="slvWalletAmountCancel" class="btn-secondary" type="button">Cancel</button><button type="submit" class="btn-green">Continue</button></div>
+  </form>
+ </div>
+</div>
+<div id="slvWalletSavedToast" role="status" aria-live="polite"></div>
 </body>
 </html>
