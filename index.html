@@ -544,7 +544,7 @@ button:hover{transform:translateY(-1px);box-shadow:0 7px 18px rgba(6,27,59,.16)}
 .slv-loader-card.slv-wallet-loading .slv-loader-symbol,.slv-loader-card.slv-transaction-loading .slv-loader-symbol{height:118px}
 .slv-loader-card.slv-wallet-loading .slv-s-letter,.slv-loader-card.slv-transaction-loading .slv-s-letter{display:none!important}
 .slv-loader-card.slv-wallet-loading .slv-loader-symbol:after,.slv-loader-card.slv-transaction-loading .slv-loader-symbol:after{content:'';position:absolute;width:100px;height:100px;border:6px solid rgba(64,161,255,.17);border-top-color:#2bd5ff;border-right-color:#278fff;border-radius:50%;box-shadow:0 0 25px rgba(45,179,255,.23);animation:slvRingRotate 1s linear infinite}
-.slv-loader-card.slv-wallet-loading .slv-loader-symbol:before{content:'💼';font-size:42px}
+.slv-loader-card.slv-wallet-loading .slv-loader-symbol:before{content:'₹';font-size:56px;font-weight:900;color:#f5d77d;animation:slvRupeeTurn 1.25s ease-in-out infinite}
 .slv-loader-card.slv-transaction-loading .slv-loader-symbol:before{content:'₹';font-size:56px;font-weight:800;color:#f5d77d}
 .slv-loader-card.slv-wallet-loading .slv-loader-symbol:before,.slv-loader-card.slv-transaction-loading .slv-loader-symbol:before{z-index:1}
 .slv-loader-card.slv-wallet-loading .slv-loader-message,.slv-loader-card.slv-transaction-loading .slv-loader-message{font-size:18px;font-weight:700}
@@ -2262,13 +2262,13 @@ try {
     try{
       if(overlay&&card){
         card.className='slv-loader-card slv-wallet-loading';
-        node('slvLoaderLetter').textContent='💼';
-        node('slvLoaderMessage').textContent='Processing cloud wallet request...';
+        node('slvLoaderLetter').textContent='₹';
+        node('slvLoaderMessage').textContent='Securely updating wallet balance...';
         overlay.classList.remove('active');void overlay.offsetWidth;overlay.classList.add('active');
         await new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,90)));
       }
       await action();
-    }catch(error){const msg='Wallet action failed: '+(error.message||String(error));status(msg);console.error('[SLV cloud wallet]',error);if(typeof window.slvShowError==='function')window.slvShowError(msg);else alert(msg)}
+    }catch(error){const detail=error.message||String(error);const msg='Wallet action failed: '+detail+(detail.includes('Use CREDIT or DEBIT')?' — Website sends CREDIT/DEBIT already; Supabase function may need inspection. No successful balance change was confirmed.':'');status(msg);console.error('[SLV cloud wallet]',error);if(typeof window.slvShowError==='function')window.slvShowError(msg);else alert(msg)}
     finally{if(overlay)overlay.classList.remove('active');pending=false}
   }
   // Amount-entry dialog is shown before any server write; closing it never posts money.
@@ -2287,7 +2287,7 @@ try {
       function cancel(){finish(null)}
       function outside(e){if(e.target===modal)cancel()}
       function escape(e){if(e.key==='Escape')cancel()}
-      function submit(e){e.preventDefault();const raw=amount.value.trim();if(!/^\d+(\.\d{1,2})?$/.test(raw)||Number(raw)<=0){amount.setCustomValidity('Enter a positive amount (up to 2 decimals)');amount.reportValidity();return}amount.setCustomValidity('');finish({type:type.value,amount:Number(raw),description:reason.value.trim()})}
+      function submit(e){e.preventDefault();const raw=amount.value.trim();if(!/^\d+(\.\d{1,2})?$/.test(raw)||Number(raw)<=0){amount.setCustomValidity('Enter a positive amount (up to 2 decimals)');amount.reportValidity();return}amount.setCustomValidity('');finish({type:String(type.value||'').trim().toUpperCase(),amount:Number(raw),description:reason.value.trim()})}
       modal.classList.add('active');modal.setAttribute('aria-hidden','false');form.addEventListener('submit',submit);node('slvWalletAmountCancel').addEventListener('click',cancel);modal.addEventListener('click',outside);document.addEventListener('keydown',escape);setTimeout(()=>amount.focus(),100);
     });
   }
@@ -2336,6 +2336,7 @@ try {
           if(!confirm(entry.type+' '+fmt(entry.amount)+' for '+wallet.wallet_name+'?'))return;
           await guarded(async()=>{
             status('Saving '+entry.type+' '+fmt(entry.amount)+' to Supabase...');
+            if(!['CREDIT','DEBIT'].includes(entry.type))throw Error('Choose Credit or Debit.');
             const db=await adminDb();
             const before=await db.from('wallets').select('balance').eq('id',wallet.id).single();
             if(before.error)throw before.error;
@@ -2789,6 +2790,12 @@ if(typeof original==='function')window.renderAdmin=function(){const result=origi
 #slvWalletSavedToast{position:fixed;z-index:100120;bottom:24px;left:50%;transform:translate(-50%,25px);background:#0e694c;color:#fff;border-radius:13px;padding:14px 22px;opacity:0;pointer-events:none;transition:.25s;box-shadow:0 12px 35px #0005}
 #slvWalletSavedToast.active{opacity:1;transform:translate(-50%,0)}
 @media(prefers-reduced-motion:reduce){.slv-wallet-amount-card,.slv-wallet-amount-icon{animation:none!important}}
+
+/* Cloud wallet loading: animated revolving rupee and secure save feedback */
+@keyframes slvRupeeTurn{0%{transform:rotateY(0deg) scale(.92);filter:drop-shadow(0 0 3px #d8ad45)}50%{transform:rotateY(180deg) scale(1.12);filter:drop-shadow(0 0 16px #f5d77d)}100%{transform:rotateY(360deg) scale(.92);filter:drop-shadow(0 0 3px #d8ad45)}}
+.slv-loader-card.slv-wallet-loading .slv-loader-symbol:before{display:block;transform-style:preserve-3d;animation:slvRupeeTurn 1.25s ease-in-out infinite}
+.slv-loader-card.slv-wallet-loading .slv-loader-symbol:after{animation:slvRingRotate 1s linear infinite}
+@media(prefers-reduced-motion:reduce){.slv-loader-card.slv-wallet-loading .slv-loader-symbol:before{animation:none}}
 </style>
 <div id="slvWalletAmountModal" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Wallet amount entry">
  <div class="slv-wallet-amount-card">
