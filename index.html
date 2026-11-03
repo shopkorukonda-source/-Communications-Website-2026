@@ -685,6 +685,11 @@ body:has(#employeeView:not(.hidden)) .main-header {
   border: 1px solid rgba(216,173,69,.25);
 }
 </style>
+<style id="slvPersonalGreetingStyle">
+.slv-personal-greeting{display:flex;flex-direction:column;gap:7px;margin:14px 0 18px;padding:19px 22px;border:1px solid #dce9fb;border-left:5px solid #1e6bc4;border-radius:14px;background:linear-gradient(105deg,#f0f6ff,#fff);box-shadow:0 5px 16px rgba(17,54,101,.05)}
+.slv-greeting-heading{font-size:clamp(18px,2.5vw,25px);font-weight:800;color:#0d3264;overflow-wrap:anywhere}
+.slv-greeting-sub{font-size:12px;color:#536781;line-height:1.6}
+</style>
 </head>
 <body>
 <div id="slvTxSuccess" class="slv-tx-success" role="status" aria-live="polite" aria-label="Transaction successful"><div class="slv-tx-success-card"><div class="slv-tx-success-check">✓</div><h3>Transaction Successful</h3><p>SLV Communications • Payment Recorded</p><div class="slv-tx-success-amount" id="slvTxSuccessAmount">₹0.00</div><p id="slvTxSuccessCount">Wallet balances updated</p><div class="slv-tx-success-line"></div></div></div>
@@ -1073,11 +1078,39 @@ function runSlvLoader(kind,message,duration,done){
   overlay.classList.add('active');
   window.setTimeout(()=>{overlay.classList.remove('active');if(typeof done==='function')done()},duration||1900);
 }
+/* Personalized greeting: local presentation only, no database writes. */
+function slvShowPersonalGreeting(viewId){
+  if(!currentUser || !['adminView','employeeView'].includes(viewId))return;
+  const root=document.getElementById(viewId);
+  if(!root)return;
+  let banner=root.querySelector('.slv-personal-greeting');
+  if(!banner){
+    banner=document.createElement('div');
+    banner.className='slv-personal-greeting';
+    banner.setAttribute('role','status');
+    const heading=document.createElement('strong');
+    heading.className='slv-greeting-heading';
+    const sub=document.createElement('span');
+    sub.className='slv-greeting-sub';
+    banner.append(heading,sub);
+    const top=root.querySelector('.topbar');
+    if(top)top.insertAdjacentElement('afterend',banner);
+    else root.prepend(banner);
+  }
+  const now=new Date();
+  const hour=Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',hour:'2-digit',hourCycle:'h23'}).format(now));
+  const greeting=hour<12?'Good Morning':hour<17?'Good Afternoon':hour<21?'Good Evening':'Good Night';
+  const icon=hour<12?'☀️':hour<17?'🌤️':hour<21?'🌆':'🌙';
+  const name=String(currentUser.name|| (currentUser.role==='Admin'?'Admin':'Employee')).trim();
+  banner.querySelector('.slv-greeting-heading').textContent=`${icon} ${greeting}, ${name}!`;
+  banner.querySelector('.slv-greeting-sub').textContent=new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'numeric',minute:'2-digit',hour12:true}).format(now)+' IST • Welcome to SLV Communications';
+}
 function showView(id){
   ['loginView','adminView','employeeView','servicesView'].forEach(v=>$(v).classList.add('hidden'));
   $(id).classList.remove('hidden');
   $('headerSubtitle').textContent=id==='loginView'?'Secure Shop Management Portal':id==='adminView'?'Admin Master Control Panel':id==='servicesView'?'Multi-Service Billing Counter':'Employee Portal';
   if(id==='adminView')renderAdmin();
+  if(id==='adminView'||id==='employeeView')slvShowPersonalGreeting(id);
   if(id==='employeeView')renderEmployee();
   if(id==='servicesView' && typeof window.slvTxLoadServices==='function')window.slvTxLoadServices();
 }
@@ -2548,6 +2581,42 @@ if(typeof original==='function')window.renderAdmin=function(){const result=origi
    }
    return result;
  };
+})();
+</script>
+
+<script>
+/* SLV cloud auto-refresh: reads are automatic; financial writes remain server-side RPCs. */
+(function(){
+  let db=null, channel=null, timer=null, scheduled=null, running=false;
+  const message=(t)=>{const e=document.getElementById('slvCloudStatus');if(e)e.textContent=t};
+  const isAdmin=()=>!document.getElementById('adminView')?.classList.contains('hidden');
+  async function refresh(){
+    if(running||!isAdmin()||!navigator.onLine)return;
+    running=true;
+    try{await window.slvCloudRefreshSilent?.()}
+    finally{running=false}
+  }
+  function schedule(){clearTimeout(scheduled);scheduled=setTimeout(refresh,350)}
+  function stop(){if(channel&&db)db.removeChannel(channel);channel=null;db=null;clearInterval(timer);timer=null}
+  async function start(){
+    const client=window.slvSupabase;
+    if(!client)return;
+    const {data:{session}}=await client.auth.getSession();
+    if(!session){stop();return}
+    if(db===client&&channel)return;
+    stop();db=client;
+    channel=db.channel('slv-wallet-live-'+Math.random().toString(36).slice(2))
+      .on('postgres_changes',{event:'*',schema:'public',table:'wallets'},schedule)
+      .on('postgres_changes',{event:'*',schema:'public',table:'slv_wallet_branding'},schedule)
+      .subscribe((state)=>{if(state==='CHANNEL_ERROR'||state==='TIMED_OUT')message('Realtime connection unavailable; automatic periodic refresh remains enabled.')});
+    timer=setInterval(refresh,15000);
+    schedule();
+  }
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden){start();schedule()}});
+  window.addEventListener('online',()=>{start();schedule()});
+  window.addEventListener('focus',schedule);
+  const boot=setInterval(()=>{if(window.slvSupabase){clearInterval(boot);start();window.slvSupabase.auth.onAuthStateChange(()=>setTimeout(start,0))}},400);
+  setTimeout(()=>clearInterval(boot),30000);
 })();
 </script>
 </body>
