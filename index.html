@@ -520,6 +520,34 @@ button:hover{transform:translateY(-1px);box-shadow:0 7px 18px rgba(6,27,59,.16)}
 .slv-tx-success-amount{font-size:32px;font-weight:900;color:#f5d77d;margin:14px 0}
 .slv-tx-success-line{height:5px;border-radius:5px;background:linear-gradient(90deg,#3388ff,#f5d77d,#42e59d);margin:19px 0 0}
 @media(prefers-reduced-motion:reduce){.slv-tx-enter,.slv-tx-success-card,.slv-tx-success-check{animation:none!important}}
+
+/* Transaction save loader: separate from login success animation */
+.slv-loader-card.slv-transaction-loading .slv-s-letter{animation:slvTxPulse 1s ease-in-out infinite;font-size:68px}
+.slv-loader-card.slv-transaction-loading .slv-v-mark,.slv-loader-card.slv-transaction-loading .slv-check-ring{display:none}
+.slv-loader-card.slv-transaction-loading .slv-progress span{animation:slvTxProgress 1s ease-in-out infinite;width:45%}
+@keyframes slvTxPulse{0%,100%{transform:scale(.92);opacity:.75}50%{transform:scale(1.08);opacity:1}}
+@keyframes slvTxProgress{0%{transform:translateX(-120%)}100%{transform:translateX(250%)}}
+
+/* Unified SLV premium loader: one success tick, ring during work */
+.slv-loader-card.slv-login-mode .slv-v-mark{display:none!important}
+.slv-loader-card.slv-login-mode .slv-check-ring{position:absolute;left:50%;top:50%;margin:-41px 0 0 -41px;animation:slvSingleTick .48s ease-out 1.3s forwards}
+.slv-loader-card.slv-login-mode .slv-s-letter{animation:slvLogoExit 0.4s ease-in 1.25s forwards}
+@keyframes slvLogoExit{to{opacity:0;transform:scale(.75)}}
+@keyframes slvSingleTick{to{opacity:1;transform:scale(1)}}
+.slv-loader-card.slv-wallet-loading .slv-v-mark,.slv-loader-card.slv-wallet-loading .slv-check-ring{display:none!important}
+.slv-loader-card.slv-wallet-loading .slv-s-letter{font-size:53px;animation:slvWalletBob 1.3s ease-in-out infinite}
+.slv-loader-card.slv-wallet-loading .slv-progress span{width:42%;animation:slvTxProgress 1.2s linear infinite}
+@keyframes slvWalletBob{50%{transform:translateY(-5px) scale(1.07)}}
+.slv-premium-ring{width:106px;height:106px;border-radius:50%;border:6px solid rgba(71,165,255,.18);border-top-color:#22c6ff;border-right-color:#348dff;box-shadow:0 0 26px rgba(30,169,255,.2);display:grid;place-items:center;animation:slvRingRotate 1s linear infinite}
+.slv-premium-ring-icon{font-size:43px;animation:slvRingRotate 1s linear infinite reverse}
+@keyframes slvRingRotate{to{transform:rotate(360deg)}}
+.slv-loader-card.slv-wallet-loading .slv-loader-symbol,.slv-loader-card.slv-transaction-loading .slv-loader-symbol{height:118px}
+.slv-loader-card.slv-wallet-loading .slv-s-letter,.slv-loader-card.slv-transaction-loading .slv-s-letter{display:none!important}
+.slv-loader-card.slv-wallet-loading .slv-loader-symbol:after,.slv-loader-card.slv-transaction-loading .slv-loader-symbol:after{content:'';position:absolute;width:100px;height:100px;border:6px solid rgba(64,161,255,.17);border-top-color:#2bd5ff;border-right-color:#278fff;border-radius:50%;box-shadow:0 0 25px rgba(45,179,255,.23);animation:slvRingRotate 1s linear infinite}
+.slv-loader-card.slv-wallet-loading .slv-loader-symbol:before{content:'💼';font-size:42px}
+.slv-loader-card.slv-transaction-loading .slv-loader-symbol:before{content:'₹';font-size:56px;font-weight:800;color:#f5d77d}
+.slv-loader-card.slv-wallet-loading .slv-loader-symbol:before,.slv-loader-card.slv-transaction-loading .slv-loader-symbol:before{z-index:1}
+.slv-loader-card.slv-wallet-loading .slv-loader-message,.slv-loader-card.slv-transaction-loading .slv-loader-message{font-size:18px;font-weight:700}
 </style>
 </head>
 <body>
@@ -550,10 +578,10 @@ button:hover{transform:translateY(-1px);box-shadow:0 7px 18px rgba(6,27,59,.16)}
     </select>
     <div id="empIdBox" style="display:block">
       <label for="loginId">Employee ID</label>
-      <input id="loginId" autocomplete="username" placeholder="e.g. SLV01">
+      <input id="loginId" autocomplete="off" placeholder="e.g. SLV01">
     </div>
     <label for="loginPass">Password</label>
-    <input id="loginPass" type="password" autocomplete="current-password" placeholder="Enter password">
+    <input id="loginPass" type="password" autocomplete="off" placeholder="Enter password">
     <button style="width:100%" onclick="handleLogin()">Login</button>
 
   </main>
@@ -830,7 +858,7 @@ button:hover{transform:translateY(-1px);box-shadow:0 7px 18px rgba(6,27,59,.16)}
     <button class="btn-green" style="width:100%" onclick="processCheckout()">Complete & Deduct from Wallet</button>
     <p id="msg" class="muted" style="text-align:center;font-weight:bold"></p>
   </main>
-  <footer class="muted" style="text-align:center;padding:8px">SLV Communications • Local browser version</footer>
+  <footer class="muted" style="text-align:center;padding:8px">Developed, Designed and Maintained by <strong>SLV COMMUNICATIONS, Korukonda</strong></footer>
 </div>
 
 <script>
@@ -846,11 +874,26 @@ function getEmployees(){
   if(!emps){emps={SLV01:{name:'Bhanu Katakam',pass:'123456',shift:'09:00 AM - 03:00 PM'}};write(KEYS.employees,emps)}
   return emps;
 }
+function slvAuthLoaderStart(kind,message){
+  const overlay=document.getElementById('slvLoadingOverlay');
+  const card=document.getElementById('slvLoaderCard');
+  if(!overlay||!card)return;
+  card.className='slv-loader-card slv-login-mode';
+  document.getElementById('slvLoaderLetter').textContent='SLV';
+  document.getElementById('slvLoaderMessage').textContent=message||'Authenticating...';
+  overlay.classList.add('active');
+}
+function slvAuthLoaderStop(){
+  const overlay=document.getElementById('slvLoadingOverlay');
+  if(overlay)overlay.classList.remove('active');
+}
 function runSlvLoader(kind,message,duration,done){
   const overlay=$('slvLoadingOverlay'),card=$('slvLoaderCard'),letter=$('slvLoaderLetter');
-  card.className='slv-loader-card '+(kind==='employee'?'employee':'success');
-  letter.textContent=kind==='employee'?'S':'SLV';
+  card.className='slv-loader-card slv-login-mode';
+  letter.textContent='SLV';
   $('slvLoaderMessage').textContent=message||'Please wait...';
+  overlay.classList.remove('active');
+  void overlay.offsetWidth;
   overlay.classList.add('active');
   window.setTimeout(()=>{overlay.classList.remove('active');if(typeof done==='function')done()},duration||1900);
 }
@@ -906,6 +949,12 @@ function requireUser(){
   if(currentUser.role!=='Employee'){showView('loginView');return false}
   return true;
 }
+function slvClearLoginFields(){
+  const id=document.getElementById('loginId');
+  const pass=document.getElementById('loginPass');
+  if(id){id.value='';id.defaultValue='';id.setAttribute('value','');}
+  if(pass){pass.value='';pass.defaultValue='';pass.setAttribute('value','');}
+}
 function logout(){
   if(currentUser&&currentUser.role==='Employee'){
     const rec=getTodayAttendance();
@@ -916,7 +965,7 @@ function logout(){
       if(idx>=0)records[idx]=rec;saveAttendance(records);
     }
   }
-  sessionStorage.removeItem(KEYS.user);currentUser=null;$('loginPass').value='';showView('loginView')
+  sessionStorage.removeItem(KEYS.user);currentUser=null;slvClearLoginFields();showView('loginView')
 }
 function changeAdminPassword(){
   const current=$('currentAdminPassword').value;
@@ -1509,7 +1558,7 @@ function calculateTotal(){
   let total=0;document.querySelectorAll('.service-row .s-amt').forEach(input=>total+=Math.max(0,Number(input.value)||0));
   $('grandTotal').textContent=total.toFixed(2);return total;
 }
-function processCheckout(){
+function slvProcessCheckoutCore(){
   if(!currentUser||currentUser.role!=='Employee'){alert('Employee login అవసరం');showView('loginView');return}
   const attendance=getTodayAttendance(),breaks=attendance?.lunchBreaks||[],lastBreak=breaks[breaks.length-1];
   if(attendance?.shiftCloseAt){alert('మీ Shift Close అయింది. కొత్త పనికి Admin సహాయం తీసుకోండి.');return}
@@ -1550,6 +1599,29 @@ function processCheckout(){
   slvShowTransactionSuccess(total,newTransactions.length);
   $('cartContainer').innerHTML='';$('grandTotal').textContent='0.00';
   setTimeout(()=>showView('employeeView'),1750);
+}
+// Show a save-in-progress loader before the existing checkout routine runs.
+// The existing validations, balance writes and success animation remain unchanged.
+let slvCheckoutBusy=false;
+function processCheckout(){
+  if(slvCheckoutBusy)return;
+  slvCheckoutBusy=true;
+  const overlay=$('slvLoadingOverlay'),card=$('slvLoaderCard');
+  if(overlay&&card){
+    card.className='slv-loader-card slv-transaction-loading';
+    $('slvLoaderLetter').textContent='₹';
+    $('slvLoaderMessage').textContent='Saving transaction...';
+    overlay.classList.remove('active');void overlay.offsetWidth;overlay.classList.add('active');
+  }
+  // Allow the browser to paint the loader before the synchronous local checkout.
+  requestAnimationFrame(()=>setTimeout(()=>{
+    try{slvProcessCheckoutCore()}
+    catch(err){console.error('Transaction save error:',err);alert('Transaction save failed: '+(err.message||err))}
+    finally{
+      if(overlay)overlay.classList.remove('active');
+      slvCheckoutBusy=false;
+    }
+  },130));
 }
 (function init(){
   toggleLoginInputs();
@@ -1688,6 +1760,7 @@ function processCheckout(){
 
       if (role === 'Admin') {
         try {
+          slvAuthLoaderStart('admin', 'Verifying Admin credentials securely...');
           const { data, error } = await db.auth.signInWithPassword({
             email: id.toLowerCase(),
             password: pass
@@ -1708,6 +1781,7 @@ function processCheckout(){
             profile.is_active !== true
           ) {
             await db.auth.signOut();
+            slvAuthLoaderStop();
             alert('Admin access ledu. Contact administrator.');
             return;
           }
@@ -1719,9 +1793,11 @@ function processCheckout(){
           };
 
           saveLoginSession(currentUser);
+          slvAuthLoaderStop();
           runSlvLoader('admin','Admin Login Successful • Opening Dashboard...',2100,()=>showView('adminView'));
 
         } catch (error) {
+          slvAuthLoaderStop();
           alert('Admin Login Failed: ' + error.message);
         }
         return;
@@ -1731,6 +1807,7 @@ function processCheckout(){
 const email = `slv-${empId.toLowerCase()}@employees.invalid`;
 
 try {
+  slvAuthLoaderStart('employee', 'Verifying Employee credentials securely...');
   const { data, error } = await db.auth.signInWithPassword({
     email,
     password: pass
@@ -1769,6 +1846,7 @@ try {
   if (attendance && attendance.shiftCloseAt) {
     currentUser = null;
     await db.auth.signOut();
+    slvAuthLoaderStop();
     alert('Ee roju shift already close ayyindi.');
     return;
   }
@@ -1790,9 +1868,11 @@ try {
   }
 
   saveLoginSession(currentUser);
+  slvAuthLoaderStop();
   runSlvLoader('employee','Employee Login Successful • Opening Dashboard...',1850,()=>showView('employeeView'));
 
 } catch (error) {
+  slvAuthLoaderStop();
   alert('Employee Login Failed: ' + error.message);
 }
     };
@@ -1867,13 +1947,13 @@ try {
           try { await window.syncAttendanceRecord(rec); }
           catch (err) { alert('Attendance cloud sync failed. Please inform Admin: ' + err.message); }
         }
-        sessionStorage.removeItem(KEYS.user); currentUser = null; showView('loginView');
         await db.auth.signOut();
+        sessionStorage.removeItem(KEYS.user); currentUser = null; slvClearLoginFields(); showView('loginView');
         return;
       }
       if (currentUser && currentUser.role === 'Admin') {
-        sessionStorage.removeItem(KEYS.user); currentUser = null; showView('loginView');
         await db.auth.signOut();
+        sessionStorage.removeItem(KEYS.user); currentUser = null; slvClearLoginFields(); showView('loginView');
       } else if (oldLogout) oldLogout();
     };
 
@@ -1889,6 +1969,7 @@ try {
 
     sessionStorage.removeItem(KEYS.user);
     currentUser = null;
+    slvClearLoginFields();
     showView('loginView');
 
     const { data } = await db.auth.getSession();
@@ -1940,7 +2021,18 @@ try {
   async function guarded(action){
     if(pending)return;
     pending=true;
-    try{await action()}catch(error){status('Error: '+(error.message||String(error)))}finally{pending=false}
+    const overlay=node('slvLoadingOverlay'),card=node('slvLoaderCard');
+    try{
+      if(overlay&&card){
+        card.className='slv-loader-card slv-wallet-loading';
+        node('slvLoaderLetter').textContent='💼';
+        node('slvLoaderMessage').textContent='Processing cloud wallet request...';
+        overlay.classList.remove('active');void overlay.offsetWidth;overlay.classList.add('active');
+        await new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,90)));
+      }
+      await action();
+    }catch(error){status('Error: '+(error.message||String(error)))}
+    finally{if(overlay)overlay.classList.remove('active');pending=false}
   }
   async function rpc(db,name,params){const response=await db.rpc(name,params);if(response.error)throw response.error;return response.data}
   async function refresh(){
@@ -2055,6 +2147,39 @@ try {
   mappings=mappings.filter(x=>x.service_id!==id);mappings.push({service_id:id,cash_wallet_id:ids[0],upi_wallet_id:ids[1],cost_wallet_id:ids[2]});
   status('Saved cloud mapping for '+name+'. Employee checkout is STILL local and must not be used as a cloud transaction.');
  });
+})();
+</script>
+
+<script>
+/* Wallet Load / Debit visual progress; existing local transaction logic is preserved. */
+(function(){
+ const original=window.postWalletTxn;
+ if(typeof original!=='function')return;
+ let busy=false;
+ window.postWalletTxn=function(){
+  if(busy)return;
+  const name=document.getElementById('walletTxnSelect')?.value;
+  const amount=Number(document.getElementById('walletTxnAmount')?.value);
+  const type=document.getElementById('walletTxnType')?.value;
+  const wallet=(typeof getWallets==='function'?getWallets():[]).find(w=>w.name===name);
+  if(!wallet||!Number.isFinite(amount)||amount<=0||(type==='Debit'&&Number(wallet.balance)<amount)){
+   return original.apply(this,arguments);
+  }
+  busy=true;
+  const overlay=document.getElementById('slvLoadingOverlay');
+  const card=document.getElementById('slvLoaderCard');
+  if(overlay&&card){
+   card.className='slv-loader-card slv-wallet-loading';
+   document.getElementById('slvLoaderLetter').textContent='💼';
+   document.getElementById('slvLoaderMessage').textContent=type==='Load'?'Loading wallet balance...':'Saving wallet debit...';
+   overlay.classList.remove('active');void overlay.offsetWidth;overlay.classList.add('active');
+  }
+  requestAnimationFrame(()=>setTimeout(()=>{
+   try{original.apply(this,arguments)}
+   catch(e){console.error(e);alert('Wallet transaction failed: '+(e.message||e))}
+   finally{overlay?.classList.remove('active');busy=false}
+  },180));
+ };
 })();
 </script>
 </body>
