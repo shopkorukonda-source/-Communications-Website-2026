@@ -929,7 +929,7 @@ body:has(#employeeView:not(.hidden)) .main-header {
       <label>Exchange Type</label><select id="slvExchangeType"><option>Big Notes → Small Notes</option><option>Notes → Coins</option><option>Coins → Notes</option></select>
       <div class="row"><div><label>Cash Given ₹</label><input id="slvExchangeGiven" type="number" min="0.01" step="0.01" placeholder="Given"></div><div><label>Cash Received ₹</label><input id="slvExchangeReceived" type="number" min="0.01" step="0.01" placeholder="Received"></div></div>
       <label>Denomination / Reference</label><input id="slvExchangeNote" placeholder="₹500 × 4 → ₹100 × 20">
-      <button type="button" onclick="slvExchangeSave()">Save Local Exchange Entry</button>
+      <button type="button" onclick="slvExchangeSave()">Save Cloud Exchange Entry</button>
       <div id="slvExchangeHistory" class="muted"></div>
       <h4 style="margin-top:18px">🗂 Local Tally History</h4><div id="slvTallyHistory" class="muted"></div>
     </div>
@@ -3210,7 +3210,7 @@ body.slv-service-modal-open{overflow:hidden}
     actual.addEventListener('input',()=>{const v=Number(actual.value);diff.textContent=actual.value!==''&&Number.isFinite(v)?'Difference: '+money(v-Number(w.balance)):'Enter real balance';diff.style.color=v-Number(w.balance)===0?'#137333':'#b45309'});
     line.append(name,business,actual,diff);wrap.append(line);
    }
-   status.textContent='Cloud balances loaded. Actual entries are not saved until Save Local Tally Snapshot.';
+   status.textContent='Cloud balances loaded. Cash tally snapshot is still local-only (cloud table not yet created).';
   }catch(e){status.textContent='Cannot load cloud balances: '+e.message}
  };
  window.slvTallySave=function(){
@@ -3222,17 +3222,64 @@ body.slv-service-modal-open{overflow:hidden}
   const history=read('slvLocalTallyHistory');history.unshift({at:new Date().toISOString(),note:$('slvTallyNote').value.trim(),items});write('slvLocalTallyHistory',history.slice(0,150));
   $('slvTallyStatus').textContent='Local tally saved on this browser only. Cloud balances and profit unchanged.';renderHistory();
  };
- window.slvExchangeSave=function(){
+ async function exchangeAdminClient(){
+  const db=window.slvSupabase;
+  if(!db)throw Error('Supabase connection not ready');
+  const {data:auth,error:authError}=await db.auth.getUser();
+  if(authError||!auth?.user)throw Error('Cloud Admin login required');
+  const {data:profile,error:profileError}=await db.from('profiles').select('role,is_active').eq('id',auth.user.id).single();
+  if(profileError||profile?.role!=='admin'||profile?.is_active!==true)throw Error('Active Supabase Admin access required');
+  return {db,user:auth.user};
+ }
+ let exchangeSaving=false;
+ window.slvExchangeSave=async function(){
   if(!admin())return alert('Admin login required');
+  if(exchangeSaving)return;
   const g=Number($('slvExchangeGiven').value),r=Number($('slvExchangeReceived').value);
   if(!(g>0&&r>0&&Number.isFinite(g)&&Number.isFinite(r)))return alert('Enter valid given and received amounts');
   if(Math.abs(g-r)>0.001)return alert('Given and received amounts differ. Reconcile shortage/extra separately; this register records equal-value exchanges only.');
-  const history=read('slvLocalExchangeHistory');history.unshift({at:new Date().toISOString(),type:$('slvExchangeType').value,given:g,received:r,note:$('slvExchangeNote').value.trim()});write('slvLocalExchangeHistory',history.slice(0,150));
-  $('slvExchangeGiven').value='';$('slvExchangeReceived').value='';$('slvExchangeNote').value='';renderHistory();alert('Exchange recorded locally. No wallet or profit balance changed.');
+  const button=document.querySelector('button[onclick="slvExchangeSave()"]');
+  exchangeSaving=true;if(button)button.disabled=true;
+  try{
+   const {db,user}=await exchangeAdminClient();
+   const note=$('slvExchangeNote').value.trim();
+   const exchangeLabel=$('slvExchangeType').value;
+   // Database CHECK accepts cash_exchange; preserve the visible subtype in notes.
+   const {error}=await db.from('slv_cash_exchanges').insert({
+    created_by:user.id,exchange_type:'cash_exchange',amount_out:g,amount_in:r,
+    denominations_out:{},denominations_in:{},notes:exchangeLabel+(note?' | '+note:'')
+   });
+   if(error)throw error;
+   $('slvExchangeGiven').value='';$('slvExchangeReceived').value='';$('slvExchangeNote').value='';
+   await window.slvExchangeLoadCloud();
+   alert('Exchange saved to Supabase Cloud. Wallet and profit balances unchanged.');
+  }catch(e){alert('Cloud exchange NOT saved: '+(e?.message||String(e)));}
+  finally{exchangeSaving=false;if(button)button.disabled=false;}
  };
+ window.slvExchangeLoadCloud=async function(){
+  const box=$('slvExchangeHistory');if(!box)return;
+  box.textContent='Loading cloud exchanges...';
+  try{
+   const {db}=await exchangeAdminClient();
+   const {data,error}=await db.from('slv_cash_exchanges')
+     .select('created_at,exchange_type,amount_out,amount_in,notes')
+     .order('created_at',{ascending:false}).limit(20);
+   if(error)throw error;
+   box.replaceChildren();
+   if(!data?.length){box.textContent='No cloud exchange records';return;}
+   for(const item of data){
+    const row=document.createElement('div');row.className='cash-history-row';
+    const desc=document.createElement('span');
+    desc.textContent=new Date(item.created_at).toLocaleString('en-IN')+' • '+(item.notes||item.exchange_type);
+    const amount=document.createElement('b');amount.textContent=money(item.amount_out);
+    row.append(desc,amount);box.append(row);
+   }
+  }catch(e){box.textContent='Cloud exchange history unavailable: '+(e?.message||String(e));}
+ };
+
  function renderHistory(){
   const tally=read('slvLocalTallyHistory');$('slvTallyHistory').textContent=tally.length?tally.slice(0,8).map(t=>new Date(t.at).toLocaleString('en-IN')+' • '+(t.note||'Count')+' • '+t.items.length+' wallets • Difference '+money(t.items.reduce((s,x)=>s+x.difference,0))).join(' | '):'No local tally records';
-  const ex=read('slvLocalExchangeHistory');$('slvExchangeHistory').textContent=ex.length?ex.slice(0,8).map(t=>new Date(t.at).toLocaleString('en-IN')+' • '+t.type+' • '+money(t.given)+' • '+t.note).join(' | '):'No exchanges recorded';
+  if(admin())window.slvExchangeLoadCloud();
  }
  document.addEventListener('DOMContentLoaded',renderHistory);
 })();
