@@ -1775,7 +1775,8 @@ function updateDenominationTotal(){
   if(result)result.textContent=Math.abs(diff)<0.005?'✅ Cash Tally Matched':'⚠️ Cash Difference: '+(diff>0?'Excess ':'Short ')+'₹'+Math.abs(diff).toFixed(2);
   return total;
 }
-function submitShiftClose(){
+async function submitShiftClose(){
+  if(window.slvShiftCloseSaving)return;
   const skipped=window.slvSkipDenom===true;
   const counted=skipped?null:updateDenominationTotal(),expected=getExpectedShiftCash(),cashDiff=skipped?null:Number((counted-expected).toFixed(2));
   const walletResults=[];document.querySelectorAll('#shiftWalletChecks input[id^="shiftWalletActual"]').forEach(input=>{
@@ -1791,15 +1792,41 @@ function submitShiftClose(){
   if(walletResults.some(w=>!w.matched)&&!overallReason){alert('Wallet mismatch కారణాన్ని Overall Reasonలో కూడా నమోదు చేయండి');return}
   const denoms={};document.querySelectorAll('#shiftClosePanel .denom-count').forEach(i=>denoms[i.dataset.denom]=Number(i.value)||0);
   const closedAt=Date.now(),attendance=getTodayAttendance();
-  if(attendance){const breaks=attendance.lunchBreaks||[],last=breaks[breaks.length-1];if(last&&!last.endAt)last.endAt=closedAt;const sessions=attendance.sessions||[],activeSession=sessions[sessions.length-1];if(activeSession&&!activeSession.logoutAt)activeSession.logoutAt=closedAt;attendance.sessions=sessions;attendance.shiftCloseHistory=attendance.shiftCloseHistory||[];attendance.shiftCloseHistory.push({closedAt,by:currentUser.name||currentUser.id});attendance.shiftCloseAt=closedAt;const all=getAttendance();const ai=all.findIndex(x=>x.employeeId===attendance.employeeId&&x.day===attendance.day);if(ai>=0)all[ai]=attendance;saveAttendance(all)}
-  const durations=attendanceDurations(attendance,closedAt);
-  const record={employeeId:currentUser.id,employeeName:currentUser.name,closedAt:new Date(closedAt).toLocaleString('en-IN'),timestamp:closedAt,shiftStartAt:attendance?.shiftStartAt||null,lunchBreaks:attendance?.lunchBreaks||[],lunchDurationMs:durations.lunch,workingDurationMs:durations.worked,workingHours:formatDuration(durations.worked),openingCash:Number(currentUser.openingCashBalance)||0,shiftTransactionCount:getShiftTransactions().length,expectedCash:expected,countedCash:counted,cashDifference:cashDiff,denominationSkipped:skipped,denominations:skipped?null:denoms,walletResults,reason:overallReason};
-  if(attendance){attendance.shiftClose=record;attendance.cashTally=counted;const all=getAttendance();const ai=all.findIndex(x=>x.employeeId===attendance.employeeId&&x.day===attendance.day);if(ai>=0)all[ai]=attendance;saveAttendance(all)}
-  const reports=read('slvShiftCloseReports',[]);reports.push(record);write('slvShiftCloseReports',reports);
-  alert('Shift Close report Adminకు పంపబడింది. Cash / Wallet tally వివరాలు సేవ్ అయ్యాయి.');
-  currentUser.shiftClosed=true;saveLoginSession(currentUser);$('shiftClosePanel').style.display='none';renderShiftCloseReports();
+  if(!attendance||attendance.cloudSync!==true){alert('Cloud attendance record missing. Please sign in again.');return}
+  const draft=JSON.parse(JSON.stringify(attendance));
+  const breaks=draft.lunchBreaks||[],last=breaks[breaks.length-1];
+  if(last&&!last.endAt)last.endAt=closedAt;
+  const sessions=draft.sessions||[],activeSession=sessions[sessions.length-1];
+  if(activeSession&&!activeSession.logoutAt)activeSession.logoutAt=closedAt;
+  draft.sessions=sessions;
+  draft.shiftCloseHistory=draft.shiftCloseHistory||[];
+  draft.shiftCloseHistory.push({closedAt,by:currentUser.name||currentUser.id});
+  draft.shiftCloseAt=closedAt;
+  const durations=attendanceDurations(draft,closedAt);
+  const record={employeeId:currentUser.id,employeeName:currentUser.name,closedAt:new Date(closedAt).toLocaleString('en-IN'),timestamp:closedAt,shiftStartAt:draft.shiftStartAt||null,lunchBreaks:draft.lunchBreaks||[],lunchDurationMs:durations.lunch,workingDurationMs:durations.worked,workingHours:formatDuration(durations.worked),openingCash:Number(currentUser.openingCashBalance)||0,shiftTransactionCount:getShiftTransactions().length,expectedCash:expected,countedCash:counted,cashDifference:cashDiff,denominationSkipped:skipped,denominations:skipped?null:denoms,walletResults,reason:overallReason};
+  draft.shiftClose=record;draft.cashTally=counted;
+  const submitButton=document.querySelector('#shiftClosePanel button[onclick="submitShiftClose()"]');
+  window.slvShiftCloseSaving=true;if(submitButton){submitButton.disabled=true;submitButton.textContent='Saving Shift Close to Cloud...'}
+  try{
+    if(typeof window.syncAttendanceRecord!=='function')throw Error('Cloud attendance connection not ready');
+    await window.syncAttendanceRecord(draft);
+    const all=getAttendance(),ai=all.findIndex(x=>x.employeeId===draft.employeeId&&x.day===draft.day);
+    if(ai>=0)all[ai]=draft;else all.push(draft);
+    // Cloud write succeeded. Commit local cache without a second asynchronous upload.
+    write(ATTENDANCE_KEY,all);
+    currentUser.shiftClosed=true;saveLoginSession(currentUser);
+    $('shiftClosePanel').style.display='none';
+    alert('Shift Close and Cash Tally saved to Supabase Cloud ✓');
+    renderShiftCloseReports();
+  }catch(e){
+    console.error('SLV cloud shift close failed',e);
+    alert('Shift Close NOT saved to Cloud: '+(e?.message||String(e))+'\nPlease retry; shift remains open.');
+  }finally{window.slvShiftCloseSaving=false;if(submitButton){submitButton.disabled=false;submitButton.textContent='Submit Shift Close'}}
 }
 function renderShiftCloseReports(){
+  if(currentUser?.role==='Admin' && typeof window.slvLoadCloudShiftCloseReports==='function'){
+    window.slvLoadCloudShiftCloseReports();return;
+  }
   const c=$('shiftCloseReports');if(!c)return;c.innerHTML='';
   const reports=read('slvShiftCloseReports',[]).slice().reverse();
   if(!reports.length){c.textContent='No shift close reports yet.';return}
@@ -3358,6 +3385,50 @@ window.slvChangeCloudAssignment=async function(mode){
   await window.slvLoadCloudAssignments();status(mode==='add'?'Wallet assignment saved to Supabase ✓':'Wallet assignment removed from Supabase ✓');
  }catch(e){status('Save failed: '+e.message)}
 };
+})();
+</script>
+
+<script>
+/* SLV shift close cloud report: reads attendance.shift_close, never alters balances */
+(function(){
+ const box=()=>document.getElementById('shiftCloseReports');
+ let requestId=0;
+ window.slvLoadCloudShiftCloseReports=async function(){
+  const el=box();if(!el)return;
+  const token=++requestId;
+  el.textContent='Loading cloud shift close reports...';
+  try{
+   const db=window.slvSupabase;if(!db)throw Error('Cloud connection not ready');
+   const auth=await db.auth.getUser();if(!auth.data?.user)throw Error('Cloud login required');
+   const profile=await db.from('profiles').select('role,is_active').eq('id',auth.data.user.id).single();
+   if(profile.error||profile.data?.role!=='admin'||profile.data?.is_active!==true)throw Error('Cloud admin access required');
+   const result=await db.from('attendance').select('employee_user_id,work_date,shift_status,shift_close,cash_tally').not('shift_close','is',null).order('work_date',{ascending:false}).limit(100);
+   if(result.error)throw result.error;
+   const people=await db.from('profiles').select('id,full_name,employee_code');
+   if(people.error)throw people.error;
+   if(token!==requestId)return;
+   const names=new Map((people.data||[]).map(p=>[p.id,p]));
+   el.replaceChildren();
+   if(!result.data?.length){el.textContent='No cloud shift close reports yet.';return}
+   for(const row of result.data){
+    const r=row.shift_close||{};
+    if(!r.timestamp&&!r.closedAt)continue;
+    const person=names.get(row.employee_user_id)||{};
+    const card=document.createElement('div');card.className='shift-report-card';
+    const title=document.createElement('b');title.textContent=(person.full_name||r.employeeName||'Employee')+' ('+(person.employee_code||row.employee_user_id)+') — '+row.work_date;
+    card.append(title);
+    const line=t=>{const d=document.createElement('div');d.textContent=t;card.append(d)};
+    line('Shift Close: '+(r.closedAt||new Date(r.timestamp).toLocaleString('en-IN'))+' | Working Hours: '+(r.workingHours||'Not recorded'));
+    const fmt=n=>n==null?'Not counted':'₹'+Number(n).toFixed(2);
+    line('Expected Cash: '+fmt(r.expectedCash)+' | Counted: '+fmt(r.countedCash)+' | Difference: '+fmt(r.cashDifference));
+    if(r.denominations){line('Denominations: '+Object.entries(r.denominations).filter(([k,v])=>Number(v)>0).map(([k,v])=>'₹'+k+' × '+v).join(', '))}
+    for(const w of (Array.isArray(r.walletResults)?r.walletResults:[]))line((w.wallet||'Wallet')+': System '+fmt(w.systemBalance)+' / Actual '+fmt(w.actualBalance)+' | Difference '+fmt(w.difference)+(w.reason?' | '+w.reason:''));
+    if(r.reason)line('Reason: '+r.reason);
+    el.append(card);
+   }
+   if(!el.children.length)el.textContent='No completed cloud shift close reports yet.';
+  }catch(e){if(token===requestId)el.textContent='Cloud shift close reports unavailable: '+(e?.message||String(e))}
+ };
 })();
 </script>
 </body>
