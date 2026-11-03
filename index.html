@@ -991,7 +991,7 @@ body:has(#employeeView:not(.hidden)) .main-header {
 
     <div id="adminTransactions" class="section-box admin-section">
       <h4>📊 Transaction History & Collection</h4>
-      <div id="adminTransactions" class="muted">No transactions yet.</div>
+      <div id="adminTransactionsList" class="muted">No transactions yet.</div>
       <div class="total">Recorded Collection: ₹<span id="adminTotal">0</span></div>
       <h4 style="margin-top:18px">🔒 Employee Shift Close / Cash Tally Reports</h4>
       <div id="shiftCloseReports" class="muted">No shift close reports yet.</div>
@@ -1315,14 +1315,14 @@ function applyLeave(){
 }
 function getTransactions(){return read(KEYS.transactions,[])}
 function renderTransactions(){
-  const txs=getTransactions(),c=$('adminTransactions');c.innerHTML='';let total=0;
+  const txs=getTransactions(),c=$('adminTransactionsList');if(!c)return;c.innerHTML='';let total=0;
   if(!txs.length){c.textContent='No transactions yet.'}
   txs.slice().reverse().slice(0,30).forEach(t=>{
     total+=Number(t.totalPaid)||0;const row=document.createElement('div');row.className='tx-row';const left=document.createElement('div');
     const title=document.createElement('b');title.textContent=t.serviceName||'Service';const detail=document.createElement('div');detail.className='muted';detail.textContent=(t.empName||t.empId||'')+' • '+(t.date||'')+' • '+(t.paymentMode||'Cash');left.append(title,detail);
     const amount=document.createElement('b');amount.textContent='₹'+(Number(t.totalPaid)||0).toFixed(2);row.append(left,amount);c.append(row);
   });
-  $('adminTotal').textContent=total.toFixed(2);
+  const totalEl=$('adminTotal');if(totalEl)totalEl.textContent=total.toFixed(2);
 }
 
 function getWallets(){
