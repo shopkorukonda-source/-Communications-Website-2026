@@ -1050,11 +1050,11 @@ body:has(#employeeView:not(.hidden)) .main-header {
     <button class="btn-orange shift-close-trigger" onclick="openShiftClose()">🔒 Shift Off / Cash Tally</button>
     <div id="shiftClosePanel" class="shift-close-panel" style="display:none"></div>
     <details id="slvLeaveDetails" class="section-box"><summary style="cursor:pointer;font-weight:800">🌴 Apply for Leave</summary>
-    <label for="leaveDate">Leave Date</label>
+    <label for="leaveType">Leave Type</label><select id="leaveType"><option value="Casual">Casual</option><option value="Sick">Sick</option><option value="Other">Other</option></select><label for="leaveDate">From Date</label>
     <input id="leaveDate" type="date" required>
-    <label for="leaveReason">Reason for leave</label>
+    <label for="leaveToDate">To Date</label><input id="leaveToDate" type="date"><label for="leaveReason">Reason for leave</label>
     <input id="leaveReason" placeholder="Reason for leave">
-    <button class="btn-green" onclick="applyLeave()">Submit Leave</button></details>
+    <button class="btn-green" onclick="applyLeave()">Submit Leave</button><h4>My Cloud Leave History</h4><div id="slvEmployeeLeaveHistory" class="muted">Loading leave history...</div></details>
     <div class="section-box slv-extra-employee">
       <h4>📢 Shop Announcement</h4>
       <div id="employeeHolidayText" class="muted">No current announcement.</div>
@@ -3429,6 +3429,104 @@ window.slvChangeCloudAssignment=async function(mode){
    if(!el.children.length)el.textContent='No completed cloud shift close reports yet.';
   }catch(e){if(token===requestId)el.textContent='Cloud shift close reports unavailable: '+(e?.message||String(e))}
  };
+})();
+</script>
+<script>
+/* SLV Leaves: cloud-only workflow. Does not mutate legacy browser leave storage. */
+(function(){
+ const $id=id=>document.getElementById(id);
+ let pending=false;
+ async function identity(adminOnly=false){
+   const db=window.slvSupabase;
+   if(!db)throw Error('Supabase connection not ready');
+   const {data:auth,error:ae}=await db.auth.getUser();
+   if(ae||!auth?.user)throw Error('Supabase login required. Please sign in with your cloud account.');
+   const {data:p,error:pe}=await db.from('profiles').select('id,full_name,employee_code,role,is_active').eq('id',auth.user.id).single();
+   if(pe||!p||p.is_active!==true)throw Error('Active cloud profile required');
+   if(adminOnly && p.role!=='admin')throw Error('Cloud Admin permission required');
+   if(!adminOnly && p.role==='admin')throw Error('Employee cloud account required to apply leave');
+   return {db,user:auth.user,profile:p};
+ }
+ const nice=e=>e?.message||String(e);
+ function line(parent,first,second){const row=document.createElement('div');row.className='leave-row';const a=document.createElement('div');a.textContent=first;const b=document.createElement('b');b.textContent=second;row.append(a,b);parent.append(row);return row;}
+ window.applyLeave=async function(){
+   if(pending)return;
+   const from=$id('leaveDate')?.value,to=$id('leaveToDate')?.value||from,reason=$id('leaveReason')?.value.trim(),type=$id('leaveType')?.value||'Casual';
+   if(!from||!to||to<from)return alert('Valid From Date and To Date select చేయండి');
+   if(!reason)return alert('Leave reason enter చేయండి');
+   pending=true;
+   try{
+     const {db,user}=await identity(false);
+     const {error}=await db.from('leave_requests').insert({employee_user_id:user.id,from_date:from,to_date:to,leave_type:type,reason,status:'Pending'});
+     if(error)throw error;
+     $id('leaveDate').value='';$id('leaveToDate').value='';$id('leaveReason').value='';
+     await window.slvLoadMyCloudLeaves();
+     alert('Leave request saved in Supabase Cloud');
+   }catch(e){alert('Leave NOT saved: '+nice(e));}
+   finally{pending=false;}
+ };
+ window.slvLoadMyCloudLeaves=async function(){
+   const el=$id('slvEmployeeLeaveHistory');if(!el)return;
+   el.textContent='Loading cloud leave requests...';
+   try{
+     const {db,user}=await identity(false);
+     const {data,error}=await db.from('leave_requests').select('id,from_date,to_date,leave_type,reason,status,admin_note,created_at').eq('employee_user_id',user.id).order('created_at',{ascending:false}).limit(50);
+     if(error)throw error;
+     el.replaceChildren();
+     if(!data?.length){el.textContent='No cloud leave requests yet';return;}
+     for(const r of data){line(el,`${r.from_date} to ${r.to_date} • ${r.leave_type||'Leave'} • ${r.reason}${r.admin_note?' • Admin: '+r.admin_note:''}`,r.status||'Pending');}
+   }catch(e){el.textContent='Cloud leave history unavailable: '+nice(e);}
+ };
+ window.renderLeaves=function(){window.slvLoadAdminCloudLeaves();};
+ window.slvLoadAdminCloudLeaves=async function(){
+   const el=$id('leaveRequestsContainer');if(!el)return;
+   el.textContent='Loading cloud leave requests...';
+   try{
+     const {db}=await identity(true);
+     const {data,error}=await db.from('leave_requests').select('id,employee_user_id,from_date,to_date,leave_type,reason,status,admin_note,created_at').order('created_at',{ascending:false}).limit(100);
+     if(error)throw error;
+     el.replaceChildren();
+     if(!data?.length){el.textContent='No cloud leave requests';return;}
+     const ids=[...new Set(data.map(r=>r.employee_user_id))];
+     const {data:people,error:peopleError}=await db.from('profiles').select('id,full_name,employee_code').in('id',ids);
+     if(peopleError)throw peopleError;
+     const names=new Map((people||[]).map(p=>[p.id,(p.full_name||p.employee_code||p.id)]));
+     for(const r of data){
+       const row=document.createElement('div');row.className='leave-row';
+       const info=document.createElement('div');
+       const name=document.createElement('b');name.textContent=names.get(r.employee_user_id)||r.employee_user_id;
+       const desc=document.createElement('div');desc.className='muted';desc.textContent=`${r.from_date} to ${r.to_date} • ${r.leave_type||'Leave'} • ${r.reason} • ${r.status||'Pending'}`+(r.admin_note?' • '+r.admin_note:'');
+       info.append(name,desc);row.append(info);
+       if((r.status||'').toLowerCase()==='pending'){
+         const actions=document.createElement('div');
+         for(const status of ['Approved','Rejected']){
+           const btn=document.createElement('button');btn.className=(status==='Approved'?'btn-green':'btn-red')+' btn-small';btn.textContent=status;
+           btn.onclick=async()=>{
+             if(!confirm(`${status} leave for ${names.get(r.employee_user_id)||'employee'}?`))return;
+             const note=prompt('Admin note (optional):','');if(note===null)return;
+             btn.disabled=true;
+             try{
+               const {db:adminDb,user}=await identity(true);
+               const payload={status,admin_note:note,approved_by:user.id,approved_at:new Date().toISOString()};
+               const {data:updated,error:ue}=await adminDb.from('leave_requests').update(payload).eq('id',r.id).eq('status','Pending').select('id');
+               if(ue)throw ue;
+               if(!updated?.length)throw Error('Request was already processed or not accessible');
+               await window.slvLoadAdminCloudLeaves();
+               alert('Leave '+status+' in Cloud. Payroll/leave ledger is not automatically adjusted by this action.');
+             }catch(e){alert('Cloud leave update failed: '+nice(e));btn.disabled=false;}
+           };actions.append(btn);
+         }
+         row.append(actions);
+       }
+       el.append(row);
+     }
+   }catch(e){el.textContent='Cloud leave requests unavailable: '+nice(e);}
+ };
+ const oldMenu=window.adminMenuGo;
+ if(typeof oldMenu==='function')window.adminMenuGo=function(section,...args){const result=oldMenu.call(this,section,...args);if(section==='adminLeaves')window.slvLoadAdminCloudLeaves();return result;};
+ const oldShow=window.showView;
+ if(typeof oldShow==='function')window.showView=function(view,...args){const result=oldShow.call(this,view,...args);if(view==='employeeView')setTimeout(()=>window.slvLoadMyCloudLeaves(),200);if(view==='adminView')setTimeout(()=>window.slvLoadAdminCloudLeaves(),200);return result;};
+ const leaveDetails=$id('slvLeaveDetails');if(leaveDetails)leaveDetails.addEventListener('toggle',()=>{if(leaveDetails.open)window.slvLoadMyCloudLeaves();});
 })();
 </script>
 </body>
