@@ -745,6 +745,37 @@ body:has(#servicesView.slv-centered-popup:not(.hidden)) .slv-pending-floating{di
 #slvXeroxPanel .xerox-bill-total strong{font-size:22px}
 #slvXeroxPanel .xerox-compact-inputs input::-webkit-inner-spin-button,#slvXeroxPanel .xerox-compact-inputs input::-webkit-outer-spin-button{display:none;-webkit-appearance:none}
 @media(max-width:600px){#slvXeroxPanel .xerox-compact-options{gap:7px 11px}#slvXeroxPanel .xerox-compact-inputs>div{width:105px}}
+
+/* Employee dashboard clean layout — intentionally scoped; admin untouched */
+#employeeView{max-width:1050px;margin:0 auto;background:#f8fafc!important;border:1px solid #e5ebf3!important;border-radius:18px!important;padding:22px!important;box-shadow:0 8px 28px rgba(20,42,70,.06)!important}
+#employeeView .employee-topbar{background:#fff!important;color:#183456!important;border:1px solid #e4eaf2;border-radius:13px;padding:12px 15px!important;box-shadow:none!important;margin-bottom:16px}
+#employeeView .employee-topbar strong{color:#183456!important;font-size:16px!important}
+#employeeView .employee-topbar .hamburger-btn{background:#edf3fa;color:#174879;box-shadow:none}
+#employeeView .employee-topbar .btn-secondary{background:#edf3fa;color:#234b72;box-shadow:none}
+#employeeView .slv-extra-employee{width:100%!important;display:block!important;min-height:0!important;margin:10px 0!important;border:1px solid #e4eaf2!important;background:#fff!important;border-radius:12px!important;box-shadow:none!important;padding:13px 16px!important}
+#employeeView #attendancePanel{margin:12px 0!important;background:#fff!important;border:1px solid #e4eaf2!important;border-left:1px solid #e4eaf2!important;box-shadow:none!important;border-radius:13px!important;padding:18px!important}
+#employeeView #attendancePanel h4{font-size:15px!important;margin:0 0 12px!important;padding:0!important;border:0!important}
+#employeeView .attendance-stats{grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+#employeeView .attendance-stats>div{background:#f8fafc;border:1px solid #e9edf3;border-radius:10px;padding:12px;min-width:0}
+#employeeView .attendance-stats b{font-size:13px;overflow-wrap:anywhere}
+#employeeView .attendance-status{font-size:12px;border-radius:9px}
+#employeeView .cash-wallet-employee-card{background:#fff;border:1px solid #e4eaf2;box-shadow:none;border-radius:12px;padding:13px 16px;margin:12px 0}
+#employeeView .cash-wallet-employee-card strong{font-size:20px}
+#employeeView>h3{font-size:15px!important;margin:18px 0 10px!important;padding:0 0 8px!important}
+#employeeView .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#employeeView .tile{min-height:84px!important;background:#fff!important;border:1px solid #e3eaf2!important;color:#1c456e!important;box-shadow:none!important;border-radius:12px!important;padding:13px!important;font-size:13px}
+#employeeView .tile span{font-size:22px;margin-bottom:4px}
+#employeeView .shift-close-trigger{width:100%;margin:15px 0 8px;background:#fff1f0;color:#ad3d36;border:1px solid #f3d5d1;box-shadow:none}
+#employeeView #slvLeaveDetails,#employeeView .section-box.slv-extra-employee{background:#fff!important;border:1px solid #e4eaf2!important;border-radius:12px!important;box-shadow:none!important;margin:12px 0!important;padding:16px!important}
+#employeeView .section-box:before{display:none!important}
+#employeeView .employee-side-menu{background:#fff!important;color:#183456!important}
+#employeeView .side-menu-link{background:#f4f7fb!important;color:#25466a!important;box-shadow:none!important}
+#employeeView .side-menu-link.side-logout{background:#fff1f0!important;color:#a63737!important}
+#employeeView .side-menu-head{color:#183456}
+#employeeView .slv-service-link-menu{margin-top:auto!important}
+#employeeView .slv-service-link-menu + .side-menu-caption{margin-top:12px}
+@media(max-width:720px){#employeeView{padding:11px!important}#employeeView .employee-topbar{padding:10px!important}#employeeView .attendance-stats{grid-template-columns:repeat(2,minmax(0,1fr))}#employeeView .grid{grid-template-columns:repeat(2,minmax(0,1fr))}#employeeView .tile{padding:12px 7px!important}#employeeView .cash-wallet-employee-card{gap:6px}}
+
 </style>
 <style id="slvPersonalGreetingStyle">
 .slv-personal-greeting{display:flex;flex-direction:column;gap:7px;margin:14px 0 18px;padding:19px 22px;border:1px solid #dce9fb;border-left:5px solid #1e6bc4;border-radius:14px;background:linear-gradient(105deg,#f0f6ff,#fff);box-shadow:0 5px 16px rgba(17,54,101,.05)}
@@ -924,6 +955,7 @@ body.slv-xerox-selected #servicesView.slv-centered-popup #slvTxSave:disabled{opa
       <button class="side-menu-link" onclick="adminMenuGo('adminLeaves')">🌴 Leave Requests</button>
       <button class="side-menu-link" onclick="adminMenuGo('adminTransactions')">📊 Transactions & Collection</button>
       <button class="side-menu-link" onclick="adminMenuGo('adminServiceLinks');slvLinksAdminLoad()">🌐 Manage Service Links</button>
+      <button class="side-menu-link slv-service-link-menu" onclick="slvLinksOpen()">🌐 Service Links</button>
       <button class="side-menu-link side-logout" onclick="logout()">🚪 Logout</button>
     </aside>
 
@@ -1047,11 +1079,15 @@ body.slv-xerox-selected #servicesView.slv-centered-popup #slvTxSave:disabled{opa
         <label for="slvMapCost">Legacy primary cost wallet (read-only reference)</label><select id="slvMapCost" disabled></select>
         <div class="section-box" style="border:1px solid #cbdcf5;background:#fff">
           <h4>➕ Additional Processing Wallets</h4>
+          <label style="display:flex;align-items:center;gap:9px;font-size:14px"><input id="slvNoProcessingWallet" type="checkbox" style="width:auto;margin:0" onchange="slvToggleNoProcessingWallet()"> No Processing Wallet Required (Cost ₹0 only)</label>
+          <p id="slvNoProcessingWalletHint" class="muted">For zero-cost services, select this to save without a processing wallet.</p>
+          <div id="slvProcessingWalletControls">
           <p class="muted">Click Add Processing Wallet to link another wallet. Employee sees only the wallets saved here and chooses one at transaction time.</p>
           <div id="slvProcessingWalletRows"></div>
           <button type="button" class="btn-secondary" onclick="slvAddProcessingWallet()">+ Add Processing Wallet</button>
           <select id="slvAllowedWallets" multiple class="hidden" aria-hidden="true" tabindex="-1"></select>
           <p id="slvProcessingWalletCount" class="muted">No processing wallets selected.</p>
+          </div>
         </div>
         <p class="muted">Cost ₹0: no processing wallet required. Changes apply to new completed transactions.</p>
         <button type="button" class="btn-green" onclick="slvMapSave()">Save Cloud Mapping</button>
@@ -1210,7 +1246,6 @@ body.slv-xerox-selected #servicesView.slv-centered-popup #slvTxSave:disabled{opa
       <div class="side-menu-head"><b>SLV Communications</b><button onclick="toggleEmployeeMenu(false)">✕</button></div>
       <button class="side-menu-link" onclick="employeeMenuGo('employeeView')">🏠 Dashboard</button>
       <button class="side-menu-link" onclick="employeeMenuGo('servicesView')">💼 Services</button><button class="side-menu-link" onclick="slvPanOpen()">🧾 PAN Receipts</button>
-      <button class="side-menu-link slv-service-link-menu" onclick="slvLinksOpen()">🌐 Service Links</button>
       <div class="side-menu-caption">Assigned Wallets</div>
       <div id="employeeAssignedWallets" class="assigned-wallet-list"></div>
       <button class="side-menu-link side-logout" onclick="logout()">🚪 Logout</button>
@@ -2815,8 +2850,16 @@ try {
   if(!next){status('No more available wallets. Load Cloud Services & Wallets if needed.');return;}
   drawProcessingRows([...current,next.id]);
  };
+ window.slvToggleNoProcessingWallet=()=>{
+  const svc=services.find(x=>x.id===el('slvMapService').value);
+  const free=Number(svc?.internal_cost)===0;const checkbox=el('slvNoProcessingWallet');
+  if(!free){checkbox.checked=false;checkbox.disabled=true;}else checkbox.disabled=false;
+  el('slvProcessingWalletControls').classList.toggle('hidden',checkbox.checked);
+  el('slvNoProcessingWalletHint').textContent=free?'No processing debit. Cash/UPI collection wallets still receive customer payments.':'This service has processing cost. Assign at least one processing wallet.';
+  if(checkbox.checked)drawProcessingRows([]);
+ };
  function apply(){const id=el('slvMapService').value;const m=mappings.find(x=>x.service_id===id)||{};
-  for(const [field,key] of [['slvMapCash','cash_wallet_id'],['slvMapUpi','upi_wallet_id'],['slvMapCost','cost_wallet_id']])el(field).value=m[key]||''; const selected=new Set(allowed.filter(x=>x.service_id===id).map(x=>x.wallet_id)); drawProcessingRows([...selected]);
+  for(const [field,key] of [['slvMapCash','cash_wallet_id'],['slvMapUpi','upi_wallet_id'],['slvMapCost','cost_wallet_id']])el(field).value=m[key]||''; const selected=new Set(allowed.filter(x=>x.service_id===id).map(x=>x.wallet_id)); drawProcessingRows([...selected]); const svc=services.find(x=>x.id===id);el('slvNoProcessingWallet').checked=Number(svc?.internal_cost)===0&&selected.size===0;window.slvToggleNoProcessingWallet();
  }
  window.slvMapRefresh=()=>run(async()=>{
   const db=await admin();
@@ -2840,7 +2883,7 @@ try {
   const ids=['slvMapCash','slvMapUpi','slvMapCost'].map(k=>el(k).value||null);
   if(!ids.some(Boolean))throw Error('Map at least one wallet');
   if(ids.some(x=>x&&!wallets.some(w=>w.id===x)))throw Error('Refresh wallets and select active wallets');
-  const selectedAllowed=Array.from(el('slvAllowedWallets').selectedOptions).map(o=>o.value);const service=services.find(x=>x.id===id);if(Number(service.internal_cost)>0&&!selectedAllowed.length)throw Error('Select at least one allowed cost wallet'); const name=service.service_name;
+  const selectedAllowed=el('slvNoProcessingWallet').checked?[]:Array.from(el('slvAllowedWallets').selectedOptions).map(o=>o.value);const service=services.find(x=>x.id===id);if(el('slvNoProcessingWallet').checked&&Number(service.internal_cost)!==0)throw Error('No Processing Wallet is permitted only for Cost ₹0 services');if(Number(service.internal_cost)>0&&!selectedAllowed.length)throw Error('Select at least one allowed cost wallet'); const name=service.service_name;
   if(!confirm('Save cloud wallet mapping for '+name+'? This does not process a transaction.'))return;
   const db=await admin();const res=await db.rpc('slv_save_allowed_wallets',{
    p_service_id:id,p_cash_wallet_id:ids[0],p_upi_wallet_id:ids[1],p_wallet_ids:selectedAllowed
@@ -2936,13 +2979,13 @@ try {
  window.slvTxInvalidateServices=()=>{servicesFetchedAt=0;};
 
  async function loadAllowedWallets(){
-  const id=el('slvTxService').value,sel=el('slvSelectedWallet');
+  const id=el('slvTxService').value,sel=el('slvSelectedWallet');el('slvSelectedWalletBox').classList.remove('hidden');
   allowedWallets=[];walletMapping=null;walletLoading=true;sel.replaceChildren();sel.add(new Option('Loading assigned wallets…',''));
   try{
    if(!id){sel.replaceChildren();sel.add(new Option('Select service first',''));return}
    const db=await employeeDb();
    const r=await db.rpc('slv_get_checkout_wallets',{p_service_id:id});if(r.error)throw r.error;
-   const data=r.data||{};allowedWallets=data.allowed||[];walletMapping=data.mapping||null;const chosenService=services.find(x=>x.id===id);if(Number(chosenService?.internal_cost)===0)allowedWallets=[];
+   const data=r.data||{};allowedWallets=data.allowed||[];walletMapping=data.mapping||null;const chosenService=services.find(x=>x.id===id);if(Number(chosenService?.internal_cost)===0)allowedWallets=[];el('slvSelectedWalletBox').classList.toggle('hidden',Number(chosenService?.internal_cost)===0);
    sel.replaceChildren();sel.add(new Option('— Select Processing Wallet —',''));
    allowedWallets.forEach(w=>sel.add(new Option(w.wallet_name,w.wallet_id)));
    if(allowedWallets.length===1)sel.value=allowedWallets[0].wallet_id;
@@ -2979,7 +3022,7 @@ try {
   const a=amounts(),name=el('slvTxCustomer').value.trim(),mobile=el('slvTxMobile').value.trim(),mode=el('slvTxMode').value;
   if(!a.valid||a.change<0||!name||(Number(a.service?.internal_cost)>0&&!allowedWallets.some(w=>w.wallet_id===el('slvSelectedWallet').value))){status('Valid quantity and full payment required. UPI cannot exceed the bill.',true);return}
   // Cash received may include change; only the net cash retained is credited.
-  const selectedWallet=el('slvSelectedWallet').value||null;const payload=JSON.stringify([a.service.id,name,mobile,a.qty,a.netCash,a.upi,mode,selectedWallet]);
+  const selectedWallet=Number(a.service.internal_cost)===0?null:(el('slvSelectedWallet').value||null);const payload=JSON.stringify([a.service.id,name,mobile,a.qty,a.netCash,a.upi,mode,selectedWallet]);
   if(pendingRequest&&pendingRequest.payload!==payload){status('Uncertain previous save: retry unchanged values, or verify Cloud Transactions before new entry.',true);return}
   if(mode==='later'){status('Pending mode requires a separate completion migration; use Complete Now.',true);return;}if(!confirm((mode==='later'?'Save PENDING':'Complete NOW')+' • '+a.service.service_name+' × '+a.qty+' • Bill '+money(a.due)+' • Change '+money(Math.max(0,a.change))+'?'))return;
   if(!pendingRequest)pendingRequest={payload,id:crypto.randomUUID()};
