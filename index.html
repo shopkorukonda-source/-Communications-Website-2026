@@ -934,9 +934,9 @@ body.slv-xerox-selected #slvCloudCheckout>h3{font-size:13px!important}
       <div id="servicesAdminList"></div>
 
 <div id="xeroxAdminPricing" class="section-box" style="margin-top:18px;border:1px solid #d6e5fa">
-<h4>🖨️ Xerox — Manage Pricing Slabs</h4>
-<p class="muted">Paper Size & Print Type కి వేర్వేరు Rates. ఈ browser లో Save అవుతాయి; Supabase sync ఇంకా లేదు.</p>
-<div class="row"><div><label>Paper Size</label><select id="xaSize" onchange="xaRender()"><option>A4</option><option>Legal</option><option>A3</option></select></div><div><label>Print Type</label><select id="xaSide" onchange="xaRender()"><option value="Single">Single Side</option><option value="Double">Double Side</option></select></div></div>
+<h4>🖨️ Xerox / Print — Separate Cloud Pricing Slabs</h4>
+<p class="muted">Select Xerox or Print. Admin edits save directly to separate Supabase tables. Existing Xerox rates remain unchanged.</p>
+<div class="row"><div><label>Service</label><select id="xaService" onchange="xaRender()"><option value="Xerox">Xerox</option><option value="Print">Print</option></select></div><div><label>Paper Size</label><select id="xaSize" onchange="xaRender()"><option>A4</option><option>Legal</option><option>A3</option></select></div><div><label>Print Type</label><select id="xaSide" onchange="xaRender()"><option value="Single">Single Side</option><option value="Double">Double Side</option></select></div></div>
 <div class="row"><div><label>From Papers</label><input id="xaFrom" type="number" min="1" step="1" value="1"></div><div><label>To Papers</label><input id="xaTo" type="number" min="1" step="1" value="1"></div></div>
 <label>Pricing Type</label><select id="xaType" onchange="xaFields()"><option value="per">Per Paper</option><option value="fixed">Fixed Total</option><option value="starting">Starting Paper + Additional Paper</option></select>
 <div class="row"><div><label id="xaRateLabel">Rate per Paper ₹</label><input id="xaRate" type="number" min="0" step="0.01" value="3"></div><div id="xaExtraBox" class="hidden"><label>Additional Paper ₹</label><input id="xaExtra" type="number" min="0" step="0.01" value="2"></div></div>
@@ -3965,7 +3965,7 @@ body.slv-xerox-selected #slvTxPreview{display:none!important}
 #xeroxSaveHint{font-size:12px;color:#385579;margin:8px 0}
 </style>
 <script>
-/* Xerox-specific cloud posting; existing service checkout is untouched. */
+/* Xerox/Print cloud posting requires companion SQL migration before Print bills are saved. */
 let slvXeroxRequest=null,slvXeroxBusy=false;
 function slvXeroxSelected(){const sel=document.getElementById('slvTxService');return /xerox|photocopy/i.test(sel?.selectedOptions[0]?.textContent||'')}
 function slvXeroxCents(n){return Math.round((Number(n)+Number.EPSILON)*100)}
@@ -3973,10 +3973,10 @@ function slvXeroxQuote(){
  const manual=document.getElementById('xeroxManual').checked;
  if(manual)throw Error('Manual rate override cannot be saved securely yet. Turn it off to use Admin Cloud Pricing.');
  if(!xaReady)throw Error('Cloud pricing not loaded');
- const rows=xeroxItems.map(x=>({paper_size:x.size,print_type:x.side,papers_per_set:xeroxSheetsPerSet(x),total_sets:Number(x.sets)}));
+ const rows=xeroxItems.map(x=>({service_type:x.jobType==='Print'?'Print':'Xerox',paper_size:x.size,print_type:x.side,papers_per_set:xeroxSheetsPerSet(x),total_sets:Number(x.sets)}));
  if(!rows.length||rows.length>30)throw Error('Invalid Xerox rows');
  const groups=new Map();let count=0;
- for(const r of rows){if(!Number.isInteger(r.papers_per_set)||!Number.isInteger(r.total_sets)||r.papers_per_set<1||r.total_sets<1)throw Error('Enter valid papers and sets');const n=r.papers_per_set*r.total_sets;count+=n;const k=r.paper_size+' / '+r.print_type;groups.set(k,(groups.get(k)||0)+n)}
+ for(const r of rows){if(!Number.isInteger(r.papers_per_set)||!Number.isInteger(r.total_sets)||r.papers_per_set<1||r.total_sets<1)throw Error('Enter valid papers and sets');const n=r.papers_per_set*r.total_sets;count+=n;const k=r.service_type+' / '+r.paper_size+' / '+r.print_type;groups.set(k,(groups.get(k)||0)+n)}
  if(count>10000)throw Error('Maximum 10,000 papers per bill');
  let subtotal=0;
  for(const [key,n] of groups){const matches=xaGetRules(key).filter(r=>n>=r.from&&n<=r.to);if(matches.length!==1)throw Error('Missing or overlapping Admin slab: '+key+' ('+n+')');const r=matches[0];subtotal+=r.type==='fixed'?r.rate:r.type==='starting'?r.rate+(n-1)*r.extra:n*r.rate}
@@ -4046,7 +4046,7 @@ function xeroxRender(){
  xeroxById('xeroxItems').innerHTML=xeroxItems.map((x,i)=>`<div class="xerox-item"><div class="xerox-head"><strong>${xeroxExtra?'Job '+(i+1):'Print Details'}</strong>${i>0?`<button type="button" class="btn-red btn-small" onclick="xeroxRemove(${x.id})">Remove</button>`:''}</div><div class="xerox-all-options"><div class="xerox-job-type"><label>Service Type</label><div class="xerox-tick-row"><label class="xerox-tick"><input type="checkbox" ${x.jobType!=='Print'?'checked':''} onchange="xeroxChange(${x.id},'jobType','Xerox');xeroxRender()"><span>Xerox</span></label><label class="xerox-tick"><input type="checkbox" ${x.jobType==='Print'?'checked':''} onchange="xeroxChange(${x.id},'jobType','Print');xeroxRender()"><span>Print</span></label></div></div><div class="xerox-compact-options"><div><label>Paper Size</label><div class="xerox-tick-row">${['A4','Legal','A3'].map(v=>`<label class="xerox-tick"><input type="checkbox" ${x.size===v?'checked':''} onchange="xeroxChange(${x.id},'size','${v}');xeroxRender()"><span>${v}</span></label>`).join('')}</div></div><div><label>Print Sides</label><div class="xerox-tick-row"><label class="xerox-tick"><input type="checkbox" ${x.side==='Single'?'checked':''} onchange="xeroxChange(${x.id},'side','Single');xeroxRender()"><span>Single</span></label><label class="xerox-tick"><input type="checkbox" ${x.side==='Double'?'checked':''} onchange="xeroxChange(${x.id},'side','Double');xeroxRender()"><span>Both</span></label></div></div><div class="xerox-count-choice"><label>Count By</label><div class="xerox-mode-buttons"><button type="button" class="${x.countMode!=='papers'?'selected':''}" onclick="xeroxChange(${x.id},'countMode','pages');xeroxRender()">Pages</button><button type="button" class="${x.countMode==='papers'?'selected':''}" onclick="xeroxChange(${x.id},'countMode','papers');xeroxRender()">Papers</button></div></div></div></div><div class="xerox-compact-inputs"><div><label>${x.countMode==='papers'?'Papers':'Pages'}</label><input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="Enter" value="${xeroxEsc(x.papers)}" oninput="xeroxChange(${x.id},'papers',this.value)"></div><div><label>Copies</label><input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="Enter" value="${xeroxEsc(x.sets)}" oninput="xeroxChange(${x.id},'sets',this.value)"></div></div><div class="xerox-count-output">${xeroxEsc(xeroxCountSummary(x))}</div></div>`).join('');xeroxCalculate();
 }
 function xeroxCalculate(){
- const groups=new Map();let papers=0;for(const x of xeroxItems){const n=xeroxSheetsPerSet(x)*Math.floor(xeroxNum(x.sets));papers+=n;const key=x.size+' / '+x.side;groups.set(key,(groups.get(key)||0)+n)}
+ const groups=new Map();let papers=0;for(const x of xeroxItems){const n=xeroxSheetsPerSet(x)*Math.floor(xeroxNum(x.sets));papers+=n;const key=(x.jobType==='Print'?'Print':'Xerox')+' / '+x.size+' / '+x.side;groups.set(key,(groups.get(key)||0)+n)}
  const manual=xeroxById('xeroxManual').checked;
  let missing=[];let details=[];
  if(!xaReady&&!manual){xeroxById('xeroxResult').textContent='Cloud pricing not loaded. Please log in and reload pricing before billing.';return;}
@@ -4055,7 +4055,7 @@ function xeroxCalculate(){
   const rule=xaGetRules(key).find(r=>n>=r.from&&n<=r.to);
   if(!rule){missing.push(key+' ('+n+' papers)');return sum}
   const amount=rule.type==='fixed'?rule.rate:rule.type==='starting'?rule.rate+Math.max(0,n-1)*rule.extra:n*rule.rate;
-  details.push((xeroxItems.filter(x=>x.size+' / '+x.side===key).map(x=>x.jobType||'Xerox').join(' + '))+': '+key+': '+n+' papers, '+rule.type+' '+rule.from+'–'+rule.to);
+  details.push((xeroxItems.filter(x=>(x.jobType==='Print'?'Print':'Xerox')+' / '+x.size+' / '+x.side===key).map(x=>x.jobType||'Xerox').join(' + '))+': '+key+': '+n+' papers, '+rule.type+' '+rule.from+'–'+rule.to);
   return sum+amount;
  },0);
  const subtotal=manual?papers*xeroxNum(xeroxById('xeroxManualRate').value):autoSubtotal;
@@ -4078,8 +4078,9 @@ document.addEventListener('DOMContentLoaded',()=>{xeroxRender();const sel=xeroxB
 <script>
 /* Xerox pricing: Supabase-backed, RLS-controlled. No local pricing fallback. */
 let xaEditIndex=null, xaData={}, xaRows={}, xaReady=false, xaBusy=false;
-const xaCombos=['A4','Legal','A3'].flatMap(size=>['Single','Double'].map(side=>size+' / '+side));
-function xaKey(){return document.getElementById('xaSize').value+' / '+document.getElementById('xaSide').value}
+const xaCombos=['Xerox','Print'].flatMap(service=>['A4','Legal','A3'].flatMap(size=>['Single','Double'].map(side=>service+' / '+size+' / '+side)));
+function xaTable(){return document.getElementById('xaService').value==='Print'?'print_pricing':'xerox_pricing'}
+function xaKey(){return document.getElementById('xaService').value+' / '+document.getElementById('xaSize').value+' / '+document.getElementById('xaSide').value}
 function xaGetRules(key){return xaReady&&Array.isArray(xaData[key])?xaData[key]:[]}
 function xaFields(){const starting=document.getElementById('xaType').value==='starting';document.getElementById('xaExtraBox').classList.toggle('hidden',!starting);document.getElementById('xaRateLabel').textContent=document.getElementById('xaType').value==='fixed'?'Fixed Total ₹':starting?'Starting Paper ₹':'Rate per Paper ₹'}
 function xaStatus(message,error=false){const el=document.getElementById('xaStatus');if(el){el.textContent=message;el.style.color=error?'#b91c1c':'#168364'}}
@@ -4087,9 +4088,18 @@ function xaCancel(){xaEditIndex=null;document.getElementById('xaSaveBtn').textCo
 function xaRender(){xaCancel();const list=xaGetRules(xaKey());document.getElementById('xaRules').innerHTML=!xaReady?'<p class="muted">Cloud rates loading / unavailable. No sample rates will be used.</p>':list.length?list.map((r,i)=>`<div class="emp-row"><div><b>${r.from}–${r.to} papers</b><br><span class="muted">${r.type==='fixed'?'Fixed Total':r.type==='starting'?'Starting + Additional':'Per Paper'}: ₹${r.rate}${r.type==='starting'?' + ₹'+r.extra+' additional':''}</span></div><button type="button" class="btn-small btn-secondary" onclick="xaEdit(${i})">Edit</button><button type="button" class="btn-small btn-red" onclick="xaDelete(${i})">Delete</button></div>`).join(''):'<p class="muted">No cloud rules for this combination. Add rules before billing.</p>';if(typeof xeroxCalculate==='function')xeroxCalculate()}
 function xaEdit(i){const r=xaGetRules(xaKey())[i];if(!r)return;xaEditIndex=i;document.getElementById('xaFrom').value=r.from;document.getElementById('xaTo').value=r.to;document.getElementById('xaType').value=r.type;document.getElementById('xaRate').value=r.rate;document.getElementById('xaExtra').value=r.extra||0;document.getElementById('xaSaveBtn').textContent='Save Changes';xaFields()}
 async function xaClient(admin=false){const db=window.slvSupabase;if(!db)throw Error('Supabase connection unavailable');const {data,error}=await db.auth.getUser();if(error||!data?.user)throw Error('Cloud login required');if(admin){const r=await db.from('profiles').select('role,is_active').eq('id',data.user.id).single();if(r.error||r.data?.role?.toLowerCase()!=='admin'||r.data?.is_active!==true)throw Error('Active admin account required')}return db}
-async function xaLoad(){try{const db=await xaClient();const {data,error}=await db.from('xerox_pricing').select('id,paper_size,print_type,from_papers,to_papers,pricing_type,rate,additional_rate').order('from_papers');if(error)throw error;xaData=Object.fromEntries(xaCombos.map(k=>[k,[]]));xaRows={};for(const r of data||[]){const key=r.paper_size+' / '+r.print_type;const row={id:r.id,from:r.from_papers,to:r.to_papers,type:r.pricing_type,rate:Number(r.rate),extra:Number(r.additional_rate)};if(xaData[key])xaData[key].push(row)}xaReady=true;xaRender();xaStatus((data||[]).length+' Xerox pricing rules loaded from Supabase ✓')}catch(e){xaReady=false;xaData={};xaRender();xaStatus('Cloud pricing unavailable: '+e.message,true)}}
-async function xaDelete(i){const r=xaGetRules(xaKey())[i];if(!r||xaBusy||!confirm('Delete this Xerox pricing rule from cloud?'))return;xaBusy=true;try{const db=await xaClient(true);const result=await db.from('xerox_pricing').delete().eq('id',r.id).select('id');if(result.error)throw result.error;if(result.data?.length!==1)throw Error('Delete not confirmed');await xaLoad();xaStatus('Rule deleted from Supabase ✓')}catch(e){xaStatus('Delete failed: '+e.message,true)}finally{xaBusy=false}}
-async function xaSave(){if(xaBusy)return;const from=Number(document.getElementById('xaFrom').value),to=Number(document.getElementById('xaTo').value),type=document.getElementById('xaType').value,rate=Number(document.getElementById('xaRate').value),extra=Number(document.getElementById('xaExtra').value);if(!Number.isSafeInteger(from)||!Number.isSafeInteger(to)||from<1||to<from||!Number.isFinite(rate)||rate<0||(type==='starting'&&(!Number.isFinite(extra)||extra<0))){xaStatus('Enter valid paper ranges and rates',true);return}if(!xaReady){xaStatus('Load cloud rates first; cannot save while offline',true);return}const list=xaGetRules(xaKey());if(list.some((r,i)=>i!==xaEditIndex&&from<=r.to&&to>=r.from)){xaStatus('Overlapping range is not allowed',true);return}xaBusy=true;try{const db=await xaClient(true);const [paper_size,print_type]=xaKey().split(' / ');const payload={paper_size,print_type,from_papers:from,to_papers:to,pricing_type:type,rate,additional_rate:type==='starting'?extra:0,updated_at:new Date().toISOString()};let result;if(xaEditIndex===null)result=await db.from('xerox_pricing').insert(payload).select('id');else result=await db.from('xerox_pricing').update(payload).eq('id',list[xaEditIndex].id).select('id');if(result.error)throw result.error;if(result.data?.length!==1)throw Error('Save not confirmed');await xaLoad();xaStatus('Pricing rule saved in Supabase Cloud ✓')}catch(e){xaStatus('Save failed: '+e.message,true)}finally{xaBusy=false}}
+async function xaLoad(){
+ try{
+  const db=await xaClient();
+  const results=await Promise.all(['xerox_pricing','print_pricing'].map(t=>db.from(t).select('id,paper_size,print_type,from_papers,to_papers,pricing_type,rate,additional_rate').order('from_papers')));
+  for(const r of results)if(r.error)throw r.error;
+  xaData=Object.fromEntries(xaCombos.map(k=>[k,[]]));xaRows={};
+  results.forEach((res,i)=>{const service=i===0?'Xerox':'Print';for(const r of res.data||[]){const key=service+' / '+r.paper_size+' / '+r.print_type;const row={id:r.id,from:r.from_papers,to:r.to_papers,type:r.pricing_type,rate:Number(r.rate),extra:Number(r.additional_rate)};if(xaData[key])xaData[key].push(row)}});
+  xaReady=true;xaRender();xaStatus((results[0].data||[]).length+' Xerox + '+(results[1].data||[]).length+' Print rules loaded from Supabase ✓');
+ }catch(e){xaReady=false;xaData={};xaRender();xaStatus('Cloud pricing unavailable: '+e.message,true)}
+}
+async function xaDelete(i){const r=xaGetRules(xaKey())[i];if(!r||xaBusy||!confirm('Delete this '+document.getElementById('xaService').value+' pricing rule from cloud?'))return;xaBusy=true;try{const db=await xaClient(true);const result=await db.from(xaTable()).delete().eq('id',r.id).select('id');if(result.error)throw result.error;if(result.data?.length!==1)throw Error('Delete not confirmed');await xaLoad();xaStatus('Rule deleted from Supabase ✓')}catch(e){xaStatus('Delete failed: '+e.message,true)}finally{xaBusy=false}}
+async function xaSave(){if(xaBusy)return;const from=Number(document.getElementById('xaFrom').value),to=Number(document.getElementById('xaTo').value),type=document.getElementById('xaType').value,rate=Number(document.getElementById('xaRate').value),extra=Number(document.getElementById('xaExtra').value);if(!Number.isSafeInteger(from)||!Number.isSafeInteger(to)||from<1||to<from||!Number.isFinite(rate)||rate<0||(type==='starting'&&(!Number.isFinite(extra)||extra<0))){xaStatus('Enter valid paper ranges and rates',true);return}if(!xaReady){xaStatus('Load cloud rates first; cannot save while offline',true);return}const list=xaGetRules(xaKey());if(list.some((r,i)=>i!==xaEditIndex&&from<=r.to&&to>=r.from)){xaStatus('Overlapping range is not allowed',true);return}xaBusy=true;try{const db=await xaClient(true);const [,paper_size,print_type]=xaKey().split(' / ');const payload={paper_size,print_type,from_papers:from,to_papers:to,pricing_type:type,rate,additional_rate:type==='starting'?extra:0,updated_at:new Date().toISOString()};let result;if(xaEditIndex===null)result=await db.from(xaTable()).insert(payload).select('id');else result=await db.from(xaTable()).update(payload).eq('id',list[xaEditIndex].id).select('id');if(result.error)throw result.error;if(result.data?.length!==1)throw Error('Save not confirmed');await xaLoad();xaStatus('Pricing rule saved in Supabase Cloud ✓')}catch(e){xaStatus('Save failed: '+e.message,true)}finally{xaBusy=false}}
 document.addEventListener('DOMContentLoaded',()=>{xaFields();xaRender();const tryLoad=()=>{if(window.slvSupabase)xaLoad()};tryLoad();let attempts=0;const timer=setInterval(()=>{if(window.slvSupabase){clearInterval(timer);xaLoad();window.slvSupabase.auth.onAuthStateChange(()=>setTimeout(xaLoad,250))}else if(++attempts>40){clearInterval(timer);xaStatus('Supabase not initialized',true)}},500)});
 </script>
 
@@ -4128,7 +4138,7 @@ document.addEventListener('DOMContentLoaded',()=>{xaFields();xaRender();const tr
   const select=$('slvTxService');select.value=x.serviceId;select.dispatchEvent(new Event('change',{bubbles:true}));
   if(x.xerox){
    if(typeof xeroxItems==='undefined')throw Error('Xerox editor unavailable');
-   xeroxItems=x.items.map((r,i)=>({id:i+1,size:r.paper_size,side:r.print_type,papers:Number(r.papers_per_set),sets:Number(r.total_sets)}));
+   xeroxItems=x.items.map((r,i)=>({id:i+1,size:r.paper_size,side:r.print_type,papers:Number(r.papers_per_set),sets:Number(r.total_sets),jobType:r.service_type==='Print'?'Print':'Xerox',countMode:'papers'}));
    xeroxNextId=xeroxItems.length+1;xeroxExtra=xeroxItems.length>1;
    $('xeroxDiscount').value=x.discount;xeroxRender();
   }else{$('slvTxQty').value=x.qty;$('slvTxMode').value=x.mode;}
