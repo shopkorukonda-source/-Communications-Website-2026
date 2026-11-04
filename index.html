@@ -1102,7 +1102,7 @@ body:has(#employeeView:not(.hidden)) .main-header {
 <div id="xeroxManualBox" class="hidden"><label>Manual Rate per Paper ₹</label><input id="xeroxManualRate" type="number" min="0" step="0.01" value="2" oninput="xeroxCalculate()"></div>
 <div class="xerox-grid"><div><label>Discount ₹</label><input id="xeroxDiscount" type="number" min="0" step="0.01" value="0" oninput="xeroxCalculate()"></div><div><label>Customer Paid ₹</label><input id="xeroxPaid" type="number" min="0" step="0.01" value="0" oninput="xeroxCalculate()"></div></div>
 <div id="xeroxResult" class="xerox-result" aria-live="polite"></div>
-<p class="xerox-note">Xerox rates load from Supabase Cloud. This is a quote calculator only; Cloud Checkout below still uses its existing service pricing and does not automatically post this Xerox total.</p>
+<p class="xerox-note">Xerox rates load from Supabase Cloud. Cloud pricing is verified again by Supabase when saving. For Xerox, use Cash / UPI fields in Cloud Checkout below. Manual override cannot be saved until admin authorization is configured.</p>
 </section>
     <section id="slvCloudCheckout" class="section-box" style="margin:12px 0">
       <h3>☁️ Cloud Service Checkout</h3>
@@ -2690,8 +2690,8 @@ try {
    '<div>Customer Bill: <b>'+money(a.due)+'</b></div><div>Received: <b>'+money(a.paid)+'</b></div>'+
    '<div>Change to return: <b>'+money(Math.max(0,a.change))+'</b></div><strong>'+label+'</strong>'+
    '<div style="font-size:12px">'+(mode==='later'?'⏳ Processing cost '+money(a.service.internal_cost*a.qty)+' debited only after completion.':'✓ Processing cost '+money(a.service.internal_cost*a.qty)+' debited immediately.')+'</div>';
-  button.disabled=busy||!a.valid||a.change<0;
-  button.textContent=mode==='later'?'⏳ Save as Pending Application':'✓ Complete Now & Save';
+  button.disabled=(/xerox|photocopy/i.test(a.service?.service_name||''))?false:(busy||!a.valid||a.change<0);
+  button.textContent=(/xerox|photocopy/i.test(a.service?.service_name||''))?'✓ Save Xerox Bill to Cloud':(mode==='later'?'⏳ Save as Pending Application':'✓ Complete Now & Save');
  };
  window.slvTxSave=async()=>{
   if(busy)return;
@@ -3798,6 +3798,72 @@ window.slvChangeCloudAssignment=async function(mode){
    return result;
  };
 })();
+</script>
+<style>
+body.slv-xerox-selected #slvTxQty,body.slv-xerox-selected label[for="slvTxQty"],body.slv-xerox-selected #slvTxMode,body.slv-xerox-selected label[for="slvTxMode"]{display:none!important}
+body.slv-xerox-selected #slvTxPreview{display:none!important}
+#xeroxSaveHint{font-size:12px;color:#385579;margin:8px 0}
+</style>
+<script>
+/* Xerox-specific cloud posting; existing service checkout is untouched. */
+let slvXeroxRequest=null,slvXeroxBusy=false;
+function slvXeroxSelected(){const sel=document.getElementById('slvTxService');return /xerox|photocopy/i.test(sel?.selectedOptions[0]?.textContent||'')}
+function slvXeroxCents(n){return Math.round((Number(n)+Number.EPSILON)*100)}
+function slvXeroxQuote(){
+ const manual=document.getElementById('xeroxManual').checked;
+ if(manual)throw Error('Manual rate override cannot be saved securely yet. Turn it off to use Admin Cloud Pricing.');
+ if(!xaReady)throw Error('Cloud pricing not loaded');
+ const rows=xeroxItems.map(x=>({paper_size:x.size,print_type:x.side,papers_per_set:Number(x.papers),total_sets:Number(x.sets)}));
+ if(!rows.length||rows.length>30)throw Error('Invalid Xerox rows');
+ const groups=new Map();let count=0;
+ for(const r of rows){if(!Number.isInteger(r.papers_per_set)||!Number.isInteger(r.total_sets)||r.papers_per_set<1||r.total_sets<1)throw Error('Enter valid papers and sets');const n=r.papers_per_set*r.total_sets;count+=n;const k=r.paper_size+' / '+r.print_type;groups.set(k,(groups.get(k)||0)+n)}
+ if(count>10000)throw Error('Maximum 10,000 papers per bill');
+ let subtotal=0;
+ for(const [key,n] of groups){const matches=xaGetRules(key).filter(r=>n>=r.from&&n<=r.to);if(matches.length!==1)throw Error('Missing or overlapping Admin slab: '+key+' ('+n+')');const r=matches[0];subtotal+=r.type==='fixed'?r.rate:r.type==='starting'?r.rate+(n-1)*r.extra:n*r.rate}
+ const raw=document.getElementById('xeroxDiscount').value;
+ if(!/^\d+(?:\.\d{1,2})?$/.test(raw))throw Error('Invalid discount');
+ const discount=Number(raw),total=slvXeroxCents(subtotal)/100-discount;
+ if(total<=0||slvXeroxCents(discount)>slvXeroxCents(subtotal))throw Error('Xerox total must be positive');
+ return {rows,count,discount,total:slvXeroxCents(total)/100};
+}
+async function slvXeroxSave(){
+ if(slvXeroxBusy)return;
+ const status=document.getElementById('slvTxStatus');const button=document.getElementById('slvTxSave');
+ try{
+  const q=slvXeroxQuote();
+  const cash=Number(document.getElementById('slvTxCash').value),upi=Number(document.getElementById('slvTxUpi').value);
+  if(!Number.isFinite(cash)||!Number.isFinite(upi)||cash<0||upi<0||!/^\d+(?:\.\d{1,2})?$/.test(document.getElementById('slvTxCash').value)||!/^\d+(?:\.\d{1,2})?$/.test(document.getElementById('slvTxUpi').value))throw Error('Enter valid Cash / UPI amounts');
+  if(slvXeroxCents(cash+upi)<slvXeroxCents(q.total))throw Error('Full payment required. Pending Xerox bills cannot be saved.');
+  if(slvXeroxCents(upi)>slvXeroxCents(q.total))throw Error('UPI cannot exceed bill');
+  const netCash=(slvXeroxCents(q.total)-slvXeroxCents(upi))/100;
+  const payload={p_service_id:document.getElementById('slvTxService').value,p_customer_name:document.getElementById('slvTxCustomer').value.trim()||'Walk-in Customer',p_customer_mobile:document.getElementById('slvTxMobile').value.trim(),p_items:q.rows,p_discount:q.discount,p_cash_amount:netCash,p_upi_amount:upi};
+  const signature=JSON.stringify(payload);
+  if(slvXeroxRequest&&slvXeroxRequest.signature!==signature)throw Error('Previous save is uncertain. Verify transaction history before changing this bill.');
+  if(!confirm('Save Xerox bill '+q.count+' papers • ₹'+q.total.toFixed(2)+' • Cash ₹'+netCash.toFixed(2)+' • PAYTM ₹'+upi.toFixed(2)+'?'))return;
+  if(!slvXeroxRequest)slvXeroxRequest={signature,id:crypto.randomUUID()};
+  slvXeroxBusy=true;button.disabled=true;status.style.color='#385579';status.textContent='Saving Xerox to Supabase...';
+  const db=window.slvSupabase;if(!db)throw Error('Supabase unavailable');
+  const user=await db.auth.getUser();if(user.error||!user.data?.user)throw Error('Employee cloud login required');
+  const r=await db.rpc('slv_post_xerox_bill',{p_request_id:slvXeroxRequest.id,...payload});
+  if(r.error)throw r.error;
+  status.style.color='#137333';status.textContent='✓ Xerox saved! Transaction '+r.data+' • Profit ₹'+q.total.toFixed(2)+' • Wallet credited once.';
+  slvXeroxRequest=null;
+  document.getElementById('slvTxCash').value='0';document.getElementById('slvTxUpi').value='0';document.getElementById('xeroxPaid').value='0';
+  if(typeof window.slvTxLoadServices==='function')window.slvTxLoadServices().catch(()=>{});
+ }catch(e){status.style.color='#c5221f';status.textContent='Xerox save NOT confirmed: '+(e.message||e)+'; if network failed, retry unchanged values.'}
+ finally{slvXeroxBusy=false;button.disabled=false}
+}
+document.addEventListener('DOMContentLoaded',()=>{
+ const select=document.getElementById('slvTxService'),btn=document.getElementById('slvTxSave');
+ if(!select||!btn)return;
+ const oldClick=btn.onclick;
+ btn.onclick=function(event){if(slvXeroxSelected()){event.preventDefault();return slvXeroxSave()}return oldClick?.call(this,event)};
+ const refresh=()=>{const yes=slvXeroxSelected();document.body.classList.toggle('slv-xerox-selected',yes);if(yes){btn.textContent='✓ Save Xerox Bill to Cloud';btn.disabled=false;document.getElementById('slvTxMode').value='now'}else{if(typeof window.slvTxUpdatePreview==='function')window.slvTxUpdatePreview()}};
+ select.addEventListener('change',refresh);new MutationObserver(refresh).observe(select,{childList:true,subtree:true});refresh();
+ for(const id of ['slvTxCash','slvTxUpi'])document.getElementById(id).addEventListener('input',()=>{if(slvXeroxSelected()){const c=Number(document.getElementById('slvTxCash').value)||0,u=Number(document.getElementById('slvTxUpi').value)||0;document.getElementById('xeroxPaid').value=(c+u).toFixed(2);xeroxCalculate()}});
+ document.getElementById('xeroxPaid').readOnly=true;
+ document.getElementById('xeroxPaid').title='Enter Cash/UPI in Cloud Checkout below';
+});
 </script>
 <script>
 /* Standalone Xerox quote calculator using cloud pricing; separate from checkout RPC. */
