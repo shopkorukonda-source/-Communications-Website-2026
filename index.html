@@ -831,6 +831,19 @@ body.slv-xerox-selected #servicesView.slv-centered-popup #slvCloudCheckout>butto
 @media(max-width:560px){#servicesView.slv-centered-popup{padding:7px 9px!important;width:calc(100vw - 10px)!important}#servicesView.slv-centered-popup #slvXeroxPanel .xerox-all-options{gap:3px 7px!important}#servicesView.slv-centered-popup #slvTxSave{min-height:38px!important;padding:7px!important}}
 @media(prefers-reduced-motion:reduce){#servicesView.slv-centered-popup #slvTxSave{animation:none!important}}
 </style>
+
+<style id="slvXeroxAlwaysVisibleSaveFix2026">
+/* Xerox/Print: keep the existing real cloud save button visible on small screens. */
+body.slv-xerox-selected #servicesView.slv-centered-popup #slvTxSave{
+ position:fixed!important;left:50%!important;bottom:max(10px,env(safe-area-inset-bottom))!important;
+ transform:translateX(-50%)!important;width:min(460px,calc(100vw - 30px))!important;
+ display:block!important;visibility:visible!important;opacity:1!important;z-index:10020!important;
+ margin:0!important;min-height:48px!important;border:2px solid rgba(255,255,255,.9)!important;
+ box-shadow:0 5px 24px rgba(5,37,69,.4)!important;
+}
+body.slv-xerox-selected #servicesView.slv-centered-popup #slvCloudCheckout{padding-bottom:65px!important}
+body.slv-xerox-selected #servicesView.slv-centered-popup #slvTxSave:disabled{opacity:.78!important}
+</style>
 </head>
 <body>
 <div id="slvTxSuccess" class="slv-tx-success" role="status" aria-live="polite" aria-label="Transaction successful"><div class="slv-tx-success-card"><div class="slv-tx-success-check">✓</div><h3>Transaction Successful</h3><p>SLV Communications • Payment Recorded</p><div class="slv-tx-success-amount" id="slvTxSuccessAmount">₹0.00</div><p id="slvTxSuccessCount">Wallet balances updated</p><div class="slv-tx-success-line"></div></div></div>
