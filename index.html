@@ -706,6 +706,9 @@ body:has(#employeeView:not(.hidden)) .main-header {
 .slv-greeting-heading{font-size:clamp(18px,2.5vw,25px);font-weight:800;color:#0d3264;overflow-wrap:anywhere}
 .slv-greeting-sub{font-size:12px;color:#536781;line-height:1.6}
 </style>
+<style>
+#slvXeroxPanel{border:1px solid #dbe6f5;border-radius:16px;padding:16px;margin:15px 0;background:#fff}#slvXeroxPanel .xerox-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#slvXeroxPanel .xerox-item{padding:12px;border:1px solid #e1e8f4;border-radius:12px;margin:9px 0}#slvXeroxPanel .xerox-result{background:#eef5ff;border-radius:12px;padding:13px;margin-top:12px;line-height:2}#slvXeroxPanel .xerox-note{font-size:12px;color:#64748b}#slvXeroxPanel label{margin-top:5px}#slvXeroxPanel input,#slvXeroxPanel select{margin:2px 0 6px}#slvXeroxPanel .xerox-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}#slvXeroxPanel .xerox-head button{margin:0}
+</style>
 </head>
 <body>
 <div id="slvTxSuccess" class="slv-tx-success" role="status" aria-live="polite" aria-label="Transaction successful"><div class="slv-tx-success-card"><div class="slv-tx-success-check">✓</div><h3>Transaction Successful</h3><p>SLV Communications • Payment Recorded</p><div class="slv-tx-success-amount" id="slvTxSuccessAmount">₹0.00</div><p id="slvTxSuccessCount">Wallet balances updated</p><div class="slv-tx-success-line"></div></div></div>
@@ -1081,6 +1084,15 @@ body:has(#employeeView:not(.hidden)) .main-header {
   <!-- SERVICES -->
   <main id="servicesView" class="card hidden">
     <div class="topbar"><strong>💼 Billing & Wallet Checkout</strong><button class="btn-secondary btn-small" onclick="showView('employeeView')">⬅ Back</button></div>
+<section id="slvXeroxPanel" class="hidden" aria-label="Xerox calculator">
+<div class="xerox-head"><h3 style="margin:0">🖨️ Xerox Billing</h3><button type="button" class="btn-secondary btn-small" id="xeroxExtraToggle" onclick="xeroxToggleExtra()">＋ Additional Sets</button></div>
+<div id="xeroxItems"></div><button type="button" class="btn-secondary btn-small hidden" id="xeroxAddItem" onclick="xeroxAddItem()">＋ Add Another Set</button>
+<label><input type="checkbox" id="xeroxManual" style="width:auto" onchange="xeroxRender()"> Manual Rate Override</label>
+<div id="xeroxManualBox" class="hidden"><label>Manual Rate per Paper ₹</label><input id="xeroxManualRate" type="number" min="0" step="0.01" value="2" oninput="xeroxCalculate()"></div>
+<div class="xerox-grid"><div><label>Discount ₹</label><input id="xeroxDiscount" type="number" min="0" step="0.01" value="0" oninput="xeroxCalculate()"></div><div><label>Customer Paid ₹</label><input id="xeroxPaid" type="number" min="0" step="0.01" value="0" oninput="xeroxCalculate()"></div></div>
+<div id="xeroxResult" class="xerox-result" aria-live="polite"></div>
+<p class="xerox-note">Sample Xerox rates only. This calculator does not save to Supabase or change wallet balances. Cloud checkout below uses its existing service rate until backend billing support is added.</p>
+</section>
     <section id="slvCloudCheckout" class="section-box" style="margin:12px 0">
       <h3>☁️ Cloud Service Checkout</h3>
       <p class="muted">Supabase wallet mapping ఆధారంగా transaction save అవుతుంది. ఒకసారి ఒక Service మాత్రమే.</p>
@@ -3775,6 +3787,33 @@ window.slvChangeCloudAssignment=async function(mode){
    return result;
  };
 })();
+</script>
+<script>
+/* Standalone Xerox quote calculator; deliberately separate from cloud posting RPC. */
+let xeroxItems=[{id:1,size:'A4',side:'Single',papers:10,sets:1}],xeroxExtra=false,xeroxNextId=2;
+const xeroxById=id=>document.getElementById(id);
+const xeroxNum=v=>Math.max(0,Number(v)||0);
+const xeroxEsc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function xeroxToggleExtra(){xeroxExtra=!xeroxExtra;if(!xeroxExtra)xeroxItems=xeroxItems.slice(0,1);xeroxRender()}
+function xeroxAddItem(){xeroxItems.push({id:xeroxNextId++,size:'A4',side:'Single',papers:1,sets:1});xeroxRender()}
+function xeroxRemove(id){xeroxItems=xeroxItems.filter(x=>x.id!==id);xeroxRender()}
+function xeroxChange(id,key,value){const x=xeroxItems.find(x=>x.id===id);if(x){x[key]=value;xeroxCalculate()}}
+function xeroxRender(){
+ xeroxById('xeroxExtraToggle').textContent=xeroxExtra?'✓ Additional Sets':'＋ Additional Sets';xeroxById('xeroxAddItem').classList.toggle('hidden',!xeroxExtra);
+ xeroxById('xeroxManualBox').classList.toggle('hidden',!xeroxById('xeroxManual').checked);
+ xeroxById('xeroxItems').innerHTML=xeroxItems.map((x,i)=>`<div class="xerox-item"><div class="xerox-head"><strong>${xeroxExtra?'Set '+(i+1):'Xerox Details'}</strong>${i>0?`<button type="button" class="btn-red btn-small" onclick="xeroxRemove(${x.id})">✕</button>`:''}</div><div class="xerox-grid"><div><label>Paper Size</label><select onchange="xeroxChange(${x.id},'size',this.value)">${['A4','Legal','A3'].map(v=>`<option ${x.size===v?'selected':''}>${v}</option>`).join('')}</select></div><div><label>Print Type</label><select onchange="xeroxChange(${x.id},'side',this.value)">${['Single','Double'].map(v=>`<option ${x.side===v?'selected':''}>${v}</option>`).join('')}</select></div><div><label>Papers per Set</label><input type="number" min="0" step="1" value="${xeroxEsc(x.papers)}" oninput="xeroxChange(${x.id},'papers',this.value)"></div><div><label>Total Sets</label><input type="number" min="0" step="1" value="${xeroxEsc(x.sets)}" oninput="xeroxChange(${x.id},'sets',this.value)"></div></div></div>`).join('');xeroxCalculate();
+}
+function xeroxCalculate(){
+ const groups=new Map();let papers=0;for(const x of xeroxItems){const n=Math.floor(xeroxNum(x.papers))*Math.floor(xeroxNum(x.sets));papers+=n;const key=x.size+' / '+x.side;groups.set(key,(groups.get(key)||0)+n)}
+ // Illustrative slabs, not database prices.
+ const price=n=>n===0?0:n<=3?10:n<=20?n*3:n*2;
+ const manual=xeroxById('xeroxManual').checked;
+ const subtotal=manual?papers*xeroxNum(xeroxById('xeroxManualRate').value):[...groups.values()].reduce((sum,n)=>sum+price(n),0);
+ const discount=Math.min(subtotal,xeroxNum(xeroxById('xeroxDiscount').value));const total=subtotal-discount;const paid=xeroxNum(xeroxById('xeroxPaid').value);const balance=paid-total;
+ const money=n=>'₹'+n.toFixed(2);
+ xeroxById('xeroxResult').innerHTML=`Total Papers: <b>${papers}</b><br>Pricing: <b>${manual?'Manual per paper':'Automatic sample slab'}</b><br>Subtotal: <b>${money(subtotal)}</b><br>Discount: <b>${money(discount)}</b><br>Total Bill: <strong>${money(total)}</strong><br>Customer Paid: <b>${money(paid)}</b><br>${balance>=0?'Return Balance':'Pending Amount'}: <strong>${money(Math.abs(balance))}</strong>`;
+}
+document.addEventListener('DOMContentLoaded',()=>{xeroxRender();const sel=xeroxById('slvTxService');const panel=xeroxById('slvXeroxPanel');if(sel&&panel){const refresh=()=>{const txt=sel.selectedOptions[0]?.textContent||'';panel.classList.toggle('hidden',!/xerox|photocopy/i.test(txt))};sel.addEventListener('change',refresh);new MutationObserver(refresh).observe(sel,{childList:true,subtree:true});refresh()}});
 </script>
 </body>
 </html>
