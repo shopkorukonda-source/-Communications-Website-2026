@@ -1045,6 +1045,7 @@ body.slv-xerox-selected #servicesView.slv-centered-popup #slvTxSave:disabled{opa
       <button class="btn-orange" onclick="saveService()">+ Save Service Rule</button>
       <div id="servicesAdminList"></div><div class="section-box" id="slvCatalogPanel" style="margin-top:18px"><h4>📚 SLV Service Catalog — Add to Cloud</h4><p class="muted">Add missing services only. New services are INACTIVE with ₹0 rates until Admin configures rates and cloud wallet mappings. Existing services are preserved.</p><div class="row"><button type="button" onclick="slvCatalogPreview()">Preview Missing Services</button><button type="button" class="btn-green" onclick="slvCatalogImport()">Add Missing Services</button></div><p id="slvCatalogStatus" class="muted"></p><div id="slvCatalogPreview"></div></div>
 
+<div class="section-box" id="slvUniversalPricing" style="margin-top:18px;border:1px solid #b8d5f5"><h4>🧮 Universal Pricing — Cloud Rules</h4><p class="muted">Fixed / Percentage / Slab rules. Profit is always Customer Charge − Processing Cost. Xerox and Current Bill keep their separate rules.</p><label>Service</label><select id="upService" onchange="slvUPLoad()"><option value="">Load services</option></select><label>Pricing Target</label><select id="upTarget" onchange="slvUPLoad()"><option value="charge">Customer Charge</option><option value="cost">Processing Cost</option></select><label>Rule Type</label><select id="upType" onchange="slvUPFields()"><option value="fixed">Fixed per Unit</option><option value="percentage">Percentage</option><option value="slab">Slab</option></select><div id="upValueBox"><label>Rate ₹ / Percentage %</label><input id="upValue" type="number" min="0" step="0.01" value="0"></div><div id="upBasisBox" class="hidden"><label>Percentage Basis</label><select id="upBasis"><option value="fixed_rate">Service Fixed Rate</option><option value="customer">Customer Amount</option></select></div><div id="upSlabBox" class="hidden"><div class="row"><div><label>Slab Method</label><select id="upMethod"><option value="flat">Flat / Matching Slab</option><option value="progressive">Progressive / Tiered</option></select></div><div><label>Slab Charge Type</label><select id="upUnit"><option value="per_unit">Per Unit Rate</option><option value="fixed_charge">Fixed Slab Charge</option></select></div></div><label>Slabs: from-to=rate (one per line, ascending, no overlaps)</label><textarea id="upSlabs" placeholder="1-10=2&#10;11-50=1.5"></textarea></div><div class="row"><button type="button" class="btn-green" onclick="slvUPSave()">Save Cloud Rule</button><button type="button" class="btn-secondary" onclick="slvUPDelete()">Remove Rule (use Service defaults)</button></div><p id="upStatus" class="muted" role="status"></p></div>
 <div id="xeroxAdminPricing" class="section-box" style="margin-top:18px;border:1px solid #d6e5fa">
 <h4>🖨️ Xerox / Print — Separate Cloud Pricing Slabs</h4>
 <p class="muted">Select Xerox or Print. Admin edits save directly to separate Supabase tables. Existing Xerox rates remain unchanged.</p>
@@ -1318,7 +1319,7 @@ body.slv-xerox-selected #servicesView.slv-centered-popup #slvTxSave:disabled{opa
       <button type="button" class="btn-secondary btn-small" onclick="slvTxLoadServices()">↻ Load Cloud Services</button>
       <input id="slvTxCustomer" type="hidden" value="Walk-in Customer">
       <input id="slvTxMobile" type="hidden" value="">
-      <label for="slvTxQty">Quantity</label><input id="slvTxQty" type="number" min="1" max="10000" step="1" value="1" oninput="slvTxUpdatePreview()">
+      <div id="slvUniversalCustomerBasis" class="hidden"><label for="slvUniversalCustomerAmount">Customer-entered Amount ₹ (percentage basis)</label><input id="slvUniversalCustomerAmount" type="number" min="0" step="0.01" value="0" oninput="slvTxUpdatePreview()"></div><label for="slvTxQty">Quantity</label><input id="slvTxQty" type="number" min="1" max="10000" step="1" value="1" oninput="slvTxUpdatePreview()">
       <div class="slv-payment-shortcuts"><button type="button" class="btn-small" onclick="slvPaymentQuick('cash')">💵 Cash</button><button type="button" class="btn-small" onclick="slvPaymentQuick('upi')">📱 UPI</button><button type="button" class="btn-small" onclick="slvPaymentQuick('split')">Cash + UPI</button></div><label for="slvTxCash">Customer ఇచ్చిన Cash ₹ (Edit చేయవచ్చు)</label><input id="slvTxCash" type="number" min="0" step="0.01" value="0" oninput="slvTxUpdatePreview()">
       <label for="slvTxUpi">UPI Received ₹</label><input id="slvTxUpi" type="number" min="0" step="0.01" value="0" oninput="slvTxUpdatePreview()">
       <div id="slvSelectedWalletBox"><label for="slvSelectedWallet">Processing Wallet (assigned by Admin)</label><select id="slvSelectedWallet" onchange="slvTxUpdatePreview()"><option value="">Select service first</option></select><small id="slvWalletSelectStatus">Only Admin-approved wallet names appear. Balances are hidden.</small></div><label for="slvTxMode">Application Processing</label>
@@ -2935,7 +2936,7 @@ try {
 /* Cloud-only employee checkout and pending applications. Wallet accounting stays in Supabase RPCs. */
 (function(){
  const el=id=>document.getElementById(id);
- let services=[],busy=false,pendingRequest=null,pendingBusy=false,allowedWallets=[],walletMapping=null,walletLoading=false;
+ let services=[],busy=false,pendingRequest=null,pendingBusy=false,allowedWallets=[],walletMapping=null,walletLoading=false;let priceQuote=null,quoteKey="",quotePending=false,quoteTimer=null,quoteError="",quoteErrorKey="";
  let servicesFetchedAt=0,servicesInFlight=null;const SERVICES_CACHE_MS=60000;
  const money=n=>'₹'+Number(n||0).toFixed(2);
  const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -2972,7 +2973,7 @@ try {
     select.replaceChildren();select.add(new Option('— Select Service —',''));
     services.forEach(s=>select.add(new Option(s.service_name+' • '+money(s.customer_rate),s.id)));
     if(services.some(s=>s.id===selected))select.value=selected;
-    select.onchange=()=>{loadAllowedWallets();window.slvTxUpdatePreview()};
+    select.onchange=()=>{priceQuote=null;quoteKey='';quoteError='';loadAllowedWallets();window.slvTxUpdatePreview()};
     status(services.length+' cloud service(s) ready');await loadAllowedWallets();window.slvTxUpdatePreview();
     window.slvPendingRefresh().catch(()=>{});
    }catch(e){status(e.message||String(e),true)}
@@ -2989,7 +2990,7 @@ try {
    if(!id){sel.replaceChildren();sel.add(new Option('Select service first',''));return}
    const db=await employeeDb();
    const r=await db.rpc('slv_get_checkout_wallets',{p_service_id:id});if(r.error)throw r.error;
-   const data=r.data||{};allowedWallets=data.allowed||[];walletMapping=data.mapping||null;const chosenService=services.find(x=>x.id===id);if(Number(chosenService?.internal_cost)===0)allowedWallets=[];el('slvSelectedWalletBox').classList.toggle('hidden',Number(chosenService?.internal_cost)===0);
+   const data=r.data||{};allowedWallets=data.allowed||[];walletMapping=data.mapping||null;const chosenService=services.find(x=>x.id===id);const zeroCost=priceQuote&&priceQuote.service_id===id?Number(priceQuote.processing_cost)===0:Number(chosenService?.internal_cost)===0;if(zeroCost)allowedWallets=[];el('slvSelectedWalletBox').classList.toggle('hidden',zeroCost);
    sel.replaceChildren();sel.add(new Option('— Select Processing Wallet —',''));
    allowedWallets.forEach(w=>sel.add(new Option(w.wallet_name,w.wallet_id)));
    if(allowedWallets.length===1)sel.value=allowedWallets[0].wallet_id;
@@ -3002,7 +3003,7 @@ try {
   const service=services.find(s=>s.id===el('slvTxService').value);
   const qRaw=el('slvTxQty').value,cRaw=el('slvTxCash').value,uRaw=el('slvTxUpi').value;
   const qty=Number(qRaw),cash=Number(cRaw),upi=Number(uRaw);
-  const due=service?Math.round(Number(service.customer_rate)*qty*100)/100:0;
+  const due=service?(priceQuote&&priceQuote.service_id===service.id&&Number(priceQuote.quantity)===qty?Number(priceQuote.customer_charge):Math.round(Number(service.customer_rate)*qty*100)/100):0;
   const valid=!!service&&Number.isInteger(qty)&&qty>=1&&qty<=10000&&decimal(cRaw)&&decimal(uRaw)&&cash>=0&&upi>=0&&Number.isFinite(due)&&due>0&&upi<=due;
   const paid=Math.round((cash+upi)*100)/100;
   const change=Math.round((paid-due)*100)/100;
@@ -3010,23 +3011,23 @@ try {
  }
  window.slvTxUpdatePreview=()=>{
   const a=amounts(),preview=el('slvTxPreview'),button=el('slvTxSave');
-  const mode=el('slvTxMode').value;const walletOk=!!a.service&&(Number(a.service.internal_cost)===0||(!walletLoading&&allowedWallets.some(w=>w.wallet_id===el('slvSelectedWallet').value)));
+  const mode=el('slvTxMode').value;const customerBasis=Number(el('slvUniversalCustomerAmount')?.value||0);const key=a.service?JSON.stringify([a.service.id,a.qty,customerBasis]):'';if(key!==quoteKey&&quoteError&&quoteErrorKey!==key)quoteError='';const ready=!!priceQuote&&quoteKey===key;const cost=ready?Number(priceQuote.processing_cost):0;const walletOk=ready&&(cost===0||(!walletLoading&&allowedWallets.some(w=>w.wallet_id===el('slvSelectedWallet').value)));if(a.service&&!ready&&!quotePending&&!quoteError){clearTimeout(quoteTimer);quoteTimer=setTimeout(async()=>{quotePending=true;try{const db=await employeeDb();const r=await db.rpc('slv_pricing_quote',{p_service_id:a.service.id,p_quantity:a.qty,p_customer_amount:customerBasis});if(r.error)throw r.error;const current=JSON.stringify([el('slvTxService').value,Number(el('slvTxQty').value),Number(el('slvUniversalCustomerAmount')?.value||0)]);if(current===key){priceQuote=r.data;quoteKey=key;quoteError='';if((Number(priceQuote.processing_cost)===0)!==el('slvSelectedWalletBox').classList.contains('hidden'))await loadAllowedWallets();}}catch(e){priceQuote=null;quoteError=e.message||String(e);quoteErrorKey=key}finally{quotePending=false;window.slvTxUpdatePreview()}},250)}
   if(!a.service){preview.className='slv-payment-preview neutral';preview.textContent='Select a cloud service to see the automatic rate.';button.disabled=true;return}
-  const label=!walletOk?'Select an Admin-assigned processing wallet':!a.valid?'Invalid amount / quantity':a.change<0?'❌ Payment short by '+money(-a.change):a.change>0?'✓ Return change '+money(a.change):'✓ Exact payment — no change';
+  const label=!ready?(quoteError?'Pricing quote failed: '+quoteError:'Checking cloud pricing…'):!walletOk?'Select an Admin-assigned processing wallet':!a.valid?'Invalid amount / quantity':a.change<0?'❌ Payment short by '+money(-a.change):a.change>0?'✓ Return change '+money(a.change):'✓ Exact payment — no change';
   preview.className='slv-payment-preview '+(!a.valid||a.change<0?'bad':a.change>0?'good':'neutral');
   preview.innerHTML='<div>Unit Rate: <b>'+money(a.service.customer_rate)+'</b> × '+esc(a.qty)+'</div>'+
    '<div>Customer Bill: <b>'+money(a.due)+'</b></div><div>Received: <b>'+money(a.paid)+'</b></div>'+
    '<div>Change to return: <b>'+money(Math.max(0,a.change))+'</b></div><strong>'+label+'</strong>'+
-   '<div style="font-size:12px">'+(mode==='later'?'⏳ Processing cost '+money(a.service.internal_cost*a.qty)+' debited only after completion.':'✓ Processing cost '+money(a.service.internal_cost*a.qty)+' debited immediately.')+'</div>';
-  button.disabled=busy||!a.valid||a.change<0||!walletOk;
+   '<div style="font-size:12px">'+(ready?'Server Processing Cost '+money(cost)+' · Profit '+money(a.due-cost):'Waiting for verified server quote')+'</div>';
+  button.disabled=busy||!ready||!a.valid||a.change<0||!walletOk;
   button.textContent=(/xerox|photocopy/i.test(a.service?.service_name||''))?'✓ Save Xerox Bill to Cloud':(mode==='later'?'⏳ Save as Pending Application':'✓ Complete Now & Save');
  };
  window.slvTxSave=async()=>{
   if(busy)return;
   const a=amounts(),name=el('slvTxCustomer').value.trim(),mobile=el('slvTxMobile').value.trim(),mode=el('slvTxMode').value;
-  if(!a.valid||a.change<0||!name||(Number(a.service?.internal_cost)>0&&!allowedWallets.some(w=>w.wallet_id===el('slvSelectedWallet').value))){status('Valid quantity and full payment required. UPI cannot exceed the bill.',true);return}
+  if(!a.valid||a.change<0||!name||!priceQuote||quoteKey!==JSON.stringify([a.service.id,a.qty,Number(el('slvUniversalCustomerAmount')?.value||0)])||(Number(priceQuote.processing_cost)>0&&!allowedWallets.some(w=>w.wallet_id===el('slvSelectedWallet').value))){status('Valid quantity and full payment required. UPI cannot exceed the bill.',true);return}
   // Cash received may include change; only the net cash retained is credited.
-  const selectedWallet=Number(a.service.internal_cost)===0?null:(el('slvSelectedWallet').value||null);const payload=JSON.stringify([a.service.id,name,mobile,a.qty,a.netCash,a.upi,mode,selectedWallet]);
+  const selectedWallet=Number(priceQuote.processing_cost)===0?null:(el('slvSelectedWallet').value||null);const payload=JSON.stringify([a.service.id,name,mobile,a.qty,a.netCash,a.upi,mode,selectedWallet]);
   if(pendingRequest&&pendingRequest.payload!==payload){status('Uncertain previous save: retry unchanged values, or verify Cloud Transactions before new entry.',true);return}
   if(mode==='later'){status('Pending mode requires a separate completion migration; use Complete Now.',true);return;}if(!confirm((mode==='later'?'Save PENDING':'Complete NOW')+' • '+a.service.service_name+' × '+a.qty+' • Bill '+money(a.due)+' • Change '+money(Math.max(0,a.change))+'?'))return;
   if(!pendingRequest)pendingRequest={payload,id:crypto.randomUUID()};
@@ -3050,7 +3051,7 @@ try {
    if(response.error)throw response.error;
    pendingRequest=null;
    status((mode==='later'?'Pending Application Saved ✓':'Completed Transaction Saved ✓')+' ID: '+response.data);
-   el('slvTxCustomer').value='Walk-in Customer';el('slvTxMobile').value='';el('slvTxQty').value='1';el('slvTxCash').value='0';el('slvTxUpi').value='0';
+   el('slvTxCustomer').value='Walk-in Customer';el('slvTxMobile').value='';el('slvTxQty').value='1';priceQuote=null;quoteKey='';el('slvTxCash').value='0';el('slvTxUpi').value='0';
    window.slvTxUpdatePreview();
    confirmedSuccess=true;
    window.slvPendingRefresh().catch(()=>{});
@@ -4413,6 +4414,19 @@ window.slvLinksSave=async function(){const status=el('slvLinksAdminStatus');cons
 window.slvLinksDelete=async function(id,name){if(!confirm('Delete service link "'+name+'"?'))return;const status=el('slvLinksAdminStatus');try{const db=await client(true);const r=await db.from('slv_service_links').delete().eq('id',id).select('id');if(r.error)throw r.error;if(r.data?.length!==1)throw Error('Delete not confirmed.');await window.slvLinksAdminLoad();status.textContent='✓ Deleted.';}catch(e){status.textContent='Delete failed: '+e.message;}};
 function shortcut(){const v=el('employeeView');const visible=v&&!v.classList.contains('hidden');el('slvLinksShortcut').classList.toggle('slv-visible',!!visible);if(!visible)window.slvLinksClose();}
 new MutationObserver(shortcut).observe(el('employeeView'),{attributes:true,attributeFilter:['class']});shortcut();
+})();
+</script>
+<script>
+/* Universal Pricing admin editor. Supabase RLS must authorize only admins to write pricing rules. */
+(function(){'use strict';const $=id=>document.getElementById(id);const status=(s)=>{$('upStatus').textContent=s};let busy=false;
+async function admin(){const db=window.slvSupabase;if(!db)throw Error('Cloud unavailable');const a=await db.auth.getUser();if(!a.data?.user)throw Error('Sign in first');const p=await db.from('profiles').select('role,is_active').eq('id',a.data.user.id).single();if(p.error||p.data?.role!=='admin'||!p.data.is_active)throw Error('Active Admin required');return db}
+window.slvUPFields=()=>{const type=$('upType').value;$('upValueBox').classList.toggle('hidden',type==='slab');$('upBasisBox').classList.toggle('hidden',type!=='percentage');$('upSlabBox').classList.toggle('hidden',type!=='slab')};
+async function list(){try{const db=await admin();const r=await db.from('services').select('id,service_name').eq('is_active',true).order('service_name');if(r.error)throw r.error;const sel=$('upService'),old=sel.value;sel.replaceChildren(new Option('— Select Service —',''));for(const x of r.data||[]){if(/^(xerox|print|current bill payment)$/i.test(x.service_name.trim())||x.id==='4ed0f512-7431-4362-ae53-c134946c0fcd')continue;sel.add(new Option(x.service_name,x.id))}sel.value=old;status('Choose a service and target.')}catch(e){status('Load failed: '+e.message)}}
+window.slvUPLoad=async()=>{try{if(!$('upService').value)return;const db=await admin();const r=await db.from('slv_pricing_rules').select('rule').eq('service_id',$('upService').value).eq('target',$('upTarget').value).maybeSingle();if(r.error)throw r.error;const x=r.data?.rule||{};$('upType').value=x.type||'fixed';$('upValue').value=x.value??0;$('upBasis').value=x.basis||'fixed_rate';$('upMethod').value=x.method||'flat';$('upUnit').value=x.unit||'per_unit';$('upSlabs').value=(x.slabs||[]).map(z=>z.from+'-'+z.to+'='+z.rate).join('\n');window.slvUPFields();status(r.data?'Cloud rule loaded.':'No custom rule — service defaults apply.')}catch(e){status('Load failed: '+e.message)}};
+function rule(){const type=$('upType').value;if(type==='fixed'||type==='percentage'){const v=Number($('upValue').value);if(!Number.isFinite(v)||v<0||v>100000000)throw Error('Invalid rate');return {type,value:v,...(type==='percentage'?{basis:$('upBasis').value}:{})}}const slabs=$('upSlabs').value.trim().split(/\n/).filter(Boolean).map(line=>{const m=line.trim().match(/^(\d+)-(\d+)\s*=\s*(\d+(?:\.\d{1,2})?)$/);if(!m)throw Error('Use from-to=rate format');return {from:Number(m[1]),to:Number(m[2]),rate:Number(m[3])}});if(!slabs.length)throw Error('Enter slabs');let last=0;for(const x of slabs){if(x.from<=last||x.to<x.from||x.rate<0||($('upMethod').value==='progressive'&&x.from!==last+1))throw Error('Slabs must be ordered, nonoverlapping and progressive ranges contiguous from 1');last=x.to}return {type:'slab',method:$('upMethod').value,unit:$('upUnit').value,slabs}}
+window.slvUPSave=async()=>{if(busy)return;busy=true;try{const db=await admin(),id=$('upService').value;if(!id)throw Error('Select a service');const r=rule();if(!confirm('Save '+$('upTarget').value+' pricing rule to Supabase?'))return;const q=await db.from('slv_pricing_rules').upsert({service_id:id,target:$('upTarget').value,rule:r,updated_at:new Date().toISOString()},{onConflict:'service_id,target'}).select('service_id');if(q.error)throw q.error;if(!q.data?.length)throw Error('Save not confirmed; check RLS');status('✓ Rule saved in Supabase. Refresh employee checkout to fetch updated quote.')}catch(e){status('Save failed: '+e.message)}finally{busy=false}};
+window.slvUPDelete=async()=>{if(busy)return;busy=true;try{const db=await admin(),id=$('upService').value;if(!id)throw Error('Select a service');if(!confirm('Remove this custom rule? Service default rate/cost will apply.'))return;const q=await db.from('slv_pricing_rules').delete().eq('service_id',id).eq('target',$('upTarget').value).select('service_id');if(q.error)throw q.error;status('✓ Removed '+(q.data?.length||0)+' rule(s).');await window.slvUPLoad()}catch(e){status('Delete failed: '+e.message)}finally{busy=false}};
+const old=window.adminMenuGo;if(typeof old==='function')window.adminMenuGo=function(section,...args){const r=old.call(this,section,...args);if(section==='adminServices')list();return r};
 })();
 </script>
 </body>
