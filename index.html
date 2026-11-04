@@ -746,6 +746,10 @@ body:has(#servicesView.slv-centered-popup:not(.hidden)) .slv-pending-floating{di
 #slvXeroxPanel .xerox-compact-inputs input::-webkit-inner-spin-button,#slvXeroxPanel .xerox-compact-inputs input::-webkit-outer-spin-button{display:none;-webkit-appearance:none}
 @media(max-width:600px){#slvXeroxPanel .xerox-compact-options{gap:7px 11px}#slvXeroxPanel .xerox-compact-inputs>div{width:105px}}
 
+/* SLV employee-only clean v2.1, admin unaffected */
+#employeeView .slv-service-link-menu{margin-top:auto!important;background:#eaf3ff!important;color:#174879!important;border:1px solid #c9dcf4!important}
+#employeeView .employee-side-menu{display:flex!important;flex-direction:column!important}
+#employeeView .employee-side-menu .side-logout{margin-top:8px!important}
 /* Employee dashboard clean layout — intentionally scoped; admin untouched */
 #employeeView{max-width:1050px;margin:0 auto;background:#f8fafc!important;border:1px solid #e5ebf3!important;border-radius:18px!important;padding:22px!important;box-shadow:0 8px 28px rgba(20,42,70,.06)!important}
 #employeeView .employee-topbar{background:#fff!important;color:#183456!important;border:1px solid #e4eaf2;border-radius:13px;padding:12px 15px!important;box-shadow:none!important;margin-bottom:16px}
@@ -955,7 +959,6 @@ body.slv-xerox-selected #servicesView.slv-centered-popup #slvTxSave:disabled{opa
       <button class="side-menu-link" onclick="adminMenuGo('adminLeaves')">🌴 Leave Requests</button>
       <button class="side-menu-link" onclick="adminMenuGo('adminTransactions')">📊 Transactions & Collection</button>
       <button class="side-menu-link" onclick="adminMenuGo('adminServiceLinks');slvLinksAdminLoad()">🌐 Manage Service Links</button>
-      <button class="side-menu-link slv-service-link-menu" onclick="slvLinksOpen()">🌐 Service Links</button>
       <button class="side-menu-link side-logout" onclick="logout()">🚪 Logout</button>
     </aside>
 
@@ -1070,7 +1073,7 @@ body.slv-xerox-selected #servicesView.slv-centered-popup #slvTxSave:disabled{opa
       </div>
 
       <div id="slvCloudServiceMap" class="section-box" style="margin-top:18px;border:1px solid #d3dff8;background:#f8fbff">
-        <h4>☁️ Cloud Service → Wallet Mapping (Admin)</h4>
+        <h4>☁️ Cloud Service → Wallet Mapping (Admin) <small style="font-size:11px;color:#168653">v2.1 • No Processing Wallet</small></h4>
         <p class="muted">Supabase services and cloud wallets only. Existing browser-local services and balances are not changed.</p>
         <button type="button" onclick="slvMapRefresh()">↻ Load Cloud Services & Wallets</button>
         <label for="slvMapService">Cloud Service</label><select id="slvMapService"></select>
@@ -1078,7 +1081,7 @@ body.slv-xerox-selected #servicesView.slv-centered-popup #slvTxSave:disabled{opa
         <label for="slvMapUpi">UPI collection wallet</label><select id="slvMapUpi"></select>
         <label for="slvMapCost">Legacy primary cost wallet (read-only reference)</label><select id="slvMapCost" disabled></select>
         <div class="section-box" style="border:1px solid #cbdcf5;background:#fff">
-          <h4>➕ Additional Processing Wallets</h4>
+          <h4>➕ Additional Processing Wallets / No Processing Wallet</h4>
           <label style="display:flex;align-items:center;gap:9px;font-size:14px"><input id="slvNoProcessingWallet" type="checkbox" style="width:auto;margin:0" onchange="slvToggleNoProcessingWallet()"> No Processing Wallet Required (Cost ₹0 only)</label>
           <p id="slvNoProcessingWalletHint" class="muted">For zero-cost services, select this to save without a processing wallet.</p>
           <div id="slvProcessingWalletControls">
@@ -1237,7 +1240,7 @@ body.slv-xerox-selected #servicesView.slv-centered-popup #slvTxSave:disabled{opa
   <main id="employeeView" class="card hidden">
     <div class="topbar employee-topbar">
       <button class="hamburger-btn" onclick="toggleEmployeeMenu()" aria-label="Open menu">☰</button>
-      <strong id="empSubTitle">Employee Portal</strong>
+      <strong id="empSubTitle">Employee Workspace · Clean v2.1</strong>
       <div class="slv-clock" data-mode="digital" aria-label="Live India date and time"><div class="slv-clock-face" aria-hidden="true"><i class="slv-clock-hand slv-clock-hour"></i><i class="slv-clock-hand slv-clock-minute"></i><i class="slv-clock-hand slv-clock-second"></i><i class="slv-clock-dot"></i></div><div><div class="slv-clock-date">Loading date...</div><div class="slv-clock-time">--:--:--</div></div><select class="slv-clock-style" aria-label="Choose clock model" title="Change clock model"><option value="digital">Digital</option><option value="analog">Analog</option><option value="compact">Compact</option></select></div>
       <button class="btn-secondary btn-small" onclick="logout()">Logout</button>
     </div>
@@ -1248,6 +1251,7 @@ body.slv-xerox-selected #servicesView.slv-centered-popup #slvTxSave:disabled{opa
       <button class="side-menu-link" onclick="employeeMenuGo('servicesView')">💼 Services</button><button class="side-menu-link" onclick="slvPanOpen()">🧾 PAN Receipts</button>
       <div class="side-menu-caption">Assigned Wallets</div>
       <div id="employeeAssignedWallets" class="assigned-wallet-list"></div>
+      <button class="side-menu-link slv-service-link-menu" onclick="slvLinksOpen()">🌐 Service Links</button>
       <button class="side-menu-link side-logout" onclick="logout()">🚪 Logout</button>
     </aside>
     <button type="button" onclick="slvPanOpen()" class="btn-green">🧾 PAN Receipt Generator</button><div id="holidayAlert" class="banner">🚨 HOLIDAY: <span id="holidayText"></span></div>
@@ -2881,7 +2885,7 @@ try {
  window.slvMapSave=()=>run(async()=>{
   const id=el('slvMapService').value;if(!id||!services.some(x=>x.id===id))throw Error('Select a cloud service');
   const ids=['slvMapCash','slvMapUpi','slvMapCost'].map(k=>el(k).value||null);
-  if(!ids.some(Boolean))throw Error('Map at least one wallet');
+  if(!ids[0]||!ids[1])throw Error('Select Cash and UPI collection wallets');
   if(ids.some(x=>x&&!wallets.some(w=>w.id===x)))throw Error('Refresh wallets and select active wallets');
   const selectedAllowed=el('slvNoProcessingWallet').checked?[]:Array.from(el('slvAllowedWallets').selectedOptions).map(o=>o.value);const service=services.find(x=>x.id===id);if(el('slvNoProcessingWallet').checked&&Number(service.internal_cost)!==0)throw Error('No Processing Wallet is permitted only for Cost ₹0 services');if(Number(service.internal_cost)>0&&!selectedAllowed.length)throw Error('Select at least one allowed cost wallet'); const name=service.service_name;
   if(!confirm('Save cloud wallet mapping for '+name+'? This does not process a transaction.'))return;
