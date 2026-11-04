@@ -685,6 +685,11 @@ body:has(#employeeView:not(.hidden)) .main-header {
   border: 1px solid rgba(216,173,69,.25);
 }
 
+/* Hide floating Pending Applications while billing popup is open.
+   The pending drawer and button remain available on employee dashboard. */
+body.slv-service-modal-open .slv-pending-floating,
+body:has(#servicesView.slv-centered-popup:not(.hidden)) .slv-pending-floating{display:none!important}
+
 /* Pending application drawer and payment validation */
 .slv-pending-floating{position:fixed;right:18px;bottom:18px;z-index:990;background:linear-gradient(110deg,#09294d,#145fa5);border:1px solid #b6d5ff;box-shadow:0 12px 35px #071e3d44}
 .slv-pending-floating span{background:#fff;color:#103e70;border-radius:30px;padding:3px 9px;margin-left:6px}
@@ -790,7 +795,43 @@ body:has(#employeeView:not(.hidden)) .main-header {
 #slvCloudCheckout>h3{font-size:14px!important;margin:0 0 8px!important}
 body.slv-xerox-selected #slvCloudCheckout{border-top:1px solid #e6ebf3!important}
 body.slv-xerox-selected #slvCloudCheckout>h3{font-size:13px!important}
-</style></head>
+</style>
+<style id="slvSingleScreenSave2026">
+/* One-screen checkout: compact controls, no horizontal scrolling, save visible at bottom. */
+#servicesView.slv-centered-popup{width:min(760px,calc(100vw - 18px))!important;max-height:calc(100dvh - 16px)!important;overflow:hidden!important;padding:9px 14px 11px!important;display:flex!important;flex-direction:column;gap:4px}
+#servicesView.slv-centered-popup>.topbar{position:static!important;flex:0 0 auto;padding:4px 2px 7px!important;margin:0!important}
+#servicesView.slv-centered-popup #slvXeroxPanel{flex:0 1 auto;min-height:0;margin:2px 0!important;padding:6px 9px!important;overflow:visible!important}
+#servicesView.slv-centered-popup #slvXeroxPanel .xerox-item{padding:6px!important;margin:4px 0!important}
+#servicesView.slv-centered-popup #slvXeroxPanel .xerox-all-options{display:flex!important;flex-wrap:wrap!important;gap:5px 12px!important;overflow:visible!important;padding:2px!important}
+#servicesView.slv-centered-popup #slvXeroxPanel .xerox-all-options .xerox-tick-row{flex-wrap:wrap!important}
+#servicesView.slv-centered-popup #slvXeroxPanel .xerox-all-options label.xerox-tick{padding:3px 5px!important;font-size:10px!important}
+#servicesView.slv-centered-popup #slvXeroxPanel .xerox-compact-inputs input{height:29px!important}
+#servicesView.slv-centered-popup #slvXeroxPanel .xerox-result{margin-top:4px!important;padding:5px 8px!important;line-height:1.3!important}
+#servicesView.slv-centered-popup #slvXeroxPanel .xerox-note{display:none!important}
+#servicesView.slv-centered-popup #slvCloudCheckout{min-height:0;display:flex;flex-direction:column;gap:2px;padding:7px 9px!important;margin:2px 0!important;overflow:visible!important}
+#servicesView.slv-centered-popup #slvCloudCheckout>h3{font-size:12px!important;margin:0 0 2px!important}
+#servicesView.slv-centered-popup #slvCloudCheckout label{font-size:10px!important;margin:2px 0 0!important}
+#servicesView.slv-centered-popup #slvCloudCheckout input,#servicesView.slv-centered-popup #slvCloudCheckout select{min-height:0!important;height:29px!important;padding:3px 7px!important;margin:0 0 2px!important;font-size:12px!important}
+#servicesView.slv-centered-popup .slv-payment-shortcuts{display:flex;gap:5px;flex-wrap:wrap}
+#servicesView.slv-centered-popup .slv-payment-shortcuts button{padding:5px 8px!important;margin:1px!important;font-size:10px!important}
+#servicesView.slv-centered-popup #slvTxPreview{padding:5px 7px!important;margin:2px 0!important;font-size:11px!important;line-height:1.3!important}
+#servicesView.slv-centered-popup #slvTxSave{flex:0 0 auto;position:relative;z-index:7;margin:4px 0 0!important;padding:10px!important;font-size:15px!important;min-height:42px!important;animation:slvSaveBlink 1.25s ease-in-out infinite;box-shadow:0 0 0 0 rgba(20,150,95,.4)!important}
+#servicesView.slv-centered-popup #slvTxSave:disabled{opacity:.82;animation:slvSaveBlink .75s ease-in-out infinite!important}
+#servicesView.slv-centered-popup #slvTxStatus{font-size:10px!important;margin:1px 0!important;max-height:28px;overflow:hidden}
+@keyframes slvSaveBlink{0%,100%{filter:brightness(1);outline:2px solid transparent}50%{filter:brightness(1.25);outline:3px solid rgba(31,190,112,.55)}}
+body.slv-xerox-selected #servicesView.slv-centered-popup #slvServiceSearch,
+body.slv-xerox-selected #servicesView.slv-centered-popup .slv-service-picker,
+body.slv-xerox-selected #servicesView.slv-centered-popup .slv-native-service-label,
+body.slv-xerox-selected #servicesView.slv-centered-popup #slvTxService,
+body.slv-xerox-selected #servicesView.slv-centered-popup #slvTxQty,
+body.slv-xerox-selected #servicesView.slv-centered-popup label[for="slvTxQty"],
+body.slv-xerox-selected #servicesView.slv-centered-popup #slvTxMode,
+body.slv-xerox-selected #servicesView.slv-centered-popup label[for="slvTxMode"],
+body.slv-xerox-selected #servicesView.slv-centered-popup #slvCloudCheckout>button[onclick*="slvTxLoadServices"]{display:none!important}
+@media(max-width:560px){#servicesView.slv-centered-popup{padding:7px 9px!important;width:calc(100vw - 10px)!important}#servicesView.slv-centered-popup #slvXeroxPanel .xerox-all-options{gap:3px 7px!important}#servicesView.slv-centered-popup #slvTxSave{min-height:38px!important;padding:7px!important}}
+@media(prefers-reduced-motion:reduce){#servicesView.slv-centered-popup #slvTxSave{animation:none!important}}
+</style>
+</head>
 <body>
 <div id="slvTxSuccess" class="slv-tx-success" role="status" aria-live="polite" aria-label="Transaction successful"><div class="slv-tx-success-card"><div class="slv-tx-success-check">✓</div><h3>Transaction Successful</h3><p>SLV Communications • Payment Recorded</p><div class="slv-tx-success-amount" id="slvTxSuccessAmount">₹0.00</div><p id="slvTxSuccessCount">Wallet balances updated</p><div class="slv-tx-success-line"></div></div></div>
 <div id="slvLoadingOverlay" aria-live="polite" aria-label="SLV loading">
@@ -1179,7 +1220,7 @@ body.slv-xerox-selected #slvCloudCheckout>h3{font-size:13px!important}
 <section id="slvXeroxPanel" class="hidden" aria-label="Xerox calculator">
 <div class="xerox-head"><h3 style="margin:0">🖨️ Xerox Billing • Tick UI v2</h3><button type="button" class="btn-secondary btn-small" id="xeroxExtraToggle" onclick="xeroxToggleExtra()">＋ Add Job</button></div>
 <div id="xeroxItems" data-layout="tick-v2"></div><button type="button" class="btn-secondary btn-small hidden" id="xeroxAddItem" onclick="xeroxAddItem()">＋ Add Another Job</button>
-<details class="xerox-advanced"><summary>Advanced options</summary><label><input type="checkbox" id="xeroxManual" style="width:auto" onchange="xeroxRender()"> Manual Rate Override (admin authorization required to save)</label>
+<details class="xerox-advanced hidden" hidden><summary>Advanced options</summary><label><input type="checkbox" id="xeroxManual" style="width:auto" onchange="xeroxRender()"> Manual Rate Override (admin authorization required to save)</label>
 <div id="xeroxManualBox" class="hidden"><label>Manual Rate per Paper ₹</label><input id="xeroxManualRate" type="number" min="0" step="0.01" value="2" oninput="xeroxCalculate()"></div></details>
 <div class="xerox-grid"><div><label>Discount ₹</label><input id="xeroxDiscount" type="number" min="0" step="0.01" value="0" oninput="xeroxCalculate()"></div><div class="hidden"><label>Received Total</label><input id="xeroxPaid" type="number" value="0" readonly></div></div>
 <div id="xeroxResult" class="xerox-result" aria-live="polite"></div>
@@ -2862,7 +2903,7 @@ try {
   if(pendingRequest&&pendingRequest.payload!==payload){status('Uncertain previous save: retry unchanged values, or verify Cloud Transactions before new entry.',true);return}
   if(!confirm((mode==='later'?'Save PENDING':'Complete NOW')+' • '+a.service.service_name+' × '+a.qty+' • Bill '+money(a.due)+' • Change '+money(Math.max(0,a.change))+'?'))return;
   if(!pendingRequest)pendingRequest={payload,id:crypto.randomUUID()};
-  busy=true;el('slvTxSave').disabled=true;
+  busy=true;el('slvTxSave').disabled=true;el('slvTxSave').textContent='⏳ Saving Transaction...';
   const overlay=el('slvLoadingOverlay'),card=el('slvLoaderCard');
   const startedAt=performance.now();
   let confirmedSuccess=false;
@@ -2893,7 +2934,7 @@ try {
    if(remaining)await new Promise(resolve=>setTimeout(resolve,remaining));
    overlay?.classList.remove('active');
    busy=false;window.slvTxUpdatePreview();
-   if(confirmedSuccess&&typeof window.slvShowTransactionSuccess==='function')window.slvShowTransactionSuccess(a.due,1);
+   if(confirmedSuccess){window.showView('employeeView');if(typeof window.slvShowTransactionSuccess==='function')window.slvShowTransactionSuccess(a.due,1);}
   }
  };
  window.slvPendingOpen=()=>{el('slvPendingShade').classList.add('open');el('slvPendingDrawer').classList.add('open');el('slvPendingDrawer').setAttribute('aria-hidden','false');window.slvPendingRefresh()};
@@ -4001,7 +4042,7 @@ async function slvXeroxSave(){
   if(slvXeroxRequest&&slvXeroxRequest.signature!==signature)throw Error('Previous save is uncertain. Verify transaction history before changing this bill.');
   if(!confirm('Save '+xeroxItems.map(x=>(x.jobType||'Xerox')).join(' + ')+' bill '+q.count+' papers • ₹'+q.total.toFixed(2)+' • Cash ₹'+netCash.toFixed(2)+' • PAYTM ₹'+upi.toFixed(2)+'?'))return;
   if(!slvXeroxRequest)slvXeroxRequest={signature,id:crypto.randomUUID()};
-  slvXeroxBusy=true;button.disabled=true;status.style.color='#385579';status.textContent='Saving Xerox to Supabase...';
+  slvXeroxBusy=true;button.disabled=true;button.textContent='⏳ Saving Transaction...';status.style.color='#385579';status.textContent='Saving Xerox to Supabase...';
   const db=window.slvSupabase;if(!db)throw Error('Supabase unavailable');
   const user=await db.auth.getUser();if(user.error||!user.data?.user)throw Error('Employee cloud login required');
   const r=await db.rpc('slv_post_xerox_bill',{p_request_id:slvXeroxRequest.id,...payload});
@@ -4010,8 +4051,10 @@ async function slvXeroxSave(){
   slvXeroxRequest=null;
   document.getElementById('slvTxCash').value='0';document.getElementById('slvTxUpi').value='0';document.getElementById('xeroxPaid').value='0';
   if(typeof window.slvTxLoadServices==='function')window.slvTxLoadServices().catch(()=>{});
+  window.showView('employeeView');
+  if(typeof window.slvShowTransactionSuccess==='function')window.slvShowTransactionSuccess(q.total,1);
  }catch(e){status.style.color='#c5221f';status.textContent='Xerox save NOT confirmed: '+(e.message||e)+'; if network failed, retry unchanged values.'}
- finally{slvXeroxBusy=false;button.disabled=false}
+ finally{slvXeroxBusy=false;button.disabled=false;if(typeof window.slvTxUpdatePreview==='function')window.slvTxUpdatePreview();if(slvXeroxSelected())button.textContent='✓ Save Xerox / Print Bill';}
 }
 document.addEventListener('DOMContentLoaded',()=>{
  const select=document.getElementById('slvTxService'),btn=document.getElementById('slvTxSave');
