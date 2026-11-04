@@ -1102,7 +1102,7 @@ body:has(#employeeView:not(.hidden)) .main-header {
 <div id="xeroxManualBox" class="hidden"><label>Manual Rate per Paper ₹</label><input id="xeroxManualRate" type="number" min="0" step="0.01" value="2" oninput="xeroxCalculate()"></div>
 <div class="xerox-grid"><div><label>Discount ₹</label><input id="xeroxDiscount" type="number" min="0" step="0.01" value="0" oninput="xeroxCalculate()"></div><div><label>Customer Paid ₹</label><input id="xeroxPaid" type="number" min="0" step="0.01" value="0" oninput="xeroxCalculate()"></div></div>
 <div id="xeroxResult" class="xerox-result" aria-live="polite"></div>
-<p class="xerox-note">Xerox rates come from Admin browser-local pricing rules. This calculator does not save to Supabase or change wallet balances. Cloud checkout below uses its existing service rate until backend billing support is added.</p>
+<p class="xerox-note">Xerox rates load from Supabase Cloud. This is a quote calculator only; Cloud Checkout below still uses its existing service pricing and does not automatically post this Xerox total.</p>
 </section>
     <section id="slvCloudCheckout" class="section-box" style="margin:12px 0">
       <h3>☁️ Cloud Service Checkout</h3>
@@ -3800,7 +3800,7 @@ window.slvChangeCloudAssignment=async function(mode){
 })();
 </script>
 <script>
-/* Standalone Xerox quote calculator; deliberately separate from cloud posting RPC. */
+/* Standalone Xerox quote calculator using cloud pricing; separate from checkout RPC. */
 let xeroxItems=[{id:1,size:'A4',side:'Single',papers:10,sets:1}],xeroxExtra=false,xeroxNextId=2;
 const xeroxById=id=>document.getElementById(id);
 const xeroxNum=v=>Math.max(0,Number(v)||0);
@@ -3818,6 +3818,7 @@ function xeroxCalculate(){
  const groups=new Map();let papers=0;for(const x of xeroxItems){const n=Math.floor(xeroxNum(x.papers))*Math.floor(xeroxNum(x.sets));papers+=n;const key=x.size+' / '+x.side;groups.set(key,(groups.get(key)||0)+n)}
  const manual=xeroxById('xeroxManual').checked;
  let missing=[];let details=[];
+ if(!xaReady&&!manual){xeroxById('xeroxResult').textContent='Cloud pricing not loaded. Please log in and reload pricing before billing.';return;}
  const autoSubtotal=[...groups].reduce((sum,[key,n])=>{
   if(!n)return sum;
   const rule=xaGetRules(key).find(r=>n>=r.from&&n<=r.to);
@@ -3835,31 +3836,21 @@ document.addEventListener('DOMContentLoaded',()=>{xeroxRender();const sel=xeroxB
 </script>
 
 <script>
-/* Browser-local Xerox admin rules: no Supabase schema or transaction posting changed. */
-const XA_KEY='slv_xerox_pricing_rules_v1';
-let xaEditIndex=null;
-const xaDefault=()=>{
- const data={};
- for(const size of ['A4','Legal','A3'])for(const side of ['Single','Double'])data[size+' / '+side]=[
- {from:1,to:1,type:'starting',rate:5,extra:2},
- {from:2,to:3,type:'fixed',rate:10,extra:0},
- {from:4,to:20,type:'per',rate:3,extra:0},
- {from:21,to:1000000,type:'per',rate:2,extra:0}];
- return data;
-};
-let xaData;
-try{xaData=JSON.parse(localStorage.getItem(XA_KEY))||xaDefault()}catch(e){xaData=xaDefault()}
+/* Xerox pricing: Supabase-backed, RLS-controlled. No local pricing fallback. */
+let xaEditIndex=null, xaData={}, xaRows={}, xaReady=false, xaBusy=false;
+const xaCombos=['A4','Legal','A3'].flatMap(size=>['Single','Double'].map(side=>size+' / '+side));
 function xaKey(){return document.getElementById('xaSize').value+' / '+document.getElementById('xaSide').value}
-function xaGetRules(key){return Array.isArray(xaData[key])?xaData[key]:[]}
-function xaPersist(){localStorage.setItem(XA_KEY,JSON.stringify(xaData));if(typeof xeroxCalculate==='function')xeroxCalculate()}
+function xaGetRules(key){return xaReady&&Array.isArray(xaData[key])?xaData[key]:[]}
 function xaFields(){const starting=document.getElementById('xaType').value==='starting';document.getElementById('xaExtraBox').classList.toggle('hidden',!starting);document.getElementById('xaRateLabel').textContent=document.getElementById('xaType').value==='fixed'?'Fixed Total ₹':starting?'Starting Paper ₹':'Rate per Paper ₹'}
-function xaStatus(message,error=false){const el=document.getElementById('xaStatus');el.textContent=message;el.style.color=error?'#b91c1c':'#168364'}
+function xaStatus(message,error=false){const el=document.getElementById('xaStatus');if(el){el.textContent=message;el.style.color=error?'#b91c1c':'#168364'}}
 function xaCancel(){xaEditIndex=null;document.getElementById('xaSaveBtn').textContent='+ Add Rule';document.getElementById('xaFrom').value='1';document.getElementById('xaTo').value='1';document.getElementById('xaType').value='per';document.getElementById('xaRate').value='3';document.getElementById('xaExtra').value='2';xaFields()}
-function xaRender(){xaCancel();const list=xaGetRules(xaKey());document.getElementById('xaRules').innerHTML=list.length?list.map((r,i)=>`<div class="emp-row"><div><b>${r.from}–${r.to} papers</b><br><span class="muted">${r.type==='fixed'?'Fixed Total':r.type==='starting'?'Starting + Additional':'Per Paper'}: ₹${r.rate}${r.type==='starting'?' + ₹'+r.extra+' additional':''}</span></div><button type="button" class="btn-small btn-secondary" onclick="xaEdit(${i})">Edit</button><button type="button" class="btn-small btn-red" onclick="xaDelete(${i})">Delete</button></div>`).join(''):'<p class="muted">No rules for this combination.</p>'}
+function xaRender(){xaCancel();const list=xaGetRules(xaKey());document.getElementById('xaRules').innerHTML=!xaReady?'<p class="muted">Cloud rates loading / unavailable. No sample rates will be used.</p>':list.length?list.map((r,i)=>`<div class="emp-row"><div><b>${r.from}–${r.to} papers</b><br><span class="muted">${r.type==='fixed'?'Fixed Total':r.type==='starting'?'Starting + Additional':'Per Paper'}: ₹${r.rate}${r.type==='starting'?' + ₹'+r.extra+' additional':''}</span></div><button type="button" class="btn-small btn-secondary" onclick="xaEdit(${i})">Edit</button><button type="button" class="btn-small btn-red" onclick="xaDelete(${i})">Delete</button></div>`).join(''):'<p class="muted">No cloud rules for this combination. Add rules before billing.</p>';if(typeof xeroxCalculate==='function')xeroxCalculate()}
 function xaEdit(i){const r=xaGetRules(xaKey())[i];if(!r)return;xaEditIndex=i;document.getElementById('xaFrom').value=r.from;document.getElementById('xaTo').value=r.to;document.getElementById('xaType').value=r.type;document.getElementById('xaRate').value=r.rate;document.getElementById('xaExtra').value=r.extra||0;document.getElementById('xaSaveBtn').textContent='Save Changes';xaFields()}
-function xaDelete(i){if(!confirm('Delete this Xerox pricing rule?'))return;xaGetRules(xaKey()).splice(i,1);xaPersist();xaRender();xaStatus('Rule deleted')}
-function xaSave(){const from=Number(document.getElementById('xaFrom').value),to=Number(document.getElementById('xaTo').value),type=document.getElementById('xaType').value,rate=Number(document.getElementById('xaRate').value),extra=Number(document.getElementById('xaExtra').value);if(!Number.isSafeInteger(from)||!Number.isSafeInteger(to)||from<1||to<from||!Number.isFinite(rate)||rate<0||(type==='starting'&&(!Number.isFinite(extra)||extra<0))){xaStatus('Enter valid paper ranges and rates',true);return}const list=xaGetRules(xaKey());if(list.some((r,i)=>i!==xaEditIndex&&from<=r.to&&to>=r.from)){xaStatus('Overlapping range is not allowed',true);return}const rule={from,to,type,rate,extra:type==='starting'?extra:0};if(xaEditIndex===null)list.push(rule);else list[xaEditIndex]=rule;list.sort((a,b)=>a.from-b.from);xaData[xaKey()]=list;xaPersist();xaRender();xaStatus('Pricing rule saved in this browser. Other devices need Supabase sync.')}
-document.addEventListener('DOMContentLoaded',()=>{xaFields();xaRender();if(typeof xeroxCalculate==='function')xeroxCalculate()});
+async function xaClient(admin=false){const db=window.slvSupabase;if(!db)throw Error('Supabase connection unavailable');const {data,error}=await db.auth.getUser();if(error||!data?.user)throw Error('Cloud login required');if(admin){const r=await db.from('profiles').select('role,is_active').eq('id',data.user.id).single();if(r.error||r.data?.role?.toLowerCase()!=='admin'||r.data?.is_active!==true)throw Error('Active admin account required')}return db}
+async function xaLoad(){try{const db=await xaClient();const {data,error}=await db.from('xerox_pricing').select('id,paper_size,print_type,from_papers,to_papers,pricing_type,rate,additional_rate').order('from_papers');if(error)throw error;xaData=Object.fromEntries(xaCombos.map(k=>[k,[]]));xaRows={};for(const r of data||[]){const key=r.paper_size+' / '+r.print_type;const row={id:r.id,from:r.from_papers,to:r.to_papers,type:r.pricing_type,rate:Number(r.rate),extra:Number(r.additional_rate)};if(xaData[key])xaData[key].push(row)}xaReady=true;xaRender();xaStatus((data||[]).length+' Xerox pricing rules loaded from Supabase ✓')}catch(e){xaReady=false;xaData={};xaRender();xaStatus('Cloud pricing unavailable: '+e.message,true)}}
+async function xaDelete(i){const r=xaGetRules(xaKey())[i];if(!r||xaBusy||!confirm('Delete this Xerox pricing rule from cloud?'))return;xaBusy=true;try{const db=await xaClient(true);const result=await db.from('xerox_pricing').delete().eq('id',r.id).select('id');if(result.error)throw result.error;if(result.data?.length!==1)throw Error('Delete not confirmed');await xaLoad();xaStatus('Rule deleted from Supabase ✓')}catch(e){xaStatus('Delete failed: '+e.message,true)}finally{xaBusy=false}}
+async function xaSave(){if(xaBusy)return;const from=Number(document.getElementById('xaFrom').value),to=Number(document.getElementById('xaTo').value),type=document.getElementById('xaType').value,rate=Number(document.getElementById('xaRate').value),extra=Number(document.getElementById('xaExtra').value);if(!Number.isSafeInteger(from)||!Number.isSafeInteger(to)||from<1||to<from||!Number.isFinite(rate)||rate<0||(type==='starting'&&(!Number.isFinite(extra)||extra<0))){xaStatus('Enter valid paper ranges and rates',true);return}if(!xaReady){xaStatus('Load cloud rates first; cannot save while offline',true);return}const list=xaGetRules(xaKey());if(list.some((r,i)=>i!==xaEditIndex&&from<=r.to&&to>=r.from)){xaStatus('Overlapping range is not allowed',true);return}xaBusy=true;try{const db=await xaClient(true);const [paper_size,print_type]=xaKey().split(' / ');const payload={paper_size,print_type,from_papers:from,to_papers:to,pricing_type:type,rate,additional_rate:type==='starting'?extra:0,updated_at:new Date().toISOString()};let result;if(xaEditIndex===null)result=await db.from('xerox_pricing').insert(payload).select('id');else result=await db.from('xerox_pricing').update(payload).eq('id',list[xaEditIndex].id).select('id');if(result.error)throw result.error;if(result.data?.length!==1)throw Error('Save not confirmed');await xaLoad();xaStatus('Pricing rule saved in Supabase Cloud ✓')}catch(e){xaStatus('Save failed: '+e.message,true)}finally{xaBusy=false}}
+document.addEventListener('DOMContentLoaded',()=>{xaFields();xaRender();const tryLoad=()=>{if(window.slvSupabase)xaLoad()};tryLoad();let attempts=0;const timer=setInterval(()=>{if(window.slvSupabase){clearInterval(timer);xaLoad();window.slvSupabase.auth.onAuthStateChange(()=>setTimeout(xaLoad,250))}else if(++attempts>40){clearInterval(timer);xaStatus('Supabase not initialized',true)}},500)});
 </script>
 </body>
 </html>
