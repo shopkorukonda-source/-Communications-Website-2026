@@ -923,9 +923,23 @@ body.slv-xerox-selected #servicesView.slv-centered-popup #slvTxSave:disabled{opa
       <button class="side-menu-link" onclick="adminMenuGo('adminAttendance')">📅 Employee Attendance & Shift Reports</button>
       <button class="side-menu-link" onclick="adminMenuGo('adminLeaves')">🌴 Leave Requests</button>
       <button class="side-menu-link" onclick="adminMenuGo('adminTransactions')">📊 Transactions & Collection</button>
+      <button class="side-menu-link" onclick="adminMenuGo('adminServiceLinks');slvLinksAdminLoad()">🌐 Manage Service Links</button>
       <button class="side-menu-link side-logout" onclick="logout()">🚪 Logout</button>
     </aside>
 
+    <div id="adminServiceLinks" class="section-box admin-section" style="border-left:4px solid #2457d6">
+      <h4>🌐 Service Links — Admin Management</h4>
+      <p class="muted">Add or edit service name, logo image URL and website URL. Changes sync to all employees via Supabase.</p>
+      <input id="slvLinkEditId" type="hidden">
+      <label>Service Name</label><input id="slvLinkName" maxlength="100" placeholder="e.g. PAN Card Portal">
+      <label>Website URL (https://)</label><input id="slvLinkUrl" type="url" placeholder="https://example.gov.in">
+      <label>Logo Image URL (optional, https://)</label><input id="slvLinkLogo" type="url" placeholder="https://example.gov.in/logo.png">
+      <label>Category (optional)</label><input id="slvLinkCategory" maxlength="60" placeholder="e.g. Government, Banking, CSC">
+      <div class="row"><button type="button" class="btn-green" onclick="slvLinksSave()">💾 Save Service Link</button><button type="button" class="btn-secondary" onclick="slvLinksClear()">Clear / New</button></div>
+      <div id="slvLinksAdminStatus" class="muted" aria-live="polite">Load to manage links.</div>
+      <input id="slvLinksAdminSearch" type="search" placeholder="🔎 Search saved links" oninput="slvLinksAdminRender()">
+      <div id="slvLinksAdminList"></div>
+    </div>
     <div id="adminSettings" class="section-box admin-section active-admin-section" style="border-left:4px solid #1a73e8">
       <h4>📌 Shop Setup & Quick Settings</h4>
       <div class="section-box" id="slvShiftRulesPanel" style="border:1px solid #bfd4ef;background:#f7fbff;margin-top:16px">
@@ -1030,7 +1044,16 @@ body.slv-xerox-selected #servicesView.slv-centered-popup #slvTxSave:disabled{opa
         <label for="slvMapService">Cloud Service</label><select id="slvMapService"></select>
         <label for="slvMapCash">Cash collection wallet</label><select id="slvMapCash"></select>
         <label for="slvMapUpi">UPI collection wallet</label><select id="slvMapUpi"></select>
-        <label for="slvMapCost">Legacy primary cost wallet (compatibility)</label><select id="slvMapCost"></select><label for="slvAllowedWallets">Allowed processing wallets (Ctrl+click for multiple)</label><select id="slvAllowedWallets" multiple size="6" style="width:100%;min-height:125px"></select><p class="muted">Cost ₹0: no processing wallet required. Changes apply to new completed transactions.</p>
+        <label for="slvMapCost">Legacy primary cost wallet (read-only reference)</label><select id="slvMapCost" disabled></select>
+        <div class="section-box" style="border:1px solid #cbdcf5;background:#fff">
+          <h4>➕ Additional Processing Wallets</h4>
+          <p class="muted">Click Add Processing Wallet to link another wallet. Employee sees only the wallets saved here and chooses one at transaction time.</p>
+          <div id="slvProcessingWalletRows"></div>
+          <button type="button" class="btn-secondary" onclick="slvAddProcessingWallet()">+ Add Processing Wallet</button>
+          <select id="slvAllowedWallets" multiple class="hidden" aria-hidden="true" tabindex="-1"></select>
+          <p id="slvProcessingWalletCount" class="muted">No processing wallets selected.</p>
+        </div>
+        <p class="muted">Cost ₹0: no processing wallet required. Changes apply to new completed transactions.</p>
         <button type="button" class="btn-green" onclick="slvMapSave()">Save Cloud Mapping</button>
         <p id="slvMapStatus" class="muted" role="status">Load cloud data to begin.</p>
       </div>
@@ -1187,6 +1210,7 @@ body.slv-xerox-selected #servicesView.slv-centered-popup #slvTxSave:disabled{opa
       <div class="side-menu-head"><b>SLV Communications</b><button onclick="toggleEmployeeMenu(false)">✕</button></div>
       <button class="side-menu-link" onclick="employeeMenuGo('employeeView')">🏠 Dashboard</button>
       <button class="side-menu-link" onclick="employeeMenuGo('servicesView')">💼 Services</button><button class="side-menu-link" onclick="slvPanOpen()">🧾 PAN Receipts</button>
+      <button class="side-menu-link slv-service-link-menu" onclick="slvLinksOpen()">🌐 Service Links</button>
       <div class="side-menu-caption">Assigned Wallets</div>
       <div id="employeeAssignedWallets" class="assigned-wallet-list"></div>
       <button class="side-menu-link side-logout" onclick="logout()">🚪 Logout</button>
@@ -2770,8 +2794,29 @@ try {
  }
  async function run(fn){if(busy)return;busy=true;try{await fn()}catch(e){status('Error: '+(e.message||String(e)))}finally{busy=false}}
  function fill(id,options){const select=el(id);select.replaceChildren();const none=new Option('— Not mapped —','');select.add(none);options.forEach(o=>select.add(new Option(o.label,o.id)))}
+ function drawProcessingRows(ids){
+  const host=el('slvProcessingWalletRows');host.replaceChildren();
+  const unique=[...new Set(ids.filter(id=>wallets.some(w=>w.id===id)))];
+  unique.forEach((value,i)=>{
+   const row=document.createElement('div');row.className='row';row.style.cssText='margin:8px 0;align-items:center';
+   const sel=document.createElement('select');sel.style.cssText='flex:4;min-width:170px;margin:0';sel.setAttribute('aria-label','Processing wallet '+(i+1));
+   sel.add(new Option('— Select processing wallet —',''));
+   wallets.forEach(w=>sel.add(new Option(w.wallet_name,w.id)));
+   sel.value=value;
+   sel.addEventListener('change',()=>{const values=getProcessingIds();if(values.length!==new Set(values).size){alert('Same wallet cannot be linked twice');sel.value=value;return;}syncProcessing()});
+   const remove=document.createElement('button');remove.type='button';remove.className='btn-red btn-small';remove.style.cssText='flex:0 0 auto';remove.textContent='Remove';
+   remove.onclick=()=>{row.remove();syncProcessing()};row.append(sel,remove);host.append(row);
+  });syncProcessing();
+ }
+ function getProcessingIds(){return Array.from(el('slvProcessingWalletRows').querySelectorAll('select')).map(x=>x.value).filter(Boolean)}
+ function syncProcessing(){const ids=new Set(getProcessingIds());Array.from(el('slvAllowedWallets').options).forEach(o=>o.selected=ids.has(o.value));el('slvProcessingWalletCount').textContent=ids.size+' processing wallet(s) selected';}
+ window.slvAddProcessingWallet=()=>{
+  const current=getProcessingIds();const next=wallets.find(w=>!current.includes(w.id));
+  if(!next){status('No more available wallets. Load Cloud Services & Wallets if needed.');return;}
+  drawProcessingRows([...current,next.id]);
+ };
  function apply(){const id=el('slvMapService').value;const m=mappings.find(x=>x.service_id===id)||{};
-  for(const [field,key] of [['slvMapCash','cash_wallet_id'],['slvMapUpi','upi_wallet_id'],['slvMapCost','cost_wallet_id']])el(field).value=m[key]||''; const selected=new Set(allowed.filter(x=>x.service_id===id).map(x=>x.wallet_id)); Array.from(el('slvAllowedWallets').options).forEach(o=>o.selected=selected.has(o.value));
+  for(const [field,key] of [['slvMapCash','cash_wallet_id'],['slvMapUpi','upi_wallet_id'],['slvMapCost','cost_wallet_id']])el(field).value=m[key]||''; const selected=new Set(allowed.filter(x=>x.service_id===id).map(x=>x.wallet_id)); drawProcessingRows([...selected]);
  }
  window.slvMapRefresh=()=>run(async()=>{
   const db=await admin();
@@ -4271,5 +4316,57 @@ let missing=[];
 window.slvCatalogPreview=async()=>{const status=$('slvCatalogStatus');status.textContent='Checking cloud services…';try{const db=await staffDb(true);const r=await db.from('services').select('service_name');if(r.error)throw r.error;const names=new Set((r.data||[]).map(x=>x.service_name.trim().toLocaleLowerCase()));missing=all.filter(x=>!names.has(x.service_name.toLocaleLowerCase()));status.textContent=all.length+' catalog entries • '+missing.length+' missing • '+(all.length-missing.length)+' already present';$('slvCatalogPreview').textContent=missing.map(x=>x.service_name).join(' • ');}catch(e){missing=[];status.textContent='Error: '+e.message;}};
 window.slvCatalogImport=async()=>{if(busy)return;await window.slvCatalogPreview();if(!missing.length)return;if(!confirm('Add '+missing.length+' missing services as INACTIVE with ₹0 rate and ₹0 cost? Set pricing and wallet mappings before activation.'))return;busy=true;const status=$('slvCatalogStatus');let added=0;try{const db=await staffDb(true);for(const item of missing){const payload={...item,customer_rate:0,internal_cost:0,is_active:false,settings:{slv_catalog_import:true}};const r=await db.from('services').insert(payload);if(r.error)throw new Error(item.service_name+': '+r.error.message);added++;}status.textContent='✓ Added '+added+' services. Configure prices and wallet mappings before activating.';await window.slvCatalogPreview();if(typeof window.renderServicesAdmin==='function')window.renderServicesAdmin();if(typeof window.slvMapRefresh==='function')await window.slvMapRefresh();}catch(e){status.textContent='Added '+added+' before error: '+e.message+'; rerun preview to avoid duplicates.';}finally{busy=false;}};
 })();
-</script></body>
+</script>
+<style>
+#slvLinksShortcut{position:fixed;bottom:17px;left:15px;z-index:995;background:linear-gradient(110deg,#0c356d,#2466bb);border:1px solid #8fbaf5;box-shadow:0 10px 30px #062a5b45;display:none}
+#slvLinksShortcut.slv-visible{display:block}
+#slvLinksModal{position:fixed;inset:0;z-index:10050;background:rgba(4,17,39,.78);display:none;align-items:center;justify-content:center;padding:14px}
+#slvLinksModal.open{display:flex}
+.slv-links-dialog{background:#f8fbff;border-radius:18px;width:min(950px,100%);max-height:90vh;overflow:auto;padding:22px;box-shadow:0 25px 80px #0005}
+.slv-links-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.slv-links-header h3{margin:0;color:#0a376d}
+#slvLinksGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:14px;margin-top:16px}
+.slv-link-card{display:flex;flex-direction:column;align-items:center;gap:10px;justify-content:center;text-align:center;min-height:135px;padding:18px 10px;border:1px solid #dbe6f5;border-radius:14px;background:#fff;color:#17375e;text-decoration:none;box-shadow:0 4px 12px #153d6c0d;overflow-wrap:anywhere}
+.slv-link-card:hover{border-color:#397aca;transform:translateY(-2px)}
+.slv-link-logo{height:53px;width:53px;object-fit:contain;border-radius:11px;background:#f2f6ff;padding:5px}
+.slv-link-fallback{display:grid;place-items:center;height:53px;width:53px;border-radius:12px;background:#e8f0ff;font-size:29px}
+.slv-link-card b{font-size:13px}.slv-link-card small{color:#66758a}
+.slv-link-admin-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px;border-bottom:1px solid #e1e7ef;flex-wrap:wrap}
+.slv-link-admin-row div{overflow-wrap:anywhere}
+@media(max-width:600px){#slvLinksShortcut{bottom:10px;left:8px;padding:9px;font-size:11px}.slv-links-dialog{padding:15px}#slvLinksGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+<button id="slvLinksShortcut" type="button" onclick="slvLinksOpen()">🌐 Service Links</button>
+<div id="slvLinksModal" role="dialog" aria-modal="true" aria-label="Service Links">
+ <div class="slv-links-dialog">
+  <div class="slv-links-header"><h3>🌐 SLV Service Links</h3><button type="button" class="btn-secondary" onclick="slvLinksClose()">✕ Close</button></div>
+  <p class="muted">Search and click a service to open its official website in a new tab.</p>
+  <input id="slvLinksSearch" type="search" placeholder="🔎 Search service name or category" oninput="slvLinksRender()">
+  <div id="slvLinksStatus" class="muted" aria-live="polite"></div>
+  <div id="slvLinksGrid"></div>
+ </div>
+</div>
+<script>
+(function(){
+'use strict';
+let rows=[],adminRows=[],loading=false;
+const el=id=>document.getElementById(id);
+function validUrl(raw,required=true){const v=String(raw||'').trim();if(!v&&!required)return '';const u=new URL(v);if(u.protocol!=='https:')throw Error('Only HTTPS URLs are allowed.');if(u.username||u.password)throw Error('URLs cannot contain credentials.');return u.href;}
+async function client(admin=false){const db=window.slvSupabase;if(!db)throw Error('Supabase connection unavailable.');const a=await db.auth.getUser();if(a.error||!a.data?.user)throw Error('Cloud login required.');const p=await db.from('profiles').select('role,is_active').eq('id',a.data.user.id).single();if(p.error||p.data?.is_active!==true||!['admin','employee'].includes(p.data.role))throw Error('Active staff account required.');if(admin&&p.data.role!=='admin')throw Error('Admin only.');return db;}
+function card(row){const a=document.createElement('a');a.className='slv-link-card';a.href=row.website_url;a.target='_blank';a.rel='noopener noreferrer';a.title='Open '+row.service_name+' in new tab';let logo;if(row.logo_url){logo=document.createElement('img');logo.className='slv-link-logo';logo.alt='';logo.loading='lazy';logo.referrerPolicy='no-referrer';logo.src=row.logo_url;logo.onerror=()=>{logo.replaceWith(fallback())};}else logo=fallback();function fallback(){const x=document.createElement('span');x.className='slv-link-fallback';x.textContent='🌐';return x}const name=document.createElement('b');name.textContent=row.service_name;const cat=document.createElement('small');cat.textContent=row.category||'Open Website ↗';a.append(logo,name,cat);return a;}
+window.slvLinksRender=function(){const grid=el('slvLinksGrid');grid.replaceChildren();const q=el('slvLinksSearch').value.toLocaleLowerCase().trim();const filtered=rows.filter(x=>(x.service_name+' '+(x.category||'')).toLocaleLowerCase().includes(q));filtered.forEach(x=>grid.append(card(x)));if(!filtered.length)grid.textContent=rows.length?'No matching services.':'No service links added yet.';};
+async function load(){if(loading)return;loading=true;el('slvLinksStatus').textContent='Loading service links from cloud…';try{const db=await client();const r=await db.from('slv_service_links').select('id,service_name,website_url,logo_url,category,sort_order').eq('is_active',true).order('sort_order',{ascending:true}).order('service_name',{ascending:true});if(r.error)throw r.error;rows=r.data||[];el('slvLinksStatus').textContent=rows.length+' service links';window.slvLinksRender();}catch(e){el('slvLinksStatus').textContent='Cannot load links: '+e.message;el('slvLinksGrid').replaceChildren();}finally{loading=false;}}
+window.slvLinksOpen=function(){if(el('employeeSideMenu')?.classList.contains('open')&&typeof window.toggleEmployeeMenu==='function')window.toggleEmployeeMenu(false);el('slvLinksModal').classList.add('open');el('slvLinksSearch').value='';load();};
+window.slvLinksClose=function(){el('slvLinksModal').classList.remove('open');};
+el('slvLinksModal').addEventListener('click',e=>{if(e.target===el('slvLinksModal'))window.slvLinksClose()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')window.slvLinksClose()});
+window.slvLinksClear=function(){['slvLinkEditId','slvLinkName','slvLinkUrl','slvLinkLogo','slvLinkCategory'].forEach(id=>el(id).value='');};
+window.slvLinksAdminRender=function(){const out=el('slvLinksAdminList');out.replaceChildren();const q=el('slvLinksAdminSearch').value.toLowerCase().trim();adminRows.filter(x=>(x.service_name+' '+(x.category||'')).toLowerCase().includes(q)).forEach(x=>{const row=document.createElement('div');row.className='slv-link-admin-row';const label=document.createElement('div');const strong=document.createElement('b');strong.textContent=x.service_name;const sub=document.createElement('div');sub.className='muted';sub.textContent=(x.category||'Uncategorized')+' · '+x.website_url;label.append(strong,sub);const actions=document.createElement('span');const edit=document.createElement('button');edit.textContent='✏️ Edit';edit.onclick=()=>{el('slvLinkEditId').value=x.id;el('slvLinkName').value=x.service_name;el('slvLinkUrl').value=x.website_url;el('slvLinkLogo').value=x.logo_url||'';el('slvLinkCategory').value=x.category||'';el('slvLinkName').focus();};const del=document.createElement('button');del.className='btn-red';del.textContent='🗑 Delete';del.onclick=()=>window.slvLinksDelete(x.id,x.service_name);actions.append(edit,del);row.append(label,actions);out.append(row)});if(!out.children.length)out.textContent='No saved service links.';};
+window.slvLinksAdminLoad=async function(){const status=el('slvLinksAdminStatus');status.textContent='Loading…';try{const db=await client(true);const r=await db.from('slv_service_links').select('*').order('service_name');if(r.error)throw r.error;adminRows=r.data||[];status.textContent=adminRows.length+' saved links';window.slvLinksAdminRender();}catch(e){status.textContent='Load failed: '+e.message;}};
+window.slvLinksSave=async function(){const status=el('slvLinksAdminStatus');const btn=el('slvLinkName');try{const name=btn.value.trim();if(!name||name.length>100)throw Error('Enter service name (max 100 characters).');const website_url=validUrl(el('slvLinkUrl').value);const logo_url=validUrl(el('slvLinkLogo').value,false)||null;const category=el('slvLinkCategory').value.trim();const db=await client(true);const payload={service_name:name,website_url,logo_url,category,is_active:true};const id=el('slvLinkEditId').value;status.textContent='Saving…';const r=id?await db.from('slv_service_links').update(payload).eq('id',id).select('id'):await db.from('slv_service_links').insert(payload).select('id');if(r.error)throw r.error;if(r.data?.length!==1)throw Error('Save not confirmed. Check Admin permissions.');window.slvLinksClear();await window.slvLinksAdminLoad();status.textContent='✓ Saved in Supabase. Employees will see the update when they open Service Links.';}catch(e){status.textContent='Save failed: '+e.message;}};
+window.slvLinksDelete=async function(id,name){if(!confirm('Delete service link "'+name+'"?'))return;const status=el('slvLinksAdminStatus');try{const db=await client(true);const r=await db.from('slv_service_links').delete().eq('id',id).select('id');if(r.error)throw r.error;if(r.data?.length!==1)throw Error('Delete not confirmed.');await window.slvLinksAdminLoad();status.textContent='✓ Deleted.';}catch(e){status.textContent='Delete failed: '+e.message;}};
+function shortcut(){const v=el('employeeView');const visible=v&&!v.classList.contains('hidden');el('slvLinksShortcut').classList.toggle('slv-visible',!!visible);if(!visible)window.slvLinksClose();}
+new MutationObserver(shortcut).observe(el('employeeView'),{attributes:true,attributeFilter:['class']});shortcut();
+})();
+</script>
+</body>
 </html>
