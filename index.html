@@ -784,7 +784,13 @@ body:has(#employeeView:not(.hidden)) .main-header {
 #servicesView.slv-centered-popup #slvCloudCheckout{padding:10px!important;margin:7px 0!important}
 @media(max-width:520px){#servicesView.slv-centered-popup:has(#slvXeroxPanel:not(.hidden)){width:calc(100vw - 12px)!important;max-height:90dvh!important;padding:9px!important}}
 </style>
-</head>
+<style>
+/* Simplified checkout: preserve hidden payment/RPC wiring and remove draft UI. */
+#slvAdditionalTransactions{display:none!important}
+#slvCloudCheckout>h3{font-size:14px!important;margin:0 0 8px!important}
+body.slv-xerox-selected #slvCloudCheckout{border-top:1px solid #e6ebf3!important}
+body.slv-xerox-selected #slvCloudCheckout>h3{font-size:13px!important}
+</style></head>
 <body>
 <div id="slvTxSuccess" class="slv-tx-success" role="status" aria-live="polite" aria-label="Transaction successful"><div class="slv-tx-success-card"><div class="slv-tx-success-check">✓</div><h3>Transaction Successful</h3><p>SLV Communications • Payment Recorded</p><div class="slv-tx-success-amount" id="slvTxSuccessAmount">₹0.00</div><p id="slvTxSuccessCount">Wallet balances updated</p><div class="slv-tx-success-line"></div></div></div>
 <div id="slvLoadingOverlay" aria-live="polite" aria-label="SLV loading">
@@ -1180,8 +1186,8 @@ body:has(#employeeView:not(.hidden)) .main-header {
 <p class="xerox-note">Pages = printed sides. Papers = physical sheets. Both-side printing uses 2 pages per paper. Final rate follows Admin Cloud Pricing.</p>
 </section>
     <section id="slvCloudCheckout" class="section-box" style="margin:12px 0">
-      <h3>☁️ Cloud Service Checkout</h3>
-      <p class="muted">Supabase wallet mapping ఆధారంగా transaction save అవుతుంది. ఒకసారి ఒక Service మాత్రమే.</p>
+      <h3>💳 Payment & Save</h3>
+      
       <label for="slvServiceSearch">🔎 Search Service</label><div class="slv-service-picker"><input id="slvServiceSearch" type="search" autocomplete="off" placeholder="Type service name (PAN, Xerox, Aadhaar...)" aria-controls="slvServiceSuggestions" aria-expanded="false"><div id="slvServiceSuggestions" class="slv-service-suggestions" role="listbox" hidden></div></div><label for="slvTxService" class="slv-native-service-label">Selected Service</label><select id="slvTxService" aria-label="Selected Cloud Service"><option value="">Load services first</option></select>
       <button type="button" class="btn-secondary btn-small" onclick="slvTxLoadServices()">↻ Load Cloud Services</button>
       <input id="slvTxCustomer" type="hidden" value="Walk-in Customer">
