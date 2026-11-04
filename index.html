@@ -3227,17 +3227,27 @@ if(typeof original==='function')window.renderAdmin=function(){const result=origi
 <script>
 /* UI-only improvements: existing Supabase RPC and wallet posting are unchanged. */
 window.slvPaymentQuick = function(mode){
- const select=document.getElementById('slvTxService');
- const qty=Number(document.getElementById('slvTxQty').value)||0;
- const text=select.options[select.selectedIndex]?.textContent||'';
- const matched=text.match(/₹\s*([\d,.]+)/);
- const rate=matched?Number(matched[1].replace(/,/g,'')):0;
- const due=Math.round(rate*qty*100)/100;
- if(!Number.isFinite(due)||due<=0){alert('Select a service and valid quantity first');return}
  const cash=document.getElementById('slvTxCash'),upi=document.getElementById('slvTxUpi');
+ let due=0;
+ if(typeof slvXeroxSelected==='function' && slvXeroxSelected()){
+  // Xerox/Print uses its own job rows and cloud pricing, not the hidden generic quantity.
+  try{due=Number(slvXeroxQuote().total)}catch(e){alert(e.message||String(e));return}
+ }else{
+  const select=document.getElementById('slvTxService');
+  const qty=Number(document.getElementById('slvTxQty').value)||0;
+  const text=select.options[select.selectedIndex]?.textContent||'';
+  const matched=text.match(/₹\s*([\d,.]+)/);
+  const rate=matched?Number(matched[1].replace(/,/g,'')):0;
+  due=Math.round(rate*qty*100)/100;
+ }
+ if(!Number.isFinite(due)||due<=0){alert('Select a service and valid quantity first');return}
  if(mode==='cash'){cash.value=due.toFixed(2);upi.value='0'}
  else if(mode==='upi'){cash.value='0';upi.value=due.toFixed(2)}
  else {cash.value='0';upi.value='0';upi.focus()}
+ if(typeof slvXeroxSelected==='function' && slvXeroxSelected()){
+  const paid=document.getElementById('xeroxPaid');if(paid)paid.value=(Number(cash.value)+Number(upi.value)).toFixed(2);
+  if(typeof xeroxCalculate==='function')xeroxCalculate();
+ }
  if(typeof window.slvTxUpdatePreview==='function')window.slvTxUpdatePreview();
 };
 </script>
