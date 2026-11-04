@@ -1030,7 +1030,7 @@ body.slv-xerox-selected #servicesView.slv-centered-popup #slvTxSave:disabled{opa
         <label for="slvMapService">Cloud Service</label><select id="slvMapService"></select>
         <label for="slvMapCash">Cash collection wallet</label><select id="slvMapCash"></select>
         <label for="slvMapUpi">UPI collection wallet</label><select id="slvMapUpi"></select>
-        <label for="slvMapCost">Service cost debit wallet</label><select id="slvMapCost"></select>
+        <label for="slvMapCost">Legacy primary cost wallet (compatibility)</label><select id="slvMapCost"></select><label for="slvAllowedWallets">Allowed processing wallets (Ctrl+click for multiple)</label><select id="slvAllowedWallets" multiple size="6" style="width:100%;min-height:125px"></select><p class="muted">Cost ₹0: no processing wallet required. Changes apply to new completed transactions.</p>
         <button type="button" class="btn-green" onclick="slvMapSave()">Save Cloud Mapping</button>
         <p id="slvMapStatus" class="muted" role="status">Load cloud data to begin.</p>
       </div>
@@ -1258,8 +1258,8 @@ body.slv-xerox-selected #servicesView.slv-centered-popup #slvTxSave:disabled{opa
       <label for="slvTxQty">Quantity</label><input id="slvTxQty" type="number" min="1" max="10000" step="1" value="1" oninput="slvTxUpdatePreview()">
       <div class="slv-payment-shortcuts"><button type="button" class="btn-small" onclick="slvPaymentQuick('cash')">💵 Cash</button><button type="button" class="btn-small" onclick="slvPaymentQuick('upi')">📱 UPI</button><button type="button" class="btn-small" onclick="slvPaymentQuick('split')">Cash + UPI</button></div><label for="slvTxCash">Customer ఇచ్చిన Cash ₹ (Edit చేయవచ్చు)</label><input id="slvTxCash" type="number" min="0" step="0.01" value="0" oninput="slvTxUpdatePreview()">
       <label for="slvTxUpi">UPI Received ₹</label><input id="slvTxUpi" type="number" min="0" step="0.01" value="0" oninput="slvTxUpdatePreview()">
-      <label for="slvTxMode">Application Processing</label>
-      <select id="slvTxMode" onchange="slvTxUpdatePreview()"><option value="now">✓ Complete Now — Cost Debit Now</option><option value="later">⏳ Complete Later — Add to Pending</option></select>
+      <div id="slvSelectedWalletBox"><label for="slvSelectedWallet">Processing Wallet (assigned by Admin)</label><select id="slvSelectedWallet" onchange="slvTxUpdatePreview()"><option value="">Select service first</option></select><small id="slvWalletSelectStatus">Only Admin-approved wallet names appear. Balances are hidden.</small></div><label for="slvTxMode">Application Processing</label>
+      <select id="slvTxMode" onchange="slvTxUpdatePreview()"><option value="now">✓ Complete Now — Cost Debit Now</option><option value="later" disabled>⏳ Complete Later — migration pending</option></select>
       <section id="slvAdditionalTransactions" class="section-box" style="margin:12px 0;border:1px solid #dbe8f7">
         <h4>＋ Additional Transaction</h4>
         <p class="muted">ఒకే Customer కోసం అనేక Service Bills సిద్ధం చేసుకోండి. ప్రతి Bill ని విడిగా Cloud లో Save చేయాలి. ఒకేసారి Combined Wallet Debit ఇంకా అందుబాటులో లేదు.</p>
@@ -1470,13 +1470,9 @@ function renderEmpList(){
   Object.keys(emps).forEach(id=>{
     const row=document.createElement('div');row.className='emp-row';
     const info=document.createElement('div');info.style.flex='1';const b=document.createElement('b');b.textContent=id+' - '+emps[id].name;const small=document.createElement('div');small.className='muted';small.textContent='Shift: '+(emps[id].shift||'Not set');info.append(b,small);
+    // Legacy browser wallet assignment retired. Cloud admin assignment is the source of truth.
     const walletBox=document.createElement('div');walletBox.className='employee-wallet-assignment';
-    const label=document.createElement('label');label.textContent='Assign wallets to this employee';
-    const select=document.createElement('select');select.multiple=true;select.className='emp-wallet-select';select.size=Math.min(4,Math.max(2,getWallets().length));
-    const assigned=Array.isArray(emps[id].wallets)?emps[id].wallets:getWallets().map(w=>w.name);
-    getWallets().forEach(w=>{const opt=document.createElement('option');opt.value=w.name;opt.textContent=w.name;opt.selected=assigned.includes(w.name);select.append(opt)});
-    const saveWallets=document.createElement('button');saveWallets.className='btn-green btn-small';saveWallets.textContent='Save Wallet Access';saveWallets.onclick=()=>{const current=getEmployees();current[id].wallets=[...select.selectedOptions].map(o=>o.value);write(KEYS.employees,current);if(currentUser&&currentUser.id===id)renderEmployee();alert('Employee wallet permissions saved')};
-    walletBox.append(label,select,saveWallets);
+    walletBox.textContent='Wallet access: manage in Supabase Employee Wallet Assignment';
     const btn=document.createElement('button');btn.className='btn-red btn-small';btn.textContent='Remove';btn.onclick=()=>removeEmp(id);row.append(info,walletBox,btn);c.append(row);
   });
 }
@@ -1861,9 +1857,11 @@ function employeeMenuGo(view){
   showView(view);
 }
 function getEmployeeWalletNames(){
-  const emp=getEmployees()[currentUser?.id]||{};
-  return Array.isArray(emp.wallets)?emp.wallets:getWallets().map(w=>w.name);
+  // Never fall back to every local wallet when permissions are missing.
+  // Legacy local checkout is separate from cloud mapping and must not be treated as authorized.
+  return [];
 }
+
 const ATTENDANCE_KEY='slvDailyAttendance';
 function localDayKey(d=new Date()){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(d)}
 function cleanLunchBreaks(breaks){
@@ -2116,10 +2114,8 @@ function renderShiftCloseReports(){
 function renderEmployee(){
   if(!currentUser||currentUser.role!=='Employee')return;
   $('empSubTitle').textContent='Welcome, '+currentUser.name;
-  const assigned=getEmployeeWalletNames(),walletList=$('employeeAssignedWallets');walletList.innerHTML='';
-  const allWallets=getWallets().filter(w=>assigned.includes(w.name));
-  if(!allWallets.length){walletList.textContent='No wallets assigned. Please contact Admin.'}
-  allWallets.forEach(w=>{const item=document.createElement('div');item.className='assigned-wallet-item';const name=document.createElement('span');name.textContent=w.name;const bal=document.createElement('b');bal.textContent='₹'+Number(w.balance||0).toFixed(2);item.append(name,bal);walletList.append(item)});
+  const walletList=$('employeeAssignedWallets');walletList.replaceChildren();
+  walletList.textContent='Wallet access is managed by Admin in Cloud. Balances are hidden from employees.';
   const emps=getEmployees();$('shiftInfo').textContent=(emps[currentUser.id]&&emps[currentUser.id].shift)||currentUser.shift||'09:00 AM - 05:00 PM';
   renderAttendancePanel();
   const holiday=localStorage.getItem(KEYS.holiday)||'';
@@ -2762,7 +2758,7 @@ try {
 /* Cloud service mapping: admin-only Supabase RPC, no local balance mutations. */
 (function(){
  const el=id=>document.getElementById(id);
- let busy=false, services=[], wallets=[], mappings=[];
+ let busy=false, services=[], wallets=[], mappings=[], allowed=[];
  const status=msg=>{if(el('slvMapStatus'))el('slvMapStatus').textContent=msg};
  async function admin(){
   const db=window.slvSupabase;
@@ -2775,20 +2771,21 @@ try {
  async function run(fn){if(busy)return;busy=true;try{await fn()}catch(e){status('Error: '+(e.message||String(e)))}finally{busy=false}}
  function fill(id,options){const select=el(id);select.replaceChildren();const none=new Option('— Not mapped —','');select.add(none);options.forEach(o=>select.add(new Option(o.label,o.id)))}
  function apply(){const id=el('slvMapService').value;const m=mappings.find(x=>x.service_id===id)||{};
-  for(const [field,key] of [['slvMapCash','cash_wallet_id'],['slvMapUpi','upi_wallet_id'],['slvMapCost','cost_wallet_id']])el(field).value=m[key]||'';
+  for(const [field,key] of [['slvMapCash','cash_wallet_id'],['slvMapUpi','upi_wallet_id'],['slvMapCost','cost_wallet_id']])el(field).value=m[key]||''; const selected=new Set(allowed.filter(x=>x.service_id===id).map(x=>x.wallet_id)); Array.from(el('slvAllowedWallets').options).forEach(o=>o.selected=selected.has(o.value));
  }
  window.slvMapRefresh=()=>run(async()=>{
   const db=await admin();
-  const [s,w,m]=await Promise.all([
+  const [s,w,m,aw]=await Promise.all([
    db.from('services').select('id,service_name,customer_rate,internal_cost,is_active').eq('is_active',true).order('service_name'),
    db.from('wallets').select('id,wallet_name,balance,is_active').is('owner_user_id',null).eq('is_active',true).order('wallet_name'),
-   db.from('slv_service_wallet_map').select('service_id,cash_wallet_id,upi_wallet_id,cost_wallet_id')
+   db.from('slv_service_wallet_map').select('service_id,cash_wallet_id,upi_wallet_id,cost_wallet_id'),
+   db.from('slv_service_allowed_wallets').select('service_id,wallet_id')
   ]);
-  for(const result of [s,w,m])if(result.error)throw result.error;
-  services=s.data||[];wallets=w.data||[];mappings=m.data||[];
+  for(const result of [s,w,m,aw])if(result.error)throw result.error;
+  services=s.data||[];wallets=w.data||[];mappings=m.data||[];allowed=aw.data||[];
   fill('slvMapService',services.map(x=>({id:x.id,label:x.service_name+' • Rate ₹'+x.customer_rate+' / Cost ₹'+x.internal_cost})));
   const opts=wallets.map(x=>({id:x.id,label:x.wallet_name+' • ₹'+Number(x.balance||0).toFixed(2)}));
-  for(const id of ['slvMapCash','slvMapUpi','slvMapCost'])fill(id,opts);
+  for(const id of ['slvMapCash','slvMapUpi','slvMapCost'])fill(id,opts); const multi=el('slvAllowedWallets');multi.replaceChildren();wallets.forEach(w=>multi.add(new Option(w.wallet_name,w.id)));
   el('slvMapService').onchange=apply;
   if(services.length)el('slvMapService').value=services[0].id;
   apply();status(services.length+' services, '+wallets.length+' active wallets loaded. Mapping changes only after Save.');
@@ -2798,13 +2795,13 @@ try {
   const ids=['slvMapCash','slvMapUpi','slvMapCost'].map(k=>el(k).value||null);
   if(!ids.some(Boolean))throw Error('Map at least one wallet');
   if(ids.some(x=>x&&!wallets.some(w=>w.id===x)))throw Error('Refresh wallets and select active wallets');
-  const name=services.find(x=>x.id===id).service_name;
+  const selectedAllowed=Array.from(el('slvAllowedWallets').selectedOptions).map(o=>o.value);const service=services.find(x=>x.id===id);if(Number(service.internal_cost)>0&&!selectedAllowed.length)throw Error('Select at least one allowed cost wallet'); const name=service.service_name;
   if(!confirm('Save cloud wallet mapping for '+name+'? This does not process a transaction.'))return;
-  const db=await admin();const res=await db.rpc('slv_set_service_wallet_map',{
-   p_service_id:id,p_cash_wallet_id:ids[0],p_upi_wallet_id:ids[1],p_cost_wallet_id:ids[2]
+  const db=await admin();const res=await db.rpc('slv_save_allowed_wallets',{
+   p_service_id:id,p_cash_wallet_id:ids[0],p_upi_wallet_id:ids[1],p_wallet_ids:selectedAllowed
   });if(res.error)throw res.error;
-  mappings=mappings.filter(x=>x.service_id!==id);mappings.push({service_id:id,cash_wallet_id:ids[0],upi_wallet_id:ids[1],cost_wallet_id:ids[2]});
-  status('Saved cloud mapping for '+name+'. Employee checkout is STILL local and must not be used as a cloud transaction.');
+  mappings=mappings.filter(x=>x.service_id!==id);mappings.push({service_id:id,cash_wallet_id:ids[0],upi_wallet_id:ids[1],cost_wallet_id:selectedAllowed[0]||null});allowed=allowed.filter(x=>x.service_id!==id);selectedAllowed.forEach(wallet_id=>allowed.push({service_id:id,wallet_id}));
+  status('Saved '+selectedAllowed.length+' allowed processing wallet(s) for '+name+'. New transactions use these selections.');
  });
 })();
 </script>
@@ -2846,7 +2843,7 @@ try {
 /* Cloud-only employee checkout and pending applications. Wallet accounting stays in Supabase RPCs. */
 (function(){
  const el=id=>document.getElementById(id);
- let services=[],busy=false,pendingRequest=null,pendingBusy=false;
+ let services=[],busy=false,pendingRequest=null,pendingBusy=false,allowedWallets=[],walletMapping=null,walletLoading=false;
  let servicesFetchedAt=0,servicesInFlight=null;const SERVICES_CACHE_MS=60000;
  const money=n=>'₹'+Number(n||0).toFixed(2);
  const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -2883,8 +2880,8 @@ try {
     select.replaceChildren();select.add(new Option('— Select Service —',''));
     services.forEach(s=>select.add(new Option(s.service_name+' • '+money(s.customer_rate),s.id)));
     if(services.some(s=>s.id===selected))select.value=selected;
-    select.onchange=()=>window.slvTxUpdatePreview();
-    status(services.length+' cloud service(s) ready');window.slvTxUpdatePreview();
+    select.onchange=()=>{loadAllowedWallets();window.slvTxUpdatePreview()};
+    status(services.length+' cloud service(s) ready');await loadAllowedWallets();window.slvTxUpdatePreview();
     window.slvPendingRefresh().catch(()=>{});
    }catch(e){status(e.message||String(e),true)}
    finally{servicesInFlight=null}
@@ -2893,6 +2890,22 @@ try {
  };
  window.slvTxInvalidateServices=()=>{servicesFetchedAt=0;};
 
+ async function loadAllowedWallets(){
+  const id=el('slvTxService').value,sel=el('slvSelectedWallet');
+  allowedWallets=[];walletMapping=null;walletLoading=true;sel.replaceChildren();sel.add(new Option('Loading assigned wallets…',''));
+  try{
+   if(!id){sel.replaceChildren();sel.add(new Option('Select service first',''));return}
+   const db=await employeeDb();
+   const r=await db.rpc('slv_get_checkout_wallets',{p_service_id:id});if(r.error)throw r.error;
+   const data=r.data||{};allowedWallets=data.allowed||[];walletMapping=data.mapping||null;const chosenService=services.find(x=>x.id===id);if(Number(chosenService?.internal_cost)===0)allowedWallets=[];
+   sel.replaceChildren();sel.add(new Option('— Select Processing Wallet —',''));
+   allowedWallets.forEach(w=>sel.add(new Option(w.wallet_name,w.wallet_id)));
+   if(allowedWallets.length===1)sel.value=allowedWallets[0].wallet_id;
+   el('slvWalletSelectStatus').textContent=allowedWallets.length+' Admin-assigned wallet(s) available. Balances hidden.';
+  }catch(e){sel.replaceChildren();sel.add(new Option('Wallet mapping unavailable — retry',''));el('slvWalletSelectStatus').textContent=e.message||String(e)}
+  finally{walletLoading=false;window.slvTxUpdatePreview()}
+ }
+ window.slvTxReloadWallets=loadAllowedWallets;
  function amounts(){
   const service=services.find(s=>s.id===el('slvTxService').value);
   const qRaw=el('slvTxQty').value,cRaw=el('slvTxCash').value,uRaw=el('slvTxUpi').value;
@@ -2905,25 +2918,25 @@ try {
  }
  window.slvTxUpdatePreview=()=>{
   const a=amounts(),preview=el('slvTxPreview'),button=el('slvTxSave');
-  const mode=el('slvTxMode').value;
+  const mode=el('slvTxMode').value;const walletOk=!!a.service&&(Number(a.service.internal_cost)===0||(!walletLoading&&allowedWallets.some(w=>w.wallet_id===el('slvSelectedWallet').value)));
   if(!a.service){preview.className='slv-payment-preview neutral';preview.textContent='Select a cloud service to see the automatic rate.';button.disabled=true;return}
-  const label=!a.valid?'Invalid amount / quantity':a.change<0?'❌ Payment short by '+money(-a.change):a.change>0?'✓ Return change '+money(a.change):'✓ Exact payment — no change';
+  const label=!walletOk?'Select an Admin-assigned processing wallet':!a.valid?'Invalid amount / quantity':a.change<0?'❌ Payment short by '+money(-a.change):a.change>0?'✓ Return change '+money(a.change):'✓ Exact payment — no change';
   preview.className='slv-payment-preview '+(!a.valid||a.change<0?'bad':a.change>0?'good':'neutral');
   preview.innerHTML='<div>Unit Rate: <b>'+money(a.service.customer_rate)+'</b> × '+esc(a.qty)+'</div>'+
    '<div>Customer Bill: <b>'+money(a.due)+'</b></div><div>Received: <b>'+money(a.paid)+'</b></div>'+
    '<div>Change to return: <b>'+money(Math.max(0,a.change))+'</b></div><strong>'+label+'</strong>'+
    '<div style="font-size:12px">'+(mode==='later'?'⏳ Processing cost '+money(a.service.internal_cost*a.qty)+' debited only after completion.':'✓ Processing cost '+money(a.service.internal_cost*a.qty)+' debited immediately.')+'</div>';
-  button.disabled=(/xerox|photocopy/i.test(a.service?.service_name||''))?false:(busy||!a.valid||a.change<0);
+  button.disabled=busy||!a.valid||a.change<0||!walletOk;
   button.textContent=(/xerox|photocopy/i.test(a.service?.service_name||''))?'✓ Save Xerox Bill to Cloud':(mode==='later'?'⏳ Save as Pending Application':'✓ Complete Now & Save');
  };
  window.slvTxSave=async()=>{
   if(busy)return;
   const a=amounts(),name=el('slvTxCustomer').value.trim(),mobile=el('slvTxMobile').value.trim(),mode=el('slvTxMode').value;
-  if(!a.valid||a.change<0||!name){status('Valid quantity and full payment required. UPI cannot exceed the bill.',true);return}
+  if(!a.valid||a.change<0||!name||(Number(a.service?.internal_cost)>0&&!allowedWallets.some(w=>w.wallet_id===el('slvSelectedWallet').value))){status('Valid quantity and full payment required. UPI cannot exceed the bill.',true);return}
   // Cash received may include change; only the net cash retained is credited.
-  const payload=JSON.stringify([a.service.id,name,mobile,a.qty,a.netCash,a.upi,mode]);
+  const selectedWallet=el('slvSelectedWallet').value||null;const payload=JSON.stringify([a.service.id,name,mobile,a.qty,a.netCash,a.upi,mode,selectedWallet]);
   if(pendingRequest&&pendingRequest.payload!==payload){status('Uncertain previous save: retry unchanged values, or verify Cloud Transactions before new entry.',true);return}
-  if(!confirm((mode==='later'?'Save PENDING':'Complete NOW')+' • '+a.service.service_name+' × '+a.qty+' • Bill '+money(a.due)+' • Change '+money(Math.max(0,a.change))+'?'))return;
+  if(mode==='later'){status('Pending mode requires a separate completion migration; use Complete Now.',true);return;}if(!confirm((mode==='later'?'Save PENDING':'Complete NOW')+' • '+a.service.service_name+' × '+a.qty+' • Bill '+money(a.due)+' • Change '+money(Math.max(0,a.change))+'?'))return;
   if(!pendingRequest)pendingRequest={payload,id:crypto.randomUUID()};
   busy=true;el('slvTxSave').disabled=true;el('slvTxSave').textContent='⏳ Saving Transaction...';
   const overlay=el('slvLoadingOverlay'),card=el('slvLoaderCard');
@@ -2940,8 +2953,8 @@ try {
   await new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,30)));
   try{
    const db=await employeeDb();
-   const rpc=mode==='later'?'slv_save_pending_application':'slv_post_auto_wallet';
-   const response=await db.rpc(rpc,{p_request_id:pendingRequest.id,p_service_id:a.service.id,p_customer_name:name,p_customer_mobile:mobile,p_quantity:a.qty,p_cash_amount:a.netCash,p_upi_amount:a.upi});
+   if(mode==='later')throw Error('Pending mode is temporarily disabled for the new wallet selection. Use Complete Now; existing pending records remain accessible.');
+   const response=await db.rpc('slv_post_selected_wallet',{p_request_id:pendingRequest.id,p_service_id:a.service.id,p_customer_name:name,p_customer_mobile:mobile,p_quantity:a.qty,p_cash_amount:a.netCash,p_upi_amount:a.upi,p_cost_wallet_id:selectedWallet});
    if(response.error)throw response.error;
    pendingRequest=null;
    status((mode==='later'?'Pending Application Saved ✓':'Completed Transaction Saved ✓')+' ID: '+response.data);
