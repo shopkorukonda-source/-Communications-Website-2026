@@ -700,6 +700,46 @@ body:has(#employeeView:not(.hidden)) .main-header {
 .slv-payment-preview.neutral{background:#fff;border-color:#d6e1ee;color:#23364d}
 .slv-payment-preview b{font-size:17px}
 @media(max-width:600px){.slv-pending-floating{bottom:10px;right:10px;font-size:11px}.slv-pending-drawer{padding:14px}}
+
+/* Simplified employee Xerox billing */
+#slvXeroxPanel{padding:14px!important;border-radius:14px!important;background:#fff!important}
+#slvXeroxPanel .xerox-item{padding:12px!important;margin:10px 0!important;border:1px solid #e3eaf3!important;background:#fff!important}
+#slvXeroxPanel .xerox-simple-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px 12px}
+#slvXeroxPanel .xerox-count-choice{grid-column:1/-1}
+#slvXeroxPanel .xerox-mode-buttons{display:flex;gap:8px}
+#slvXeroxPanel .xerox-mode-buttons button{flex:1;background:#edf3fb;color:#20436c;box-shadow:none;border:1px solid #d7e3f1;margin:0}
+#slvXeroxPanel .xerox-mode-buttons button.selected{background:#1456a4;color:#fff;border-color:#1456a4}
+#slvXeroxPanel .xerox-count-output{font-size:12px;color:#1d6b52;background:#edf9f3;border-radius:8px;padding:9px 11px;margin-top:6px;font-weight:700}
+#slvXeroxPanel .xerox-advanced{font-size:12px;color:#64748b;margin:10px 0}
+#slvXeroxPanel .xerox-advanced summary{cursor:pointer;font-weight:700}
+#slvXeroxPanel .xerox-result{line-height:1.5!important;padding:12px!important}
+#slvXeroxPanel .xerox-bill-line,#slvXeroxPanel .xerox-bill-total{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:6px 0;font-size:13px}
+#slvXeroxPanel .xerox-bill-total{border-top:1px solid #d7e3f1;border-bottom:1px solid #d7e3f1;margin:5px 0;padding:11px 0;font-weight:800;font-size:17px}
+#slvXeroxPanel .xerox-bill-total strong{font-size:23px;color:#1557ad}
+#slvXeroxPanel .xerox-note{font-size:11px;line-height:1.5}
+@media(max-width:440px){#slvXeroxPanel .xerox-simple-grid{gap:5px 8px}#slvXeroxPanel .xerox-simple-grid label{font-size:11px}}
+
+/* Xerox quick tick choices: exactly one selection in each group */
+#slvXeroxPanel .xerox-tick-row{display:flex;gap:7px;flex-wrap:wrap;margin:4px 0 8px}
+#slvXeroxPanel label.xerox-tick{display:inline-flex;align-items:center;gap:6px;cursor:pointer;margin:0;padding:8px 10px;border:1px solid #d7e3f1;border-radius:10px;background:#f5f8fd;font-size:12px;font-weight:750;color:#294260;user-select:none}
+#slvXeroxPanel .xerox-tick input{width:17px;height:17px;margin:0;accent-color:#155ba9;cursor:pointer}
+#slvXeroxPanel .xerox-tick:has(input:checked){background:#e4f0ff;border-color:#347ad3;color:#0a4b94}
+#slvXeroxPanel .xerox-tick span{white-space:nowrap}
+
+/* Xerox compact employee layout */
+#slvXeroxPanel .xerox-compact-options{display:flex;align-items:flex-start;flex-wrap:wrap;gap:8px 18px;margin:9px 0}
+#slvXeroxPanel .xerox-compact-options>div{min-width:0}
+#slvXeroxPanel .xerox-compact-options label{margin:3px 0 6px}
+#slvXeroxPanel .xerox-compact-options .xerox-count-choice{margin-left:0}
+#slvXeroxPanel .xerox-compact-inputs{display:flex;gap:10px;align-items:flex-start;margin-top:9px}
+#slvXeroxPanel .xerox-compact-inputs>div{width:116px;max-width:calc(50% - 5px)}
+#slvXeroxPanel .xerox-compact-inputs input{width:100%;height:37px;padding:6px 9px;margin:2px 0;font-size:14px}
+#slvXeroxPanel .xerox-compact-options .xerox-mode-buttons button{padding:8px 10px;font-size:12px}
+#slvXeroxPanel .xerox-bill-line{font-size:12px}
+#slvXeroxPanel .xerox-bill-total{font-size:15px}
+#slvXeroxPanel .xerox-bill-total strong{font-size:22px}
+#slvXeroxPanel .xerox-compact-inputs input::-webkit-inner-spin-button,#slvXeroxPanel .xerox-compact-inputs input::-webkit-outer-spin-button{display:none;-webkit-appearance:none}
+@media(max-width:600px){#slvXeroxPanel .xerox-compact-options{gap:7px 11px}#slvXeroxPanel .xerox-compact-inputs>div{width:105px}}
 </style>
 <style id="slvPersonalGreetingStyle">
 .slv-personal-greeting{display:flex;flex-direction:column;gap:7px;margin:14px 0 18px;padding:19px 22px;border:1px solid #dce9fb;border-left:5px solid #1e6bc4;border-radius:14px;background:linear-gradient(105deg,#f0f6ff,#fff);box-shadow:0 5px 16px rgba(17,54,101,.05)}
@@ -708,6 +748,41 @@ body:has(#employeeView:not(.hidden)) .main-header {
 </style>
 <style>
 #slvXeroxPanel{border:1px solid #dbe6f5;border-radius:16px;padding:16px;margin:15px 0;background:#fff}#slvXeroxPanel .xerox-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#slvXeroxPanel .xerox-item{padding:12px;border:1px solid #e1e8f4;border-radius:12px;margin:9px 0}#slvXeroxPanel .xerox-result{background:#eef5ff;border-radius:12px;padding:13px;margin-top:12px;line-height:2}#slvXeroxPanel .xerox-note{font-size:12px;color:#64748b}#slvXeroxPanel label{margin-top:5px}#slvXeroxPanel input,#slvXeroxPanel select{margin:2px 0 6px}#slvXeroxPanel .xerox-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}#slvXeroxPanel .xerox-head button{margin:0}
+.xerox-job-type{margin:3px 0 7px}.xerox-job-type>label{margin:0 0 4px;font-size:11px}.xerox-job-type .xerox-tick-row{margin:0 0 4px}
+</style>
+<style id="slvXeroxOneRowStyle">
+/* Four groups in one horizontal row for each Xerox/Print job */
+#slvXeroxPanel .xerox-all-options{display:flex;align-items:flex-start;gap:14px;overflow-x:auto;max-width:100%;padding:5px 2px 10px;scrollbar-width:thin}
+#slvXeroxPanel .xerox-all-options>.xerox-job-type{flex:0 0 auto;margin:0}
+#slvXeroxPanel .xerox-all-options>.xerox-compact-options{display:contents}
+#slvXeroxPanel .xerox-all-options>.xerox-compact-options>div{flex:0 0 auto;min-width:max-content;margin:0}
+#slvXeroxPanel .xerox-all-options .xerox-tick-row{display:flex;flex-wrap:nowrap;gap:4px}
+#slvXeroxPanel .xerox-all-options label.xerox-tick{padding:6px 7px;font-size:11px;gap:4px}
+#slvXeroxPanel .xerox-all-options .xerox-tick input{width:14px;height:14px}
+#slvXeroxPanel .xerox-all-options .xerox-mode-buttons{display:flex;flex-wrap:nowrap;gap:4px}
+#slvXeroxPanel .xerox-all-options .xerox-mode-buttons button{padding:7px 8px;font-size:11px;white-space:nowrap}
+#slvXeroxPanel .xerox-all-options>div>label,#slvXeroxPanel .xerox-all-options .xerox-compact-options>div>label{display:block;margin:0 0 6px;font-size:11px;white-space:nowrap}
+</style>
+
+<!-- Compact Xerox popup: visual sizing only; no billing or wallet changes -->
+<style id="slvXeroxCompactPopup2026">
+#servicesView.slv-centered-popup:has(#slvXeroxPanel:not(.hidden)){
+ width:min(490px,calc(100vw - 22px))!important;
+ max-height:min(84dvh,740px)!important;
+ padding:12px!important;border-radius:15px!important;
+}
+#servicesView.slv-centered-popup:has(#slvXeroxPanel:not(.hidden)) .topbar{top:-12px;padding:7px 2px 9px!important;font-size:13px}
+#servicesView.slv-centered-popup #slvXeroxPanel{padding:10px!important;margin:9px 0!important;border-radius:12px!important}
+#servicesView.slv-centered-popup #slvXeroxPanel .xerox-head h3{font-size:14px!important}
+#servicesView.slv-centered-popup #slvXeroxPanel .xerox-item{padding:9px!important;margin:7px 0!important;border-radius:10px}
+#servicesView.slv-centered-popup #slvXeroxPanel .xerox-all-options{gap:10px!important;padding:3px 1px 7px!important}
+#servicesView.slv-centered-popup #slvXeroxPanel .xerox-compact-inputs{gap:8px!important;margin-top:5px!important}
+#servicesView.slv-centered-popup #slvXeroxPanel .xerox-compact-inputs>div{width:98px!important}
+#servicesView.slv-centered-popup #slvXeroxPanel .xerox-compact-inputs input{height:33px!important;padding:5px 8px!important}
+#servicesView.slv-centered-popup #slvXeroxPanel .xerox-result{padding:9px!important;margin-top:8px!important;line-height:1.55!important;font-size:12px}
+#servicesView.slv-centered-popup #slvXeroxPanel .xerox-note{font-size:10px!important;line-height:1.35}
+#servicesView.slv-centered-popup #slvCloudCheckout{padding:10px!important;margin:7px 0!important}
+@media(max-width:520px){#servicesView.slv-centered-popup:has(#slvXeroxPanel:not(.hidden)){width:calc(100vw - 12px)!important;max-height:90dvh!important;padding:9px!important}}
 </style>
 </head>
 <body>
@@ -1096,13 +1171,13 @@ body:has(#employeeView:not(.hidden)) .main-header {
   <main id="servicesView" class="card hidden">
     <div class="topbar"><strong>💼 Billing & Wallet Checkout</strong><button class="btn-secondary btn-small" onclick="showView('employeeView')">⬅ Back</button></div>
 <section id="slvXeroxPanel" class="hidden" aria-label="Xerox calculator">
-<div class="xerox-head"><h3 style="margin:0">🖨️ Xerox Billing</h3><button type="button" class="btn-secondary btn-small" id="xeroxExtraToggle" onclick="xeroxToggleExtra()">＋ Additional Sets</button></div>
-<div id="xeroxItems"></div><button type="button" class="btn-secondary btn-small hidden" id="xeroxAddItem" onclick="xeroxAddItem()">＋ Add Another Set</button>
-<label><input type="checkbox" id="xeroxManual" style="width:auto" onchange="xeroxRender()"> Manual Rate Override</label>
-<div id="xeroxManualBox" class="hidden"><label>Manual Rate per Paper ₹</label><input id="xeroxManualRate" type="number" min="0" step="0.01" value="2" oninput="xeroxCalculate()"></div>
-<div class="xerox-grid"><div><label>Discount ₹</label><input id="xeroxDiscount" type="number" min="0" step="0.01" value="0" oninput="xeroxCalculate()"></div><div><label>Customer Paid ₹</label><input id="xeroxPaid" type="number" min="0" step="0.01" value="0" oninput="xeroxCalculate()"></div></div>
+<div class="xerox-head"><h3 style="margin:0">🖨️ Xerox Billing • Tick UI v2</h3><button type="button" class="btn-secondary btn-small" id="xeroxExtraToggle" onclick="xeroxToggleExtra()">＋ Add Job</button></div>
+<div id="xeroxItems" data-layout="tick-v2"></div><button type="button" class="btn-secondary btn-small hidden" id="xeroxAddItem" onclick="xeroxAddItem()">＋ Add Another Job</button>
+<details class="xerox-advanced"><summary>Advanced options</summary><label><input type="checkbox" id="xeroxManual" style="width:auto" onchange="xeroxRender()"> Manual Rate Override (admin authorization required to save)</label>
+<div id="xeroxManualBox" class="hidden"><label>Manual Rate per Paper ₹</label><input id="xeroxManualRate" type="number" min="0" step="0.01" value="2" oninput="xeroxCalculate()"></div></details>
+<div class="xerox-grid"><div><label>Discount ₹</label><input id="xeroxDiscount" type="number" min="0" step="0.01" value="0" oninput="xeroxCalculate()"></div><div class="hidden"><label>Received Total</label><input id="xeroxPaid" type="number" value="0" readonly></div></div>
 <div id="xeroxResult" class="xerox-result" aria-live="polite"></div>
-<p class="xerox-note">Xerox rates load from Supabase Cloud. Cloud pricing is verified again by Supabase when saving. For Xerox, use Cash / UPI fields in Cloud Checkout below. Manual override cannot be saved until admin authorization is configured.</p>
+<p class="xerox-note">Pages = printed sides. Papers = physical sheets. Both-side printing uses 2 pages per paper. Final rate follows Admin Cloud Pricing.</p>
 </section>
     <section id="slvCloudCheckout" class="section-box" style="margin:12px 0">
       <h3>☁️ Cloud Service Checkout</h3>
@@ -1112,10 +1187,17 @@ body:has(#employeeView:not(.hidden)) .main-header {
       <input id="slvTxCustomer" type="hidden" value="Walk-in Customer">
       <input id="slvTxMobile" type="hidden" value="">
       <label for="slvTxQty">Quantity</label><input id="slvTxQty" type="number" min="1" max="10000" step="1" value="1" oninput="slvTxUpdatePreview()">
-      <div class="slv-payment-shortcuts"><button type="button" class="btn-small" onclick="slvPaymentQuick('cash')">💵 Cash</button><button type="button" class="btn-small" onclick="slvPaymentQuick('upi')">📱 UPI</button><button type="button" class="btn-small" onclick="slvPaymentQuick('split')">Cash + UPI</button></div><label for="slvTxCash">Cash Received ₹</label><input id="slvTxCash" type="number" min="0" step="0.01" value="0" oninput="slvTxUpdatePreview()">
+      <div class="slv-payment-shortcuts"><button type="button" class="btn-small" onclick="slvPaymentQuick('cash')">💵 Cash</button><button type="button" class="btn-small" onclick="slvPaymentQuick('upi')">📱 UPI</button><button type="button" class="btn-small" onclick="slvPaymentQuick('split')">Cash + UPI</button></div><label for="slvTxCash">Customer ఇచ్చిన Cash ₹ (Edit చేయవచ్చు)</label><input id="slvTxCash" type="number" min="0" step="0.01" value="0" oninput="slvTxUpdatePreview()">
       <label for="slvTxUpi">UPI Received ₹</label><input id="slvTxUpi" type="number" min="0" step="0.01" value="0" oninput="slvTxUpdatePreview()">
       <label for="slvTxMode">Application Processing</label>
       <select id="slvTxMode" onchange="slvTxUpdatePreview()"><option value="now">✓ Complete Now — Cost Debit Now</option><option value="later">⏳ Complete Later — Add to Pending</option></select>
+      <section id="slvAdditionalTransactions" class="section-box" style="margin:12px 0;border:1px solid #dbe8f7">
+        <h4>＋ Additional Transaction</h4>
+        <p class="muted">ఒకే Customer కోసం అనేక Service Bills సిద్ధం చేసుకోండి. ప్రతి Bill ని విడిగా Cloud లో Save చేయాలి. ఒకేసారి Combined Wallet Debit ఇంకా అందుబాటులో లేదు.</p>
+        <button type="button" class="btn-secondary" id="slvAddTransactionBtn">＋ Add Current Transaction</button>
+        <div id="slvAdditionalList" aria-live="polite"></div>
+        <div class="total" id="slvAdditionalTotal" style="font-size:15px">Draft Grand Total: ₹0.00</div>
+      </section>
       <div id="slvTxPreview" class="slv-payment-preview" aria-live="polite">Select a cloud service.</div>
       <button type="button" class="btn-green" style="width:100%" id="slvTxSave" onclick="slvTxSave()">☁️ Save Cloud Transaction</button>
       <p id="slvTxStatus" role="status" style="font-weight:bold"></p>
@@ -1219,7 +1301,7 @@ function showView(id){
   $('headerSubtitle').textContent=id==='loginView'?'Secure Shop Management Portal':id==='adminView'?'Admin Master Control Panel':id==='servicesView'?'Multi-Service Billing Counter':'Employee Portal';
   if(id==='adminView')renderAdmin();
   if(id==='adminView'||id==='employeeView')slvShowPersonalGreeting(id);
-  if(id==='employeeView')renderEmployee();
+  if(id==='employeeView'){renderEmployee();if(typeof window.slvTxLoadServices==='function')window.slvTxLoadServices();}
   if(id==='servicesView' && typeof window.slvTxLoadServices==='function')window.slvTxLoadServices();
 }
 function toggleLoginInputs(){
@@ -1558,35 +1640,87 @@ function transactionDate(t){
   // Older records may have a locale date string; use it only when the browser can parse it.
   const d=new Date(t.date||'');return Number.isNaN(d.getTime())?null:d;
 }
-function renderMonthlyTarget(){
+// Cloud-only profit reporting. Local transaction cache is deliberately excluded
+// to avoid double counting transactions that were also posted to Supabase.
+let slvProfitRequestId=0;
+function slvIstDay(date){
+  return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(date);
+}
+function slvIstMonth(date){return slvIstDay(date).slice(0,7)}
+function slvProfitMoney(value){return (Number(value)||0).toFixed(2)}
+async function renderMonthlyTarget(){
   const target=Number(read('slvMonthlyProfitTarget',0))||0;
-  const now=new Date(),todayKey=now.toDateString(),month=now.getMonth(),year=now.getFullYear();
-  let today=0,monthTotal=0;const daily={};
-  getTransactions().forEach(t=>{
-    const profit=Number(t.profitAmount)||0,d=transactionDate(t);
-    if(!d||profit<=0)return;
-    if(d.getMonth()===month&&d.getFullYear()===year){
-      monthTotal+=profit;const key=d.toLocaleDateString('en-IN');daily[key]=(daily[key]||0)+profit;
-      if(d.toDateString()===todayKey)today+=profit;
+  const now=new Date(), monthKey=slvIstMonth(now), todayKey=slvIstDay(now);
+  const $target=$('monthlyProfitTarget'); if(!$target)return;
+  $target.value=target||'';
+  $('targetMonthLabel').textContent=new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',month:'long',year:'numeric'}).format(now);
+  const history=$('dailyProfitHistory');
+  history.textContent='Loading verified Cloud Profit…';
+  const requestId=++slvProfitRequestId;
+  try{
+    const db=window.slvSupabase;
+    if(!db)throw Error('Supabase connection not ready. Refresh after login.');
+    const auth=await db.auth.getUser();
+    if(auth.error||!auth.data?.user)throw Error('Cloud login required');
+    const profile=await db.from('profiles').select('role,is_active').eq('id',auth.data.user.id).single();
+    if(profile.error)throw profile.error;
+    if(String(profile.data?.role||'').toLowerCase()!=='admin'||profile.data?.is_active!==true)throw Error('Active cloud admin login required');
+    // Query month boundaries in IST (not browser locale or UTC).
+    const [y,m]=monthKey.split('-').map(Number);
+    const start=new Date(Date.UTC(y,m-1,1,0,0,0)-330*60000).toISOString();
+    const end=new Date(Date.UTC(y,m,1,0,0,0)-330*60000).toISOString();
+    const rows=[];let from=0;
+    while(true){
+      const r=await db.from('transactions').select('id,created_at,service_name,customer_amount,internal_cost,profit').gte('created_at',start).lt('created_at',end).order('created_at',{ascending:true}).order('id',{ascending:true}).range(from,from+999);
+      if(r.error)throw r.error;
+      rows.push(...(r.data||[]));
+      if(!r.data||r.data.length<1000)break;
+      from+=1000;
+      if(from>=100000)throw Error('Too many records; use a paginated server report');
     }
-  });
-  const remaining=Math.max(0,target-monthTotal),pct=target?Math.min(100,(monthTotal/target)*100):0;
-  $('monthlyProfitTarget').value=target||'';
-  $('todayProfit').textContent=today.toFixed(2);
-  $('monthProfit').textContent=monthTotal.toFixed(2);
-  $('targetRemaining').textContent=remaining.toFixed(2);
-  $('targetProgressBar').style.width=pct.toFixed(1)+'%';
-  $('targetProgressText').textContent=(target?pct.toFixed(1):'0')+'% completed';
-  $('targetMonthLabel').textContent=now.toLocaleDateString('en-IN',{month:'long',year:'numeric'});
-  const history=$('dailyProfitHistory');history.innerHTML='<b>Daily Profit History — This Month</b>';
-  const entries=Object.entries(daily);
-  if(!entries.length){history.innerHTML+='<p class="muted">ఇంకా profit నమోదైన transactions లేవు. కొత్త Service setupలో Profit per transaction నమోదు చేయండి.</p>';return}
-  entries.slice(-10).reverse().forEach(([day,amount])=>{
-    const row=document.createElement('div');row.className='daily-profit-row';
-    const date=document.createElement('span');date.textContent=day;
-    const value=document.createElement('b');value.textContent='₹'+amount.toFixed(2);
-    row.append(date,value);history.append(row);
-  });
+    if(requestId!==slvProfitRequestId)return;
+    let today=0,monthTotal=0;const daily={},services={};
+    for(const t of rows){
+      const profit=Number(t.profit);
+      if(!Number.isFinite(profit))continue;
+      const day=slvIstDay(new Date(t.created_at));
+      monthTotal+=profit;daily[day]=(daily[day]||0)+profit;
+      if(day===todayKey)today+=profit;
+      const name=t.service_name||'Other';
+      services[name]=(services[name]||0)+profit;
+    }
+    const remaining=Math.max(0,target-monthTotal),pct=target?Math.min(100,(monthTotal/target)*100):0;
+    $('todayProfit').textContent=slvProfitMoney(today);
+    $('monthProfit').textContent=slvProfitMoney(monthTotal);
+    $('targetRemaining').textContent=slvProfitMoney(remaining);
+    $('targetProgressBar').style.width=pct.toFixed(1)+'%';
+    $('targetProgressText').textContent=(target?pct.toFixed(1):'0')+'% completed';
+    history.replaceChildren();
+    const heading=document.createElement('b');heading.textContent='Daily Profit History — Cloud (IST)';history.append(heading);
+    const days=Object.keys(daily).sort().reverse();
+    if(!days.length){const p=document.createElement('p');p.className='muted';p.textContent='ఈ నెలలో Cloud Transactions లేవు.';history.append(p)}
+    for(const day of days){
+      const row=document.createElement('div');row.className='daily-profit-row';
+      const label=document.createElement('span');label.textContent=day;
+      const val=document.createElement('b');val.textContent='₹'+slvProfitMoney(daily[day]);
+      row.append(label,val);history.append(row);
+    }
+    const section=document.createElement('div');section.className='daily-profit-history';
+    const h=document.createElement('b');h.textContent='Service-wise Profit — This Month';section.append(h);
+    for(const [name,amount] of Object.entries(services).sort((a,b)=>b[1]-a[1])){
+      const row=document.createElement('div');row.className='daily-profit-row';
+      const label=document.createElement('span');label.textContent=name;
+      const val=document.createElement('b');val.textContent='₹'+slvProfitMoney(amount);
+      row.append(label,val);section.append(row);
+    }
+    history.append(section);
+    const status=document.createElement('p');status.className='muted';status.textContent=`Cloud transactions this month: ${rows.length}. Wallet balances were not changed.`;history.append(status);
+  }catch(e){
+    if(requestId!==slvProfitRequestId)return;
+    ['todayProfit','monthProfit','targetRemaining'].forEach(id=>$(id).textContent='—');
+    $('targetProgressBar').style.width='0%';$('targetProgressText').textContent='Cloud data unavailable';
+    history.textContent='Cloud Profit load failed: '+(e?.message||String(e));
+  }
 }
 
 function toggleAdminMenu(force){
@@ -1595,6 +1729,7 @@ function toggleAdminMenu(force){
   menu.classList.toggle('open',open);shade.classList.toggle('open',open);
 }
 function adminMenuGo(sectionId){
+  if(sectionId==='adminTarget')setTimeout(()=>renderMonthlyTarget(),0);
   document.querySelectorAll('#adminView .admin-section').forEach(section=>section.classList.remove('active-admin-section'));
   const selected=$(sectionId);if(selected)selected.classList.add('active-admin-section');
   toggleAdminMenu(false);
@@ -2038,6 +2173,7 @@ function processCheckout(){
     );
 
     window.slvSupabase = db;
+    if(typeof renderMonthlyTarget==='function' && !document.getElementById('adminView')?.classList.contains('hidden')) renderMonthlyTarget();
 
     // Attendance cloud sync: employee_user_id is the Supabase profiles UUID,
     // while the local employeeId remains the shop's employee code.
@@ -2642,6 +2778,7 @@ try {
 (function(){
  const el=id=>document.getElementById(id);
  let services=[],busy=false,pendingRequest=null,pendingBusy=false;
+ let servicesFetchedAt=0,servicesInFlight=null;const SERVICES_CACHE_MS=60000;
  const money=n=>'₹'+Number(n||0).toFixed(2);
  const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const status=(message,error=false)=>{el('slvTxStatus').textContent=message;el('slvTxStatus').style.color=error?'#c5221f':'#137333'};
@@ -2657,19 +2794,36 @@ try {
   if(last&&!last.endAt)throw Error('Resume from lunch break first');
   return db;
  }
- window.slvTxLoadServices=async()=>{
-  if(busy)return;
-  try{
-   const db=await employeeDb();
-   const r=await db.from('services').select('id,service_name,customer_rate,internal_cost,is_active').eq('is_active',true).order('service_name');
-   if(r.error)throw r.error;services=r.data||[];
-   const select=el('slvTxService');select.replaceChildren();select.add(new Option('— Select Service —',''));
-   services.forEach(s=>select.add(new Option(s.service_name+' • '+money(s.customer_rate),s.id)));
-   select.onchange=()=>window.slvTxUpdatePreview();
-   status(services.length+' cloud service(s) loaded');window.slvTxUpdatePreview();
-   window.slvPendingRefresh().catch(()=>{});
-  }catch(e){status(e.message||String(e),true)}
+ // Prefetch after employee dashboard opens; reuse recent data when Services is clicked.
+ // Authentication/shift checks remain mandatory for every transaction save.
+ window.slvTxLoadServices=async(force=false)=>{
+  const fresh=services.length>0 && Date.now()-servicesFetchedAt<SERVICES_CACHE_MS;
+  if(fresh&&!force){
+   const select=el('slvTxService');
+   if(select?.options.length>1){status(services.length+' cloud service(s) ready');return;}
+  }
+  if(servicesInFlight)return servicesInFlight;
+  servicesInFlight=(async()=>{
+   try{
+    if(!services.length)status('Loading services…');
+    const db=await employeeDb();
+    const r=await db.from('services').select('id,service_name,customer_rate,internal_cost,is_active').eq('is_active',true).order('service_name');
+    if(r.error)throw r.error;
+    services=r.data||[];servicesFetchedAt=Date.now();
+    const select=el('slvTxService');const selected=select.value;
+    select.replaceChildren();select.add(new Option('— Select Service —',''));
+    services.forEach(s=>select.add(new Option(s.service_name+' • '+money(s.customer_rate),s.id)));
+    if(services.some(s=>s.id===selected))select.value=selected;
+    select.onchange=()=>window.slvTxUpdatePreview();
+    status(services.length+' cloud service(s) ready');window.slvTxUpdatePreview();
+    window.slvPendingRefresh().catch(()=>{});
+   }catch(e){status(e.message||String(e),true)}
+   finally{servicesInFlight=null}
+  })();
+  return servicesInFlight;
  };
+ window.slvTxInvalidateServices=()=>{servicesFetchedAt=0;};
+
  function amounts(){
   const service=services.find(s=>s.id===el('slvTxService').value);
   const qRaw=el('slvTxQty').value,cRaw=el('slvTxCash').value,uRaw=el('slvTxUpi').value;
@@ -3813,7 +3967,7 @@ function slvXeroxQuote(){
  const manual=document.getElementById('xeroxManual').checked;
  if(manual)throw Error('Manual rate override cannot be saved securely yet. Turn it off to use Admin Cloud Pricing.');
  if(!xaReady)throw Error('Cloud pricing not loaded');
- const rows=xeroxItems.map(x=>({paper_size:x.size,print_type:x.side,papers_per_set:Number(x.papers),total_sets:Number(x.sets)}));
+ const rows=xeroxItems.map(x=>({paper_size:x.size,print_type:x.side,papers_per_set:xeroxSheetsPerSet(x),total_sets:Number(x.sets)}));
  if(!rows.length||rows.length>30)throw Error('Invalid Xerox rows');
  const groups=new Map();let count=0;
  for(const r of rows){if(!Number.isInteger(r.papers_per_set)||!Number.isInteger(r.total_sets)||r.papers_per_set<1||r.total_sets<1)throw Error('Enter valid papers and sets');const n=r.papers_per_set*r.total_sets;count+=n;const k=r.paper_size+' / '+r.print_type;groups.set(k,(groups.get(k)||0)+n)}
@@ -3839,7 +3993,7 @@ async function slvXeroxSave(){
   const payload={p_service_id:document.getElementById('slvTxService').value,p_customer_name:document.getElementById('slvTxCustomer').value.trim()||'Walk-in Customer',p_customer_mobile:document.getElementById('slvTxMobile').value.trim(),p_items:q.rows,p_discount:q.discount,p_cash_amount:netCash,p_upi_amount:upi};
   const signature=JSON.stringify(payload);
   if(slvXeroxRequest&&slvXeroxRequest.signature!==signature)throw Error('Previous save is uncertain. Verify transaction history before changing this bill.');
-  if(!confirm('Save Xerox bill '+q.count+' papers • ₹'+q.total.toFixed(2)+' • Cash ₹'+netCash.toFixed(2)+' • PAYTM ₹'+upi.toFixed(2)+'?'))return;
+  if(!confirm('Save '+xeroxItems.map(x=>(x.jobType||'Xerox')).join(' + ')+' bill '+q.count+' papers • ₹'+q.total.toFixed(2)+' • Cash ₹'+netCash.toFixed(2)+' • PAYTM ₹'+upi.toFixed(2)+'?'))return;
   if(!slvXeroxRequest)slvXeroxRequest={signature,id:crypto.randomUUID()};
   slvXeroxBusy=true;button.disabled=true;status.style.color='#385579';status.textContent='Saving Xerox to Supabase...';
   const db=window.slvSupabase;if(!db)throw Error('Supabase unavailable');
@@ -3858,7 +4012,7 @@ document.addEventListener('DOMContentLoaded',()=>{
  if(!select||!btn)return;
  const oldClick=btn.onclick;
  btn.onclick=function(event){if(slvXeroxSelected()){event.preventDefault();return slvXeroxSave()}return oldClick?.call(this,event)};
- const refresh=()=>{const yes=slvXeroxSelected();document.body.classList.toggle('slv-xerox-selected',yes);if(yes){btn.textContent='✓ Save Xerox Bill to Cloud';btn.disabled=false;document.getElementById('slvTxMode').value='now'}else{if(typeof window.slvTxUpdatePreview==='function')window.slvTxUpdatePreview()}};
+ const refresh=()=>{const yes=slvXeroxSelected();document.body.classList.toggle('slv-xerox-selected',yes);if(yes){btn.textContent='✓ Save Xerox Bill to Cloud';btn.disabled=false;document.getElementById('slvTxMode').value='now';if(typeof xeroxCalculate==='function')xeroxCalculate()}else{if(typeof window.slvTxUpdatePreview==='function')window.slvTxUpdatePreview()}};
  select.addEventListener('change',refresh);new MutationObserver(refresh).observe(select,{childList:true,subtree:true});refresh();
  for(const id of ['slvTxCash','slvTxUpi'])document.getElementById(id).addEventListener('input',()=>{if(slvXeroxSelected()){const c=Number(document.getElementById('slvTxCash').value)||0,u=Number(document.getElementById('slvTxUpi').value)||0;document.getElementById('xeroxPaid').value=(c+u).toFixed(2);xeroxCalculate()}});
  document.getElementById('xeroxPaid').readOnly=true;
@@ -3866,22 +4020,27 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 </script>
 <script>
+/* Stop mouse wheel from changing focused numeric billing fields. */
+document.addEventListener('wheel',function(e){const el=document.activeElement;if(el&&el.tagName==='INPUT'&&el.type==='number'&&el.closest('#servicesView'))el.blur()},{passive:true});
 /* Standalone Xerox quote calculator using cloud pricing; separate from checkout RPC. */
-let xeroxItems=[{id:1,size:'A4',side:'Single',papers:10,sets:1}],xeroxExtra=false,xeroxNextId=2;
+let xeroxItems=[{id:1,size:'A4',side:'Single',papers:'',sets:'',countMode:'pages',jobType:'Xerox'}],xeroxExtra=false,xeroxNextId=2;
 const xeroxById=id=>document.getElementById(id);
 const xeroxNum=v=>Math.max(0,Number(v)||0);
 const xeroxEsc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Convert printed pages into physical sheets. Duplex odd page counts round up per set.
+function xeroxSheetsPerSet(x){const n=Number(x.papers);if(!Number.isSafeInteger(n)||n<1)return 0;return x.countMode==='pages'&&x.side==='Double'?Math.ceil(n/2):n}
+function xeroxCountSummary(x){const pages=Number(x.papers)||0,sets=Number(x.sets)||0,sheets=xeroxSheetsPerSet(x);return `${sheets} physical paper(s) per set × ${sets} set(s) = ${sheets*sets} papers`}
 function xeroxToggleExtra(){xeroxExtra=!xeroxExtra;if(!xeroxExtra)xeroxItems=xeroxItems.slice(0,1);xeroxRender()}
-function xeroxAddItem(){xeroxItems.push({id:xeroxNextId++,size:'A4',side:'Single',papers:1,sets:1});xeroxRender()}
+function xeroxAddItem(){const prev=xeroxItems[xeroxItems.length-1]||{size:'A4',side:'Single',countMode:'pages'};xeroxItems.push({id:xeroxNextId++,size:prev.size,side:prev.side,papers:'',sets:'',countMode:prev.countMode,jobType:prev.jobType||'Xerox'});xeroxRender()}
 function xeroxRemove(id){xeroxItems=xeroxItems.filter(x=>x.id!==id);xeroxRender()}
 function xeroxChange(id,key,value){const x=xeroxItems.find(x=>x.id===id);if(x){x[key]=value;xeroxCalculate()}}
 function xeroxRender(){
- xeroxById('xeroxExtraToggle').textContent=xeroxExtra?'✓ Additional Sets':'＋ Additional Sets';xeroxById('xeroxAddItem').classList.toggle('hidden',!xeroxExtra);
+ xeroxById('xeroxExtraToggle').textContent=xeroxExtra?'✓ Multiple Jobs':'＋ Add Job';xeroxById('xeroxAddItem').classList.toggle('hidden',!xeroxExtra);
  xeroxById('xeroxManualBox').classList.toggle('hidden',!xeroxById('xeroxManual').checked);
- xeroxById('xeroxItems').innerHTML=xeroxItems.map((x,i)=>`<div class="xerox-item"><div class="xerox-head"><strong>${xeroxExtra?'Set '+(i+1):'Xerox Details'}</strong>${i>0?`<button type="button" class="btn-red btn-small" onclick="xeroxRemove(${x.id})">✕</button>`:''}</div><div class="xerox-grid"><div><label>Paper Size</label><select onchange="xeroxChange(${x.id},'size',this.value)">${['A4','Legal','A3'].map(v=>`<option ${x.size===v?'selected':''}>${v}</option>`).join('')}</select></div><div><label>Print Type</label><select onchange="xeroxChange(${x.id},'side',this.value)">${['Single','Double'].map(v=>`<option ${x.side===v?'selected':''}>${v}</option>`).join('')}</select></div><div><label>Papers per Set</label><input type="number" min="0" step="1" value="${xeroxEsc(x.papers)}" oninput="xeroxChange(${x.id},'papers',this.value)"></div><div><label>Total Sets</label><input type="number" min="0" step="1" value="${xeroxEsc(x.sets)}" oninput="xeroxChange(${x.id},'sets',this.value)"></div></div></div>`).join('');xeroxCalculate();
+ xeroxById('xeroxItems').innerHTML=xeroxItems.map((x,i)=>`<div class="xerox-item"><div class="xerox-head"><strong>${xeroxExtra?'Job '+(i+1):'Print Details'}</strong>${i>0?`<button type="button" class="btn-red btn-small" onclick="xeroxRemove(${x.id})">Remove</button>`:''}</div><div class="xerox-all-options"><div class="xerox-job-type"><label>Service Type</label><div class="xerox-tick-row"><label class="xerox-tick"><input type="checkbox" ${x.jobType!=='Print'?'checked':''} onchange="xeroxChange(${x.id},'jobType','Xerox');xeroxRender()"><span>Xerox</span></label><label class="xerox-tick"><input type="checkbox" ${x.jobType==='Print'?'checked':''} onchange="xeroxChange(${x.id},'jobType','Print');xeroxRender()"><span>Print</span></label></div></div><div class="xerox-compact-options"><div><label>Paper Size</label><div class="xerox-tick-row">${['A4','Legal','A3'].map(v=>`<label class="xerox-tick"><input type="checkbox" ${x.size===v?'checked':''} onchange="xeroxChange(${x.id},'size','${v}');xeroxRender()"><span>${v}</span></label>`).join('')}</div></div><div><label>Print Sides</label><div class="xerox-tick-row"><label class="xerox-tick"><input type="checkbox" ${x.side==='Single'?'checked':''} onchange="xeroxChange(${x.id},'side','Single');xeroxRender()"><span>Single</span></label><label class="xerox-tick"><input type="checkbox" ${x.side==='Double'?'checked':''} onchange="xeroxChange(${x.id},'side','Double');xeroxRender()"><span>Both</span></label></div></div><div class="xerox-count-choice"><label>Count By</label><div class="xerox-mode-buttons"><button type="button" class="${x.countMode!=='papers'?'selected':''}" onclick="xeroxChange(${x.id},'countMode','pages');xeroxRender()">Pages</button><button type="button" class="${x.countMode==='papers'?'selected':''}" onclick="xeroxChange(${x.id},'countMode','papers');xeroxRender()">Papers</button></div></div></div></div><div class="xerox-compact-inputs"><div><label>${x.countMode==='papers'?'Papers':'Pages'}</label><input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="Enter" value="${xeroxEsc(x.papers)}" oninput="xeroxChange(${x.id},'papers',this.value)"></div><div><label>Copies</label><input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="Enter" value="${xeroxEsc(x.sets)}" oninput="xeroxChange(${x.id},'sets',this.value)"></div></div><div class="xerox-count-output">${xeroxEsc(xeroxCountSummary(x))}</div></div>`).join('');xeroxCalculate();
 }
 function xeroxCalculate(){
- const groups=new Map();let papers=0;for(const x of xeroxItems){const n=Math.floor(xeroxNum(x.papers))*Math.floor(xeroxNum(x.sets));papers+=n;const key=x.size+' / '+x.side;groups.set(key,(groups.get(key)||0)+n)}
+ const groups=new Map();let papers=0;for(const x of xeroxItems){const n=xeroxSheetsPerSet(x)*Math.floor(xeroxNum(x.sets));papers+=n;const key=x.size+' / '+x.side;groups.set(key,(groups.get(key)||0)+n)}
  const manual=xeroxById('xeroxManual').checked;
  let missing=[];let details=[];
  if(!xaReady&&!manual){xeroxById('xeroxResult').textContent='Cloud pricing not loaded. Please log in and reload pricing before billing.';return;}
@@ -3890,13 +4049,22 @@ function xeroxCalculate(){
   const rule=xaGetRules(key).find(r=>n>=r.from&&n<=r.to);
   if(!rule){missing.push(key+' ('+n+' papers)');return sum}
   const amount=rule.type==='fixed'?rule.rate:rule.type==='starting'?rule.rate+Math.max(0,n-1)*rule.extra:n*rule.rate;
-  details.push(key+': '+n+' papers, '+rule.type+' '+rule.from+'–'+rule.to);
+  details.push((xeroxItems.filter(x=>x.size+' / '+x.side===key).map(x=>x.jobType||'Xerox').join(' + '))+': '+key+': '+n+' papers, '+rule.type+' '+rule.from+'–'+rule.to);
   return sum+amount;
  },0);
  const subtotal=manual?papers*xeroxNum(xeroxById('xeroxManualRate').value):autoSubtotal;
- const discount=Math.min(subtotal,xeroxNum(xeroxById('xeroxDiscount').value));const total=subtotal-discount;const paid=xeroxNum(xeroxById('xeroxPaid').value);const balance=paid-total;
+ const discount=Math.min(subtotal,xeroxNum(xeroxById('xeroxDiscount').value));const total=subtotal-discount;
+ // Do not overwrite manually entered customer cash while recalculating.
+ // Keep the displayed paid total synchronized with editable Cash/UPI inputs.
+ if(typeof slvXeroxSelected==='function' && slvXeroxSelected()){
+  const cashEl=xeroxById('slvTxCash'),upiEl=xeroxById('slvTxUpi');
+  if(cashEl&&upiEl){
+   xeroxById('xeroxPaid').value=((Number(cashEl.value)||0)+(Number(upiEl.value)||0)).toFixed(2);
+  }
+ }
+ const paid=xeroxNum(xeroxById('xeroxPaid').value);const balance=paid-total;
  const money=n=>'₹'+n.toFixed(2);
- xeroxById('xeroxResult').innerHTML=`${!manual&&missing.length?'<b style="color:#b91c1c">Missing Admin slab: '+xeroxEsc(missing.join(', '))+'</b><br>':''}Total Papers: <b>${papers}</b><br>Pricing: <b>${manual?'Manual per paper':details.map(xeroxEsc).join('; ')||'No matching slab'}</b><br>Subtotal: <b>${money(subtotal)}</b><br>Discount: <b>${money(discount)}</b><br>Total Bill: <strong>${money(total)}</strong><br>Customer Paid: <b>${money(paid)}</b><br>${balance>=0?'Return Balance':'Pending Amount'}: <strong>${money(Math.abs(balance))}</strong>`;
+ xeroxById('xeroxResult').innerHTML=`${!manual&&missing.length?'<div style="color:#b91c1c">Missing Admin pricing: '+xeroxEsc(missing.join(', '))+'</div>':''}<div class="xerox-bill-line"><span>Total Papers</span><b>${papers}</b></div><div class="xerox-bill-line"><span>Discount</span><b>${money(discount)}</b></div><div class="xerox-bill-total"><span>To Pay</span><strong>${money(total)}</strong></div><div class="xerox-bill-line"><span>Received</span><b>${money(paid)}</b></div><div class="xerox-bill-line"><span>${balance>=0?'Change to Return':'Balance Due'}</span><b>${money(Math.abs(balance))}</b></div>`;
 }
 document.addEventListener('DOMContentLoaded',()=>{xeroxRender();const sel=xeroxById('slvTxService');const panel=xeroxById('slvXeroxPanel');if(sel&&panel){const refresh=()=>{const txt=sel.selectedOptions[0]?.textContent||'';panel.classList.toggle('hidden',!/xerox|photocopy/i.test(txt))};sel.addEventListener('change',refresh);new MutationObserver(refresh).observe(sel,{childList:true,subtree:true});refresh()}});
 </script>
@@ -3917,6 +4085,63 @@ async function xaLoad(){try{const db=await xaClient();const {data,error}=await d
 async function xaDelete(i){const r=xaGetRules(xaKey())[i];if(!r||xaBusy||!confirm('Delete this Xerox pricing rule from cloud?'))return;xaBusy=true;try{const db=await xaClient(true);const result=await db.from('xerox_pricing').delete().eq('id',r.id).select('id');if(result.error)throw result.error;if(result.data?.length!==1)throw Error('Delete not confirmed');await xaLoad();xaStatus('Rule deleted from Supabase ✓')}catch(e){xaStatus('Delete failed: '+e.message,true)}finally{xaBusy=false}}
 async function xaSave(){if(xaBusy)return;const from=Number(document.getElementById('xaFrom').value),to=Number(document.getElementById('xaTo').value),type=document.getElementById('xaType').value,rate=Number(document.getElementById('xaRate').value),extra=Number(document.getElementById('xaExtra').value);if(!Number.isSafeInteger(from)||!Number.isSafeInteger(to)||from<1||to<from||!Number.isFinite(rate)||rate<0||(type==='starting'&&(!Number.isFinite(extra)||extra<0))){xaStatus('Enter valid paper ranges and rates',true);return}if(!xaReady){xaStatus('Load cloud rates first; cannot save while offline',true);return}const list=xaGetRules(xaKey());if(list.some((r,i)=>i!==xaEditIndex&&from<=r.to&&to>=r.from)){xaStatus('Overlapping range is not allowed',true);return}xaBusy=true;try{const db=await xaClient(true);const [paper_size,print_type]=xaKey().split(' / ');const payload={paper_size,print_type,from_papers:from,to_papers:to,pricing_type:type,rate,additional_rate:type==='starting'?extra:0,updated_at:new Date().toISOString()};let result;if(xaEditIndex===null)result=await db.from('xerox_pricing').insert(payload).select('id');else result=await db.from('xerox_pricing').update(payload).eq('id',list[xaEditIndex].id).select('id');if(result.error)throw result.error;if(result.data?.length!==1)throw Error('Save not confirmed');await xaLoad();xaStatus('Pricing rule saved in Supabase Cloud ✓')}catch(e){xaStatus('Save failed: '+e.message,true)}finally{xaBusy=false}}
 document.addEventListener('DOMContentLoaded',()=>{xaFields();xaRender();const tryLoad=()=>{if(window.slvSupabase)xaLoad()};tryLoad();let attempts=0;const timer=setInterval(()=>{if(window.slvSupabase){clearInterval(timer);xaLoad();window.slvSupabase.auth.onAuthStateChange(()=>setTimeout(xaLoad,250))}else if(++attempts>40){clearInterval(timer);xaStatus('Supabase not initialized',true)}},500)});
+</script>
+
+<script>
+/* Multi-service draft list: each row uses existing, independently validated cloud save flow.
+   This UI deliberately does not simulate an atomic combined wallet transaction. */
+(function(){
+ const $=id=>document.getElementById(id);
+ const queue=[];let next=1;
+ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const money=v=>'₹'+Number(v||0).toFixed(2);
+ function snapshot(){
+  const select=$('slvTxService'),opt=select?.selectedOptions?.[0];
+  if(!select?.value)throw Error('Select a Service first');
+  const xerox=/xerox|photocopy/i.test(opt?.textContent||'');
+  let due=0,items=null,discount=0;
+  if(xerox){
+   if(typeof slvXeroxQuote!=='function')throw Error('Xerox calculator unavailable');
+   const q=slvXeroxQuote();due=q.total;items=structuredClone(q.rows);discount=q.discount;
+  }else{
+   const qty=Number($('slvTxQty').value);
+   if(!Number.isInteger(qty)||qty<1||qty>10000)throw Error('Invalid quantity');
+   const m=(opt?.textContent||'').match(/₹([\d,.]+)/);
+   if(!m)throw Error('Cloud price unavailable for selected service');
+   due=Math.round(Number(m[1].replace(/,/g,''))*qty*100)/100;
+  }
+  if(!(due>0))throw Error('Valid positive bill required');
+  return {id:next++,serviceId:select.value,name:(opt?.textContent||'').split(' • ')[0],qty:Number($('slvTxQty').value),due,items,discount,xerox,mode:$('slvTxMode').value};
+ }
+ function render(){
+  const root=$('slvAdditionalList');if(!root)return;
+  root.innerHTML=queue.map((x,i)=>`<div class="slab-box" style="margin:9px 0"><div class="row"><strong>${i+1}. ${esc(x.name)}</strong><strong>${money(x.due)}</strong></div><small>${x.xerox?'Xerox cloud quote':`Quantity: ${x.qty}`} · ${x.mode==='later'?'Pending':'Complete now'}</small><div><button type="button" class="btn-small" data-load="${x.id}">Load to Save</button><button type="button" class="btn-small btn-red" data-remove="${x.id}">Remove</button></div></div>`).join('');
+  $('slvAdditionalTotal').textContent='Draft Grand Total: '+money(queue.reduce((a,x)=>a+x.due,0));
+ }
+ function load(x){
+  const select=$('slvTxService');select.value=x.serviceId;select.dispatchEvent(new Event('change',{bubbles:true}));
+  if(x.xerox){
+   if(typeof xeroxItems==='undefined')throw Error('Xerox editor unavailable');
+   xeroxItems=x.items.map((r,i)=>({id:i+1,size:r.paper_size,side:r.print_type,papers:Number(r.papers_per_set),sets:Number(r.total_sets)}));
+   xeroxNextId=xeroxItems.length+1;xeroxExtra=xeroxItems.length>1;
+   $('xeroxDiscount').value=x.discount;xeroxRender();
+  }else{$('slvTxQty').value=x.qty;$('slvTxMode').value=x.mode;}
+  $('slvTxCash').value=x.due.toFixed(2);$('slvTxUpi').value='0';
+  if(typeof window.slvTxUpdatePreview==='function')window.slvTxUpdatePreview();
+  $('slvTxSave').scrollIntoView({behavior:'smooth',block:'center'});
+ }
+ document.addEventListener('DOMContentLoaded',()=>{
+  $('slvAddTransactionBtn')?.addEventListener('click',()=>{
+   try{queue.push(snapshot());render()}catch(e){alert(e.message||String(e))}
+  });
+  $('slvAdditionalList')?.addEventListener('click',e=>{
+   const loadId=e.target.closest('[data-load]')?.dataset.load;
+   const removeId=e.target.closest('[data-remove]')?.dataset.remove;
+   if(removeId){const idx=queue.findIndex(x=>x.id===Number(removeId));if(idx>=0)queue.splice(idx,1);render()}
+   if(loadId){const x=queue.find(x=>x.id===Number(loadId));if(x)try{load(x)}catch(err){alert(err.message||String(err))}}
+  });
+ });
+})();
 </script>
 </body>
 </html>
