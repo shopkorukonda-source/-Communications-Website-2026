@@ -851,6 +851,17 @@ body:has(#employeeView:not(.hidden)) .main-header {
       <select id="srvWallet"></select>
       <button class="btn-orange" onclick="saveService()">+ Save Service Rule</button>
       <div id="servicesAdminList"></div>
+
+<div id="xeroxAdminPricing" class="section-box" style="margin-top:18px;border:1px solid #d6e5fa">
+<h4>🖨️ Xerox — Manage Pricing Slabs</h4>
+<p class="muted">Paper Size & Print Type కి వేర్వేరు Rates. ఈ browser లో Save అవుతాయి; Supabase sync ఇంకా లేదు.</p>
+<div class="row"><div><label>Paper Size</label><select id="xaSize" onchange="xaRender()"><option>A4</option><option>Legal</option><option>A3</option></select></div><div><label>Print Type</label><select id="xaSide" onchange="xaRender()"><option value="Single">Single Side</option><option value="Double">Double Side</option></select></div></div>
+<div class="row"><div><label>From Papers</label><input id="xaFrom" type="number" min="1" step="1" value="1"></div><div><label>To Papers</label><input id="xaTo" type="number" min="1" step="1" value="1"></div></div>
+<label>Pricing Type</label><select id="xaType" onchange="xaFields()"><option value="per">Per Paper</option><option value="fixed">Fixed Total</option><option value="starting">Starting Paper + Additional Paper</option></select>
+<div class="row"><div><label id="xaRateLabel">Rate per Paper ₹</label><input id="xaRate" type="number" min="0" step="0.01" value="3"></div><div id="xaExtraBox" class="hidden"><label>Additional Paper ₹</label><input id="xaExtra" type="number" min="0" step="0.01" value="2"></div></div>
+<div class="row"><button type="button" class="btn-green" onclick="xaSave()" id="xaSaveBtn">+ Add Rule</button><button type="button" class="btn-secondary" onclick="xaCancel()">Cancel Edit</button></div>
+<p id="xaStatus" class="muted" role="status"></p><div id="xaRules"></div>
+</div>
       <div id="slvBillSlabAdmin" class="section-box" style="border:1px solid #d6e5fa;background:#f7fbff;margin-top:18px">
         <h4>⚡ Current Bill Payment — Portal Charge Slabs</h4>
         <p class="muted">Cloud Admin మాత్రమే Slabs Add / Edit / Delete చేయగలరు. Amount ranges overlap కాకూడదు. Employeeకి editing access లేదు.</p>
@@ -1091,7 +1102,7 @@ body:has(#employeeView:not(.hidden)) .main-header {
 <div id="xeroxManualBox" class="hidden"><label>Manual Rate per Paper ₹</label><input id="xeroxManualRate" type="number" min="0" step="0.01" value="2" oninput="xeroxCalculate()"></div>
 <div class="xerox-grid"><div><label>Discount ₹</label><input id="xeroxDiscount" type="number" min="0" step="0.01" value="0" oninput="xeroxCalculate()"></div><div><label>Customer Paid ₹</label><input id="xeroxPaid" type="number" min="0" step="0.01" value="0" oninput="xeroxCalculate()"></div></div>
 <div id="xeroxResult" class="xerox-result" aria-live="polite"></div>
-<p class="xerox-note">Sample Xerox rates only. This calculator does not save to Supabase or change wallet balances. Cloud checkout below uses its existing service rate until backend billing support is added.</p>
+<p class="xerox-note">Xerox rates come from Admin browser-local pricing rules. This calculator does not save to Supabase or change wallet balances. Cloud checkout below uses its existing service rate until backend billing support is added.</p>
 </section>
     <section id="slvCloudCheckout" class="section-box" style="margin:12px 0">
       <h3>☁️ Cloud Service Checkout</h3>
@@ -3805,15 +3816,50 @@ function xeroxRender(){
 }
 function xeroxCalculate(){
  const groups=new Map();let papers=0;for(const x of xeroxItems){const n=Math.floor(xeroxNum(x.papers))*Math.floor(xeroxNum(x.sets));papers+=n;const key=x.size+' / '+x.side;groups.set(key,(groups.get(key)||0)+n)}
- // Illustrative slabs, not database prices.
- const price=n=>n===0?0:n<=3?10:n<=20?n*3:n*2;
  const manual=xeroxById('xeroxManual').checked;
- const subtotal=manual?papers*xeroxNum(xeroxById('xeroxManualRate').value):[...groups.values()].reduce((sum,n)=>sum+price(n),0);
+ let missing=[];let details=[];
+ const autoSubtotal=[...groups].reduce((sum,[key,n])=>{
+  if(!n)return sum;
+  const rule=xaGetRules(key).find(r=>n>=r.from&&n<=r.to);
+  if(!rule){missing.push(key+' ('+n+' papers)');return sum}
+  const amount=rule.type==='fixed'?rule.rate:rule.type==='starting'?rule.rate+Math.max(0,n-1)*rule.extra:n*rule.rate;
+  details.push(key+': '+n+' papers, '+rule.type+' '+rule.from+'–'+rule.to);
+  return sum+amount;
+ },0);
+ const subtotal=manual?papers*xeroxNum(xeroxById('xeroxManualRate').value):autoSubtotal;
  const discount=Math.min(subtotal,xeroxNum(xeroxById('xeroxDiscount').value));const total=subtotal-discount;const paid=xeroxNum(xeroxById('xeroxPaid').value);const balance=paid-total;
  const money=n=>'₹'+n.toFixed(2);
- xeroxById('xeroxResult').innerHTML=`Total Papers: <b>${papers}</b><br>Pricing: <b>${manual?'Manual per paper':'Automatic sample slab'}</b><br>Subtotal: <b>${money(subtotal)}</b><br>Discount: <b>${money(discount)}</b><br>Total Bill: <strong>${money(total)}</strong><br>Customer Paid: <b>${money(paid)}</b><br>${balance>=0?'Return Balance':'Pending Amount'}: <strong>${money(Math.abs(balance))}</strong>`;
+ xeroxById('xeroxResult').innerHTML=`${!manual&&missing.length?'<b style="color:#b91c1c">Missing Admin slab: '+xeroxEsc(missing.join(', '))+'</b><br>':''}Total Papers: <b>${papers}</b><br>Pricing: <b>${manual?'Manual per paper':details.map(xeroxEsc).join('; ')||'No matching slab'}</b><br>Subtotal: <b>${money(subtotal)}</b><br>Discount: <b>${money(discount)}</b><br>Total Bill: <strong>${money(total)}</strong><br>Customer Paid: <b>${money(paid)}</b><br>${balance>=0?'Return Balance':'Pending Amount'}: <strong>${money(Math.abs(balance))}</strong>`;
 }
 document.addEventListener('DOMContentLoaded',()=>{xeroxRender();const sel=xeroxById('slvTxService');const panel=xeroxById('slvXeroxPanel');if(sel&&panel){const refresh=()=>{const txt=sel.selectedOptions[0]?.textContent||'';panel.classList.toggle('hidden',!/xerox|photocopy/i.test(txt))};sel.addEventListener('change',refresh);new MutationObserver(refresh).observe(sel,{childList:true,subtree:true});refresh()}});
+</script>
+
+<script>
+/* Browser-local Xerox admin rules: no Supabase schema or transaction posting changed. */
+const XA_KEY='slv_xerox_pricing_rules_v1';
+let xaEditIndex=null;
+const xaDefault=()=>{
+ const data={};
+ for(const size of ['A4','Legal','A3'])for(const side of ['Single','Double'])data[size+' / '+side]=[
+ {from:1,to:1,type:'starting',rate:5,extra:2},
+ {from:2,to:3,type:'fixed',rate:10,extra:0},
+ {from:4,to:20,type:'per',rate:3,extra:0},
+ {from:21,to:1000000,type:'per',rate:2,extra:0}];
+ return data;
+};
+let xaData;
+try{xaData=JSON.parse(localStorage.getItem(XA_KEY))||xaDefault()}catch(e){xaData=xaDefault()}
+function xaKey(){return document.getElementById('xaSize').value+' / '+document.getElementById('xaSide').value}
+function xaGetRules(key){return Array.isArray(xaData[key])?xaData[key]:[]}
+function xaPersist(){localStorage.setItem(XA_KEY,JSON.stringify(xaData));if(typeof xeroxCalculate==='function')xeroxCalculate()}
+function xaFields(){const starting=document.getElementById('xaType').value==='starting';document.getElementById('xaExtraBox').classList.toggle('hidden',!starting);document.getElementById('xaRateLabel').textContent=document.getElementById('xaType').value==='fixed'?'Fixed Total ₹':starting?'Starting Paper ₹':'Rate per Paper ₹'}
+function xaStatus(message,error=false){const el=document.getElementById('xaStatus');el.textContent=message;el.style.color=error?'#b91c1c':'#168364'}
+function xaCancel(){xaEditIndex=null;document.getElementById('xaSaveBtn').textContent='+ Add Rule';document.getElementById('xaFrom').value='1';document.getElementById('xaTo').value='1';document.getElementById('xaType').value='per';document.getElementById('xaRate').value='3';document.getElementById('xaExtra').value='2';xaFields()}
+function xaRender(){xaCancel();const list=xaGetRules(xaKey());document.getElementById('xaRules').innerHTML=list.length?list.map((r,i)=>`<div class="emp-row"><div><b>${r.from}–${r.to} papers</b><br><span class="muted">${r.type==='fixed'?'Fixed Total':r.type==='starting'?'Starting + Additional':'Per Paper'}: ₹${r.rate}${r.type==='starting'?' + ₹'+r.extra+' additional':''}</span></div><button type="button" class="btn-small btn-secondary" onclick="xaEdit(${i})">Edit</button><button type="button" class="btn-small btn-red" onclick="xaDelete(${i})">Delete</button></div>`).join(''):'<p class="muted">No rules for this combination.</p>'}
+function xaEdit(i){const r=xaGetRules(xaKey())[i];if(!r)return;xaEditIndex=i;document.getElementById('xaFrom').value=r.from;document.getElementById('xaTo').value=r.to;document.getElementById('xaType').value=r.type;document.getElementById('xaRate').value=r.rate;document.getElementById('xaExtra').value=r.extra||0;document.getElementById('xaSaveBtn').textContent='Save Changes';xaFields()}
+function xaDelete(i){if(!confirm('Delete this Xerox pricing rule?'))return;xaGetRules(xaKey()).splice(i,1);xaPersist();xaRender();xaStatus('Rule deleted')}
+function xaSave(){const from=Number(document.getElementById('xaFrom').value),to=Number(document.getElementById('xaTo').value),type=document.getElementById('xaType').value,rate=Number(document.getElementById('xaRate').value),extra=Number(document.getElementById('xaExtra').value);if(!Number.isSafeInteger(from)||!Number.isSafeInteger(to)||from<1||to<from||!Number.isFinite(rate)||rate<0||(type==='starting'&&(!Number.isFinite(extra)||extra<0))){xaStatus('Enter valid paper ranges and rates',true);return}const list=xaGetRules(xaKey());if(list.some((r,i)=>i!==xaEditIndex&&from<=r.to&&to>=r.from)){xaStatus('Overlapping range is not allowed',true);return}const rule={from,to,type,rate,extra:type==='starting'?extra:0};if(xaEditIndex===null)list.push(rule);else list[xaEditIndex]=rule;list.sort((a,b)=>a.from-b.from);xaData[xaKey()]=list;xaPersist();xaRender();xaStatus('Pricing rule saved in this browser. Other devices need Supabase sync.')}
+document.addEventListener('DOMContentLoaded',()=>{xaFields();xaRender();if(typeof xeroxCalculate==='function')xeroxCalculate()});
 </script>
 </body>
 </html>
