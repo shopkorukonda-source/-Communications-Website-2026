@@ -1257,7 +1257,7 @@ body.slv-xerox-selected #servicesView.slv-centered-popup #slvTxSave:disabled{opa
       <button class="side-menu-link" onclick="employeeMenuGo('servicesView')">💼 Services</button><button class="side-menu-link" onclick="slvPanOpen()">🧾 PAN Receipts</button>
       <div class="side-menu-caption">Assigned Wallets</div>
       <div id="employeeAssignedWallets" class="assigned-wallet-list"></div>
-      <button class="side-menu-link slv-service-link-menu" onclick="slvLinksOpen()">🌐 Service Links</button>
+      <button class="side-menu-link slv-service-link-menu" onclick="slvLinksOpen()">⚡ Quick Links</button>
       <button class="side-menu-link side-logout" onclick="logout()">🚪 Logout</button>
     </aside>
     <div class="slv-service-top-action"><div class="tile" role="button" tabindex="0" onclick="showView('servicesView')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showView('servicesView')}"><span>💼</span>Services Counter</div></div>
@@ -1283,8 +1283,9 @@ body.slv-xerox-selected #servicesView.slv-centered-popup #slvTxSave:disabled{opa
       <div style="font-size:22px;font-weight:bold;color:#137333">₹ <span id="drawerCash">0</span></div>
     </div>
     <section class="section-box" id="slvEmployeeServiceSection" aria-label="Service links">
-      <h4>🌐 Service List</h4>
-      <p class="muted">Select a service logo to open its website.</p>
+      <h4>⚡ Quick Links</h4>
+      <p class="muted">మీకు అవసరమైన Website Logo నొక్కితే కొత్త Tab లో Open అవుతుంది.</p>
+      <input id="slvQuickSearch" type="search" placeholder="🔎 Search Quick Links" oninput="slvQuickRender()" aria-label="Search quick links">
       <div id="slvEmployeeServiceStatus" class="muted" aria-live="polite">Loading services…</div>
       <div id="slvEmployeeServiceGrid" class="slv-employee-service-grid"></div>
     </section>
@@ -4448,11 +4449,16 @@ window.slvCatalogImport=async()=>{if(busy)return;await window.slvCatalogPreview(
 .slv-link-admin-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px;border-bottom:1px solid #e1e7ef;flex-wrap:wrap}
 .slv-link-admin-row div{overflow-wrap:anywhere}
 @media(max-width:600px){#slvLinksShortcut{bottom:10px;left:8px;padding:9px;font-size:11px}.slv-links-dialog{padding:15px}#slvLinksGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+#slvEmployeeServiceSection .slv-employee-service-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))!important;gap:12px}
+#slvEmployeeServiceSection .slv-link-card{min-height:112px;padding:13px 8px}
+#slvQuickSearch{max-width:420px}
+@media(max-width:520px){#slvEmployeeServiceSection .slv-employee-service-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px}#slvEmployeeServiceSection .slv-link-card{min-height:102px;padding:9px 5px}#slvEmployeeServiceSection .slv-link-logo{width:43px;height:43px}#slvEmployeeServiceSection .slv-link-card b{font-size:11px}}
 </style>
-<button id="slvLinksShortcut" type="button" onclick="slvLinksOpen()">🌐 Service Links</button>
+<button id="slvLinksShortcut" type="button" onclick="slvLinksOpen()">⚡ Quick Links</button>
 <div id="slvLinksModal" role="dialog" aria-modal="true" aria-label="Service Links">
  <div class="slv-links-dialog">
-  <div class="slv-links-header"><h3>🌐 SLV Service Links</h3><button type="button" class="btn-secondary" onclick="slvLinksClose()">✕ Close</button></div>
+  <div class="slv-links-header"><h3>⚡ SLV Quick Links</h3><button type="button" class="btn-secondary" onclick="slvLinksClose()">✕ Close</button></div>
   <p class="muted">Search and click a service to open its official website in a new tab.</p>
   <input id="slvLinksSearch" type="search" placeholder="🔎 Search service name or category" oninput="slvLinksRender()">
   <div id="slvLinksStatus" class="muted" aria-live="polite"></div>
@@ -4470,7 +4476,8 @@ function card(row){const a=document.createElement('a');a.className='slv-link-car
 try { const destination=new URL(row.website_url); if(destination.protocol!=='https:') throw Error('Invalid external link'); a.href=destination.href; }
 catch(_) { a.href='#'; a.addEventListener('click',event=>{event.preventDefault();alert('Invalid service website URL. Contact Admin.');}); }
 a.target='_blank';a.rel='noopener noreferrer';a.referrerPolicy='no-referrer';a.title='Open '+row.service_name+' in a new browser tab';let logo;if(row.logo_url){logo=document.createElement('img');logo.className='slv-link-logo';logo.alt='';logo.loading='lazy';logo.referrerPolicy='no-referrer';logo.src=row.logo_url;logo.onerror=()=>{logo.replaceWith(fallback())};}else logo=fallback();function fallback(){const x=document.createElement('span');x.className='slv-link-fallback';x.textContent='🌐';return x}const name=document.createElement('b');name.textContent=row.service_name;const cat=document.createElement('small');cat.textContent=row.category||'Open Website ↗';a.append(logo,name,cat);return a;}
-function renderEmployeeServices(){const grid=el('slvEmployeeServiceGrid');if(!grid)return;grid.replaceChildren();rows.forEach(x=>grid.append(card(x)));el('slvEmployeeServiceStatus').textContent=rows.length?rows.length+' services available':'No services added yet.';}
+function renderEmployeeServices(){const grid=el('slvEmployeeServiceGrid');if(!grid)return;grid.replaceChildren();const q=(el('slvQuickSearch')?.value||'').toLocaleLowerCase().trim();const matches=rows.filter(x=>(x.service_name+' '+(x.category||'')).toLocaleLowerCase().includes(q));matches.forEach(x=>grid.append(card(x)));el('slvEmployeeServiceStatus').textContent=rows.length?(matches.length+' of '+rows.length+' quick links'):'No quick links added yet.';}
+window.slvQuickRender=renderEmployeeServices;
 window.slvLinksRender=function(){const grid=el('slvLinksGrid');grid.replaceChildren();const q=el('slvLinksSearch').value.toLocaleLowerCase().trim();const filtered=rows.filter(x=>(x.service_name+' '+(x.category||'')).toLocaleLowerCase().includes(q));filtered.forEach(x=>grid.append(card(x)));if(!filtered.length)grid.textContent=rows.length?'No matching services.':'No service links added yet.';};
 async function load(){if(loading)return;loading=true;el('slvLinksStatus').textContent='Loading service links from cloud…';try{const db=await client();const r=await db.from('slv_service_links').select('id,service_name,website_url,logo_url,category,sort_order').eq('is_active',true).order('sort_order',{ascending:true}).order('service_name',{ascending:true});if(r.error)throw r.error;rows=r.data||[];el('slvLinksStatus').textContent=rows.length+' service links';window.slvLinksRender();renderEmployeeServices();}catch(e){el('slvLinksStatus').textContent='Cannot load links: '+e.message;el('slvLinksGrid').replaceChildren();if(el('slvEmployeeServiceStatus'))el('slvEmployeeServiceStatus').textContent='Could not load services: '+e.message;}finally{loading=false;}}
 window.slvLinksOpen=function(){if(el('employeeSideMenu')?.classList.contains('open')&&typeof window.toggleEmployeeMenu==='function')window.toggleEmployeeMenu(false);el('slvLinksModal').classList.add('open');el('slvLinksSearch').value='';load();};
