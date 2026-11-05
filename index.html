@@ -2959,7 +2959,7 @@ try {
   const fresh=services.length>0 && Date.now()-servicesFetchedAt<SERVICES_CACHE_MS;
   if(fresh&&!force){
    const select=el('slvTxService');
-   if(select?.options.length>1){status(services.length+' cloud service(s) ready');return;}
+   if(select?.options.length>1){return;}
   }
   if(servicesInFlight)return servicesInFlight;
   servicesInFlight=(async()=>{
@@ -2975,7 +2975,6 @@ try {
     if(services.some(s=>s.id===selected))select.value=selected;
     select.onchange=()=>{priceQuote=null;quoteKey='';quoteError='';loadAllowedWallets();window.slvTxUpdatePreview()};
     status(services.length+' cloud service(s) ready');await loadAllowedWallets();window.slvTxUpdatePreview();
-    window.slvPendingRefresh().catch(()=>{});
    }catch(e){status(e.message||String(e),true)}
    finally{servicesInFlight=null}
   })();
@@ -2994,6 +2993,7 @@ try {
    sel.replaceChildren();sel.add(new Option('— Select Processing Wallet —',''));
    allowedWallets.forEach(w=>sel.add(new Option(w.wallet_name,w.wallet_id)));
    if(allowedWallets.length===1)sel.value=allowedWallets[0].wallet_id;
+   sel.disabled=allowedWallets.length<=1;
    el('slvWalletSelectStatus').textContent=allowedWallets.length+' Admin-assigned wallet(s) available. Balances hidden.';
   }catch(e){sel.replaceChildren();sel.add(new Option('Wallet mapping unavailable — retry',''));el('slvWalletSelectStatus').textContent=e.message||String(e)}
   finally{walletLoading=false;window.slvTxUpdatePreview()}
@@ -3018,7 +3018,7 @@ try {
   preview.innerHTML='<div>Unit Rate: <b>'+money(a.service.customer_rate)+'</b> × '+esc(a.qty)+'</div>'+
    '<div>Customer Bill: <b>'+money(a.due)+'</b></div><div>Received: <b>'+money(a.paid)+'</b></div>'+
    '<div>Change to return: <b>'+money(Math.max(0,a.change))+'</b></div><strong>'+label+'</strong>'+
-   '<div style="font-size:12px">'+(ready?'Server Processing Cost '+money(cost)+' · Profit '+money(a.due-cost):'Waiting for verified server quote')+'</div>';
+   (!ready?'<div style="font-size:12px">Checking service pricing…</div>':'');
   button.disabled=busy||!ready||!a.valid||a.change<0||!walletOk;
   button.textContent=(/xerox|photocopy/i.test(a.service?.service_name||''))?'✓ Save Xerox Bill to Cloud':(mode==='later'?'⏳ Save as Pending Application':'✓ Complete Now & Save');
  };
@@ -3052,13 +3052,14 @@ try {
    pendingRequest=null;
    status((mode==='later'?'Pending Application Saved ✓':'Completed Transaction Saved ✓')+' ID: '+response.data);
    el('slvTxCustomer').value='Walk-in Customer';el('slvTxMobile').value='';el('slvTxQty').value='1';priceQuote=null;quoteKey='';el('slvTxCash').value='0';el('slvTxUpi').value='0';
+   const search=el('slvServiceSearch');if(search){search.value='';search.dispatchEvent(new Event('input',{bubbles:true}));}
    window.slvTxUpdatePreview();
    confirmedSuccess=true;
    window.slvPendingRefresh().catch(()=>{});
   }catch(e){status('Not confirmed: '+(e.message||String(e))+'. Retry unchanged values; verify cloud records before changing details.',true)}
   finally{
    // A short visible hold prevents a fast network response from skipping the animation.
-   const remaining=Math.max(0,650-(performance.now()-startedAt));
+   const remaining=Math.max(0,120-(performance.now()-startedAt));
    if(remaining)await new Promise(resolve=>setTimeout(resolve,remaining));
    overlay?.classList.remove('active');
    busy=false;window.slvTxUpdatePreview();
