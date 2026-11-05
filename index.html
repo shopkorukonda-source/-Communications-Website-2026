@@ -1332,7 +1332,7 @@ body.slv-xerox-selected #servicesView.slv-centered-popup #slvTxSave:disabled{opa
         <div class="total" id="slvAdditionalTotal" style="font-size:15px">Draft Grand Total: ₹0.00</div>
       </section>
       <div id="slvTxPreview" class="slv-payment-preview" aria-live="polite">Select a cloud service.</div>
-      <button type="button" class="btn-green" style="width:100%" id="slvTxSave" onclick="slvTxSave()">☁️ Save Cloud Transaction</button>
+      <button type="button" class="btn-green" style="width:100%" id="slvTxSave" onclick="slvTxSave()">☁️ Save Cloud Transaction</button><div id="slvSaveFeedback" role="status" aria-live="polite" style="font-size:13px;font-weight:700;margin:7px 0 12px"></div>
       <p id="slvTxStatus" role="status" style="font-weight:bold"></p>
     </section>
     <button type="button" class="slv-pending-floating" onclick="slvPendingOpen()">⏳ Pending Applications <span id="slvPendingCount">—</span></button>
@@ -2940,7 +2940,7 @@ try {
  let servicesFetchedAt=0,servicesInFlight=null;const SERVICES_CACHE_MS=60000;
  const money=n=>'₹'+Number(n||0).toFixed(2);
  const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- const status=(message,error=false)=>{el('slvTxStatus').textContent=message;el('slvTxStatus').style.color=error?'#c5221f':'#137333'};
+ const status=(message,error=false)=>{el('slvTxStatus').textContent=message;el('slvTxStatus').style.color=error?'#c5221f':'#137333';const hint=el('slvSaveFeedback');if(hint){hint.textContent=message;hint.style.color=error?'#b91c1c':'#137333';}};
  const decimal=v=>/^\d+(?:\.\d{1,2})?$/.test(String(v).trim());
  async function employeeDb(){
   const db=window.slvSupabase;if(!db)throw Error('Supabase connection unavailable');
@@ -3019,13 +3019,26 @@ try {
    '<div>Customer Bill: <b>'+money(a.due)+'</b></div><div>Received: <b>'+money(a.paid)+'</b></div>'+
    '<div>Change to return: <b>'+money(Math.max(0,a.change))+'</b></div><strong>'+label+'</strong>'+
    (!ready?'<div style="font-size:12px">Checking service pricing…</div>':'');
-  button.disabled=busy||!ready||!a.valid||a.change<0||!walletOk;
+  button.disabled=busy; // Keep clickable so validation errors can be explained; RPC guard remains strict.
   button.textContent=(/xerox|photocopy/i.test(a.service?.service_name||''))?'✓ Save Xerox Bill to Cloud':(mode==='later'?'⏳ Save as Pending Application':'✓ Complete Now & Save');
  };
  window.slvTxSave=async()=>{
   if(busy)return;
   const a=amounts(),name=el('slvTxCustomer').value.trim(),mobile=el('slvTxMobile').value.trim(),mode=el('slvTxMode').value;
-  if(!a.valid||a.change<0||!name||!priceQuote||quoteKey!==JSON.stringify([a.service.id,a.qty,Number(el('slvUniversalCustomerAmount')?.value||0)])||(Number(priceQuote.processing_cost)>0&&!allowedWallets.some(w=>w.wallet_id===el('slvSelectedWallet').value))){status('Valid quantity and full payment required. UPI cannot exceed the bill.',true);return}
+  if(!a.service){status('Please select a service first.',true);return}
+  if(!name){status('Enter customer name before saving.',true);return}
+  if(!a.valid){status('Check quantity and Cash/UPI amounts. UPI cannot exceed the bill.',true);return}
+  if(a.change<0){status('Payment short by '+money(-a.change)+'. Enter the full payment.',true);return}
+  const expectedQuoteKey=JSON.stringify([a.service.id,a.qty,Number(el('slvUniversalCustomerAmount')?.value||0)]);
+  if(!priceQuote||quoteKey!==expectedQuoteKey){
+   if(quoteError){status('Cloud pricing error: '+quoteError+' — retrying quote. Please tap Save again when pricing is ready.',true);quoteError='';quoteErrorKey='';}
+   else status('Cloud pricing is still loading. Wait briefly and tap Save again.',true);
+   window.slvTxUpdatePreview();return;
+  }
+  if(walletLoading){status('Processing wallets are still loading. Please try again shortly.',true);return}
+  if(Number(priceQuote.processing_cost)>0&&!allowedWallets.some(w=>w.wallet_id===el('slvSelectedWallet').value)){
+   status('Processing wallet required. Ask Admin to assign an active wallet or select one from the dropdown.',true);return;
+  }
   // Cash received may include change; only the net cash retained is credited.
   const selectedWallet=Number(priceQuote.processing_cost)===0?null:(el('slvSelectedWallet').value||null);const payload=JSON.stringify([a.service.id,name,mobile,a.qty,a.netCash,a.upi,mode,selectedWallet]);
   if(pendingRequest&&pendingRequest.payload!==payload){status('Uncertain previous save: retry unchanged values, or verify Cloud Transactions before new entry.',true);return}
