@@ -4462,6 +4462,20 @@ window.slvCatalogImport=async()=>{if(busy)return;await window.slvCatalogPreview(
 #slvLinksModal #slvLinksGrid{overflow:auto;padding:10px 18px 24px;margin:0;align-content:start}
 body.slv-links-open{overflow:hidden}
 @media(max-width:600px){#slvLinksModal .slv-links-dialog{width:100%;height:100dvh;max-height:100dvh;border-radius:0}#slvLinksModal .slv-links-header{grid-template-columns:85px 1fr 85px;padding:13px 10px}#slvLinksModal .slv-links-header h3{font-size:17px}#slvLinksModal #slvLinksGrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;padding:10px 12px 30px}#slvLinksModal .slv-link-card{min-height:112px;padding:10px 5px}#slvLinksModal .slv-link-logo{width:48px;height:48px}#slvLinksModal .slv-link-card b{font-size:11px}#slvLinksModal .slv-link-card small{font-size:10px}#slvLinksModal .slv-links-search-wrap{margin:14px 12px 6px}}
+
+/* Larger service logos, service name only, no Open Website caption */
+#slvLinksModal .slv-link-card{min-height:164px;padding:16px 10px;gap:12px}
+#slvLinksModal .slv-link-logo{width:104px;height:104px;object-fit:contain;padding:6px;background:#fff;border-radius:12px}
+#slvLinksModal .slv-link-fallback{width:104px;height:104px;font-size:42px}
+#slvLinksModal .slv-link-card b{font-size:13px;line-height:1.35;overflow-wrap:anywhere}
+#slvLinksModal .slv-link-card small{display:none!important}
+@media(max-width:600px){
+ #slvLinksModal #slvLinksGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+ #slvLinksModal .slv-link-card{min-height:133px;padding:10px 4px;gap:8px}
+ #slvLinksModal .slv-link-logo{width:76px;height:76px;padding:3px}
+ #slvLinksModal .slv-link-fallback{width:76px;height:76px;font-size:34px}
+ #slvLinksModal .slv-link-card b{font-size:11px}
+}
 </style>
 
 <div id="slvLinksModal" role="dialog" aria-modal="true" aria-label="Service Webpage">
@@ -4482,7 +4496,7 @@ async function client(admin=false){const db=window.slvSupabase;if(!db)throw Erro
 function card(row){const a=document.createElement('a');a.className='slv-link-card';// Open external service links only in a separate browser tab; never embed in SLV.
 try { const destination=new URL(row.website_url); if(destination.protocol!=='https:') throw Error('Invalid external link'); a.href=destination.href; }
 catch(_) { a.href='#'; a.addEventListener('click',event=>{event.preventDefault();alert('Invalid service website URL. Contact Admin.');}); }
-a.target='_blank';a.rel='noopener noreferrer';a.referrerPolicy='no-referrer';a.title='Open '+row.service_name+' in a new browser tab';let logo;if(row.logo_url){logo=document.createElement('img');logo.className='slv-link-logo';logo.alt='';logo.loading='lazy';logo.referrerPolicy='no-referrer';logo.src=row.logo_url;logo.onerror=()=>{logo.replaceWith(fallback())};}else logo=fallback();function fallback(){const x=document.createElement('span');x.className='slv-link-fallback';x.textContent='🌐';return x}const name=document.createElement('b');name.textContent=row.service_name;const cat=document.createElement('small');cat.textContent=row.category||'Open Website ↗';a.append(logo,name,cat);return a;}
+a.target='_blank';a.rel='noopener noreferrer';a.referrerPolicy='no-referrer';a.title='Open '+row.service_name+' in a new browser tab';let logo;if(row.logo_url){logo=document.createElement('img');logo.className='slv-link-logo';logo.alt='';logo.loading='lazy';logo.referrerPolicy='no-referrer';logo.src=row.logo_url;logo.onerror=()=>{logo.replaceWith(fallback())};}else logo=fallback();function fallback(){const x=document.createElement('span');x.className='slv-link-fallback';x.textContent='🌐';return x}const name=document.createElement('b');name.textContent=row.service_name;a.append(logo,name);return a;}
 function renderEmployeeServices(){const grid=el('slvEmployeeServiceGrid');if(!grid)return;grid.replaceChildren();const q=(el('slvQuickSearch')?.value||'').toLocaleLowerCase().trim();const matches=rows.filter(x=>(x.service_name+' '+(x.category||'')).toLocaleLowerCase().includes(q));matches.forEach(x=>grid.append(card(x)));el('slvEmployeeServiceStatus').textContent=rows.length?(matches.length+' of '+rows.length+' quick links'):'No quick links added yet.';}
 window.slvQuickRender=renderEmployeeServices;
 window.slvLinksRender=function(){const grid=el('slvLinksGrid');grid.replaceChildren();const q=el('slvLinksSearch').value.toLocaleLowerCase().trim();const filtered=rows.filter(x=>(x.service_name+' '+(x.category||'')).toLocaleLowerCase().includes(q));filtered.forEach(x=>grid.append(card(x)));if(!filtered.length)grid.textContent=rows.length?'No matching services.':'No service links added yet.';};
