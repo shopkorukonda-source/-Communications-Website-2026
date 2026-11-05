@@ -1806,17 +1806,24 @@ async function renderMonthlyTarget(){
     const end=new Date(Date.UTC(y,m,1,0,0,0)-330*60000).toISOString();
     const rows=[];let from=0;
     while(true){
-      const r=await db.from('transactions').select('id,created_at,service_name,customer_amount,internal_cost,profit').gte('created_at',start).lt('created_at',end).order('created_at',{ascending:true}).order('id',{ascending:true}).range(from,from+999);
+      const r=await db.from('transactions').select('id,created_at,service_id,service_name,customer_amount,internal_cost,profit').gte('created_at',start).lt('created_at',end).order('created_at',{ascending:true}).order('id',{ascending:true}).range(from,from+999);
       if(r.error)throw r.error;
       rows.push(...(r.data||[]));
       if(!r.data||r.data.length<1000)break;
       from+=1000;
       if(from>=100000)throw Error('Too many records; use a paginated server report');
     }
+    // A service with no saved cloud wallet mapping contributes its full customer fee
+    // to the dashboard's Today's Profit metric. Mapped services retain booked profit.
+    // This is a reporting calculation only; it never modifies wallet balances.
+    const mapResult=await db.from('slv_service_wallet_map').select('service_id');
+    if(mapResult.error)throw new Error('Cannot verify service wallet mappings: '+mapResult.error.message);
+    const mappedServiceIds=new Set((mapResult.data||[]).map(x=>String(x.service_id)));
     if(requestId!==slvProfitRequestId)return;
     let today=0,monthTotal=0;const daily={},services={};
     for(const t of rows){
-      const profit=Number(t.profit);
+      const isUnmapped=t.service_id&&!mappedServiceIds.has(String(t.service_id));
+      const profit=Number(isUnmapped?t.customer_amount:t.profit);
       if(!Number.isFinite(profit))continue;
       const day=slvIstDay(new Date(t.created_at));
       monthTotal+=profit;daily[day]=(daily[day]||0)+profit;
@@ -1849,7 +1856,7 @@ async function renderMonthlyTarget(){
       row.append(label,val);section.append(row);
     }
     history.append(section);
-    const status=document.createElement('p');status.className='muted';status.textContent=`Cloud transactions this month: ${rows.length}. Wallet balances were not changed.`;history.append(status);
+    const status=document.createElement('p');status.className='muted';status.textContent=`Cloud transactions this month: ${rows.length}. Unmapped services use full customer fee; mapped services use booked profit. Wallet balances were not changed.`;history.append(status);
   }catch(e){
     if(requestId!==slvProfitRequestId)return;
     ['todayProfit','monthProfit','targetRemaining'].forEach(id=>$(id).textContent='—');
