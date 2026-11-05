@@ -976,6 +976,12 @@ body.slv-xerox-selected #servicesView.slv-centered-popup #slvTxSave:disabled{opa
       <label>Logo Image URL (optional, https://)</label><input id="slvLinkLogo" type="url" placeholder="https://example.gov.in/logo.png">
       <label>Upload Logo (PNG, JPG, WEBP, max 2 MB)</label><input id="slvLinkLogoFile" type="file" accept="image/png,image/jpeg,image/webp" onchange="slvLinkPreviewLogo()"><img id="slvLinkLogoPreview" alt="Logo preview" style="display:none;width:72px;height:72px;object-fit:contain;border:1px solid #ddd;border-radius:12px;padding:6px"><p class="muted">Optional: upload a logo, or enter its HTTPS URL above. For uploads, create the Supabase Storage bucket using the supplied SQL setup.</p><label>Category (optional)</label><input id="slvLinkCategory" maxlength="60" placeholder="e.g. Government, Banking, CSC">
       <div class="row"><button type="button" class="btn-green" onclick="slvLinksSave()">💾 Save Quick Link</button><button type="button" class="btn-secondary" onclick="slvLinksClear()">Clear / New</button></div>
+      <div id="slvLinkSaveFeedback" class="slv-link-save-feedback" role="status" aria-live="polite" hidden>
+        <span class="slv-link-save-spinner" aria-hidden="true"></span>
+        <span class="slv-link-save-check" aria-hidden="true">✓</span>
+        <span class="slv-link-save-error-icon" aria-hidden="true">!</span>
+        <span id="slvLinkSaveFeedbackText">Saving…</span>
+      </div>
       <div id="slvLinksAdminStatus" class="muted" aria-live="polite">Load to manage links.</div>
       <input id="slvLinksAdminSearch" type="search" placeholder="🔎 Search saved links" oninput="slvLinksAdminRender()">
       <div id="slvLinksAdminList"></div>
@@ -4449,6 +4455,21 @@ window.slvCatalogImport=async()=>{if(busy)return;await window.slvCatalogPreview(
 @media(max-width:520px){#slvEmployeeServiceSection .slv-employee-service-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px}#slvEmployeeServiceSection .slv-link-card{min-height:102px;padding:9px 5px}#slvEmployeeServiceSection .slv-link-logo{width:43px;height:43px}#slvEmployeeServiceSection .slv-link-card b{font-size:11px}}
 </style>
 
+<style id="slv-quick-link-save-animation">
+#adminServiceLinks .slv-link-save-feedback{display:flex;align-items:center;gap:11px;margin:12px 0;padding:12px 14px;border-radius:12px;border:1px solid #c7dafb;background:#eff5ff;color:#164c9b;font-size:13px;font-weight:750;min-height:52px}
+#adminServiceLinks .slv-link-save-feedback[hidden]{display:none!important}
+#adminServiceLinks .slv-link-save-spinner{width:25px;height:25px;flex:none;border:3px solid #bfd4f6;border-top-color:#1765c1;border-radius:50%;animation:slvLinkSavingSpin .7s linear infinite}
+#adminServiceLinks .slv-link-save-check,#adminServiceLinks .slv-link-save-error-icon{display:none;flex:none;width:27px;height:27px;border-radius:50%;place-items:center;font-size:19px;font-weight:900}
+#adminServiceLinks .slv-link-save-feedback.success{border-color:#b9e6ce;background:#ecfaf3;color:#137346}
+#adminServiceLinks .slv-link-save-feedback.success .slv-link-save-spinner{display:none}
+#adminServiceLinks .slv-link-save-feedback.success .slv-link-save-check{display:grid;background:#15975b;color:#fff;animation:slvLinkSavedPop .3s ease-out both}
+#adminServiceLinks .slv-link-save-feedback.error{border-color:#f1bcbc;background:#fff0f0;color:#a51f26}
+#adminServiceLinks .slv-link-save-feedback.error .slv-link-save-spinner{display:none}
+#adminServiceLinks .slv-link-save-feedback.error .slv-link-save-error-icon{display:grid;background:#cb343c;color:#fff}
+@keyframes slvLinkSavingSpin{to{transform:rotate(360deg)}}
+@keyframes slvLinkSavedPop{from{transform:scale(.5);opacity:.2}to{transform:scale(1);opacity:1}}
+@media(prefers-reduced-motion:reduce){#adminServiceLinks .slv-link-save-spinner,#adminServiceLinks .slv-link-save-check{animation:none}}
+</style>
 <style id="slv-service-webpage-style">
 #slvLinksModal{padding:0;background:rgba(5,20,45,.72)}
 #slvLinksModal .slv-links-dialog{width:min(950px,100%);height:min(92dvh,950px);max-height:92dvh;display:flex;flex-direction:column;padding:0;overflow:hidden;background:#f5f8fd;border-radius:18px}
@@ -4476,6 +4497,18 @@ body.slv-links-open{overflow:hidden}
  #slvLinksModal .slv-link-fallback{width:76px;height:76px;font-size:34px}
  #slvLinksModal .slv-link-card b{font-size:11px}
 }
+/* SLV logo fit + responsive loading improvements */
+#slvLinksModal .slv-link-card{min-width:0;min-height:170px;padding:12px 9px;gap:9px;justify-content:flex-start}
+#slvLinksModal .slv-link-logo{display:block;width:100%;max-width:150px;height:112px;max-height:112px;object-fit:contain;object-position:center;padding:2px;border-radius:8px;background:transparent;flex-shrink:0}
+#slvLinksModal .slv-link-card b{display:block;width:100%;font-size:12px;line-height:1.35;overflow-wrap:anywhere;text-align:center}
+#slvLinksModal .slv-link-card small{display:none!important}
+#slvLinksModal #slvLinksGrid{grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:12px}
+@media(max-width:600px){
+ #slvLinksModal #slvLinksGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ #slvLinksModal .slv-link-card{min-height:153px;padding:9px 7px;gap:7px}
+ #slvLinksModal .slv-link-logo{width:100%;max-width:125px;height:100px;max-height:100px;padding:2px}
+ #slvLinksModal .slv-link-card b{font-size:11px}
+}
 </style>
 
 <div id="slvLinksModal" role="dialog" aria-modal="true" aria-label="Service Webpage">
@@ -4489,19 +4522,19 @@ body.slv-links-open{overflow:hidden}
 <script>
 (function(){
 'use strict';
-let rows=[],adminRows=[],loading=false;
+let rows=[],adminRows=[],loading=false,lastLoadedAt=0;
 const el=id=>document.getElementById(id);
 function validUrl(raw,required=true){const v=String(raw||'').trim();if(!v&&!required)return '';const u=new URL(v);if(u.protocol!=='https:')throw Error('Only HTTPS URLs are allowed.');if(u.username||u.password)throw Error('URLs cannot contain credentials.');return u.href;}
 async function client(admin=false){const db=window.slvSupabase;if(!db)throw Error('Supabase connection unavailable.');const a=await db.auth.getUser();if(a.error||!a.data?.user)throw Error('Cloud login required. Please sign out and log in again.');if(admin){const p=await db.from('profiles').select('role,is_active').eq('id',a.data.user.id).single();if(p.error||p.data?.role!=='admin'||p.data?.is_active!==true)throw Error('Active Admin required.');}return db;}
 function card(row){const a=document.createElement('a');a.className='slv-link-card';// Open external service links only in a separate browser tab; never embed in SLV.
 try { const destination=new URL(row.website_url); if(destination.protocol!=='https:') throw Error('Invalid external link'); a.href=destination.href; }
 catch(_) { a.href='#'; a.addEventListener('click',event=>{event.preventDefault();alert('Invalid service website URL. Contact Admin.');}); }
-a.target='_blank';a.rel='noopener noreferrer';a.referrerPolicy='no-referrer';a.title='Open '+row.service_name+' in a new browser tab';let logo;if(row.logo_url){logo=document.createElement('img');logo.className='slv-link-logo';logo.alt='';logo.loading='lazy';logo.referrerPolicy='no-referrer';logo.src=row.logo_url;logo.onerror=()=>{logo.replaceWith(fallback())};}else logo=fallback();function fallback(){const x=document.createElement('span');x.className='slv-link-fallback';x.textContent='🌐';return x}const name=document.createElement('b');name.textContent=row.service_name;a.append(logo,name);return a;}
+a.target='_blank';a.rel='noopener noreferrer';a.referrerPolicy='no-referrer';a.title='Open '+row.service_name+' in a new browser tab';let logo;if(row.logo_url){logo=document.createElement('img');logo.className='slv-link-logo';logo.alt='';logo.loading='lazy';logo.decoding='async';logo.referrerPolicy='no-referrer';logo.src=row.logo_url;logo.onerror=()=>{logo.replaceWith(fallback())};}else logo=fallback();function fallback(){const x=document.createElement('span');x.className='slv-link-fallback';x.textContent='🌐';return x}const name=document.createElement('b');name.textContent=row.service_name;a.append(logo,name);return a;}
 function renderEmployeeServices(){const grid=el('slvEmployeeServiceGrid');if(!grid)return;grid.replaceChildren();const q=(el('slvQuickSearch')?.value||'').toLocaleLowerCase().trim();const matches=rows.filter(x=>(x.service_name+' '+(x.category||'')).toLocaleLowerCase().includes(q));matches.forEach(x=>grid.append(card(x)));el('slvEmployeeServiceStatus').textContent=rows.length?(matches.length+' of '+rows.length+' quick links'):'No quick links added yet.';}
 window.slvQuickRender=renderEmployeeServices;
 window.slvLinksRender=function(){const grid=el('slvLinksGrid');grid.replaceChildren();const q=el('slvLinksSearch').value.toLocaleLowerCase().trim();const filtered=rows.filter(x=>(x.service_name+' '+(x.category||'')).toLocaleLowerCase().includes(q));filtered.forEach(x=>grid.append(card(x)));if(!filtered.length)grid.textContent=rows.length?'No matching services.':'No service links added yet.';};
-async function load(){if(loading)return;loading=true;el('slvLinksStatus').textContent='Loading service links from cloud…';try{const db=await client();const r=await db.from('slv_service_links').select('id,service_name,website_url,logo_url,category,is_active');if(r.error)throw r.error;rows=(r.data||[]).filter(x=>x.is_active===true).sort((a,b)=>String(a.service_name||'').localeCompare(String(b.service_name||'')));el('slvLinksStatus').textContent=rows.length+' service links';window.slvLinksRender();renderEmployeeServices();}catch(e){el('slvLinksStatus').textContent='Cannot load links: '+(e?.message||String(e));el('slvLinksGrid').replaceChildren();if(el('slvEmployeeServiceStatus'))el('slvEmployeeServiceStatus').textContent='Could not load services: '+(e?.message||String(e));}finally{loading=false;}}
-window.slvLinksOpen=function(){if(el('employeeSideMenu')?.classList.contains('open')&&typeof window.toggleEmployeeMenu==='function')window.toggleEmployeeMenu(false);el('slvLinksModal').classList.add('open');document.body.classList.add('slv-links-open');el('slvLinksSearch').value='';load();};
+async function load(force=false){if(loading)return;if(!force&&lastLoadedAt&&Date.now()-lastLoadedAt<60000){el('slvLinksStatus').textContent=rows.length+' service links';return;}loading=true;if(!rows.length)el('slvLinksStatus').textContent='Loading service links from cloud…';try{const db=await client();const r=await db.from('slv_service_links').select('id,service_name,website_url,logo_url,category,is_active');if(r.error)throw r.error;rows=(r.data||[]).filter(x=>x.is_active===true).sort((a,b)=>String(a.service_name||'').localeCompare(String(b.service_name||'')));lastLoadedAt=Date.now();el('slvLinksStatus').textContent=rows.length+' service links';window.slvLinksRender();renderEmployeeServices();}catch(e){el('slvLinksStatus').textContent='Cannot load links: '+(e?.message||String(e));if(!rows.length)el('slvLinksGrid').replaceChildren();if(el('slvEmployeeServiceStatus'))el('slvEmployeeServiceStatus').textContent='Could not load services: '+(e?.message||String(e));}finally{loading=false;}}
+window.slvLinksOpen=function(){if(el('employeeSideMenu')?.classList.contains('open')&&typeof window.toggleEmployeeMenu==='function')window.toggleEmployeeMenu(false);el('slvLinksModal').classList.add('open');document.body.classList.add('slv-links-open');el('slvLinksSearch').value='';if(rows.length){window.slvLinksRender();el('slvLinksStatus').textContent=rows.length+' service links';}load();};
 window.slvLinksClose=function(){el('slvLinksModal').classList.remove('open');document.body.classList.remove('slv-links-open');};
 el('slvLinksModal').addEventListener('click',e=>{if(e.target===el('slvLinksModal'))window.slvLinksClose()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')window.slvLinksClose()});
@@ -4509,8 +4542,74 @@ window.slvLinkPreviewLogo=function(){const file=el('slvLinkLogoFile').files?.[0]
 window.slvLinksClear=function(){el('slvLinkLogoFile').value='';const img=el('slvLinkLogoPreview');if(img.dataset.objectUrl)URL.revokeObjectURL(img.dataset.objectUrl);img.style.display='none';['slvLinkEditId','slvLinkName','slvLinkUrl','slvLinkLogo','slvLinkCategory'].forEach(id=>el(id).value='');};
 window.slvLinksAdminRender=function(){const out=el('slvLinksAdminList');out.replaceChildren();const q=el('slvLinksAdminSearch').value.toLowerCase().trim();adminRows.filter(x=>(x.service_name+' '+(x.category||'')).toLowerCase().includes(q)).forEach(x=>{const row=document.createElement('div');row.className='slv-link-admin-row';const label=document.createElement('div');const strong=document.createElement('b');strong.textContent=x.service_name;const sub=document.createElement('div');sub.className='muted';sub.textContent=(x.category||'Uncategorized')+' · '+x.website_url;label.append(strong,sub);const actions=document.createElement('span');const edit=document.createElement('button');edit.textContent='✏️ Edit';edit.onclick=()=>{el('slvLinkEditId').value=x.id;el('slvLinkName').value=x.service_name;el('slvLinkUrl').value=x.website_url;el('slvLinkLogo').value=x.logo_url||'';el('slvLinkLogoFile').value='';const preview=el('slvLinkLogoPreview');preview.src=x.logo_url||'';preview.style.display=x.logo_url?'block':'none';el('slvLinkCategory').value=x.category||'';el('slvLinkName').focus();};const del=document.createElement('button');del.className='btn-red';del.textContent='🗑 Delete';del.onclick=()=>window.slvLinksDelete(x.id,x.service_name);actions.append(edit,del);row.append(label,actions);out.append(row)});if(!out.children.length)out.textContent='No saved service links.';};
 window.slvLinksAdminLoad=async function(){const status=el('slvLinksAdminStatus');status.textContent='Loading…';try{const db=await client(true);const r=await db.from('slv_service_links').select('*').order('service_name');if(r.error)throw r.error;adminRows=r.data||[];status.textContent=adminRows.length+' saved links';window.slvLinksAdminRender();}catch(e){status.textContent='Load failed: '+e.message;}};
-window.slvLinksSave=async function(){const status=el('slvLinksAdminStatus');const btn=el('slvLinkName');try{const name=btn.value.trim();if(!name||name.length>100)throw Error('Enter service name (max 100 characters).');const website_url=validUrl(el('slvLinkUrl').value);let logo_url=validUrl(el('slvLinkLogo').value,false)||null;const category=el('slvLinkCategory').value.trim();const db=await client(true);const file=el('slvLinkLogoFile').files?.[0];if(file){if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>2*1024*1024)throw Error('Logo must be PNG/JPG/WEBP under 2 MB.');status.textContent='Uploading logo…';const ext={'image/png':'png','image/jpeg':'jpg','image/webp':'webp'}[file.type];const path=crypto.randomUUID()+'.'+ext;const up=await db.storage.from('slv-quick-link-logos').upload(path,file,{contentType:file.type,upsert:false});if(up.error)throw Error('Logo upload failed: '+up.error.message+' (check Storage SQL setup)');logo_url=db.storage.from('slv-quick-link-logos').getPublicUrl(path).data.publicUrl;}const payload={service_name:name,website_url,logo_url,category,is_active:true};const id=el('slvLinkEditId').value;status.textContent='Saving…';const r=id?await db.from('slv_service_links').update(payload).eq('id',id).select('id'):await db.from('slv_service_links').insert(payload).select('id');if(r.error)throw r.error;if(r.data?.length!==1)throw Error('Save not confirmed. Check Admin permissions.');window.slvLinksClear();await window.slvLinksAdminLoad();status.textContent='✓ Saved in Supabase. Employees will see the update in Quick Links.';}catch(e){status.textContent='Save failed: '+e.message;}};
-window.slvLinksDelete=async function(id,name){if(!confirm('Delete service link "'+name+'"?'))return;const status=el('slvLinksAdminStatus');try{const db=await client(true);const r=await db.from('slv_service_links').delete().eq('id',id).select('id');if(r.error)throw r.error;if(r.data?.length!==1)throw Error('Delete not confirmed.');await window.slvLinksAdminLoad();status.textContent='✓ Deleted.';}catch(e){status.textContent='Delete failed: '+e.message;}};
+let slvLinkSaveBusy=false;
+function slvLinkSaveFeedback(mode,message){
+  const panel=el('slvLinkSaveFeedback'),label=el('slvLinkSaveFeedbackText');
+  if(!panel||!label)return;
+  panel.hidden=false;
+  panel.classList.remove('success','error');
+  if(mode==='success'||mode==='error')panel.classList.add(mode);
+  label.textContent=message;
+}
+async function slvOptimizeLogo(file){
+  if(file.size<=160*1024)return file;
+  try{
+    const bitmap=await createImageBitmap(file);
+    const max=640,scale=Math.min(1,max/Math.max(bitmap.width,bitmap.height));
+    const canvas=document.createElement('canvas');
+    canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+    canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);
+    bitmap.close();
+    const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',.82));
+    return blob&&blob.size<file.size?blob:file;
+  }catch(e){return file;}
+}
+window.slvLinksSave=async function(){
+  if(slvLinkSaveBusy)return;
+  const status=el('slvLinksAdminStatus');
+  const saveButton=document.querySelector('#adminServiceLinks button[onclick="slvLinksSave()"]');
+  slvLinkSaveBusy=true;
+  if(saveButton){saveButton.disabled=true;saveButton.textContent='⏳ Saving…';}
+  slvLinkSaveFeedback('saving','Checking details…');
+  try{
+    const name=el('slvLinkName').value.trim();
+    if(!name||name.length>100)throw Error('Enter service name (max 100 characters).');
+    const website_url=validUrl(el('slvLinkUrl').value);
+    let logo_url=validUrl(el('slvLinkLogo').value,false)||null;
+    const category=el('slvLinkCategory').value.trim();
+    const file=el('slvLinkLogoFile').files?.[0];
+    if(file&&(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>2*1024*1024))throw Error('Logo must be PNG/JPG/WEBP under 2 MB.');
+    status.textContent='Checking admin access…';slvLinkSaveFeedback('saving','Checking admin access…');
+    const db=await client(true);
+    if(file){
+      status.textContent='Optimizing logo…';slvLinkSaveFeedback('saving','Preparing logo…');
+      const uploadFile=await slvOptimizeLogo(file);
+      const mime=uploadFile.type||file.type;
+      const ext={'image/png':'png','image/jpeg':'jpg','image/webp':'webp'}[mime]||'png';
+      const path=crypto.randomUUID()+'.'+ext;
+      status.textContent='Uploading logo ('+Math.ceil(uploadFile.size/1024)+' KB)…';slvLinkSaveFeedback('saving','Uploading logo ('+Math.ceil(uploadFile.size/1024)+' KB)…');
+      const up=await db.storage.from('slv-quick-link-logos').upload(path,uploadFile,{contentType:mime,upsert:false,cacheControl:'3600'});
+      if(up.error)throw Error('Logo upload failed: '+up.error.message+' (check Storage SQL setup)');
+      logo_url=db.storage.from('slv-quick-link-logos').getPublicUrl(path).data.publicUrl;
+    }
+    const payload={service_name:name,website_url,logo_url,category,is_active:true};
+    const id=el('slvLinkEditId').value;
+    status.textContent='Saving link…';slvLinkSaveFeedback('saving','Saving website details…');
+    const query=id?db.from('slv_service_links').update(payload).eq('id',id):db.from('slv_service_links').insert(payload);
+    const r=await query.select('id,service_name,website_url,logo_url,category,is_active').single();
+    if(r.error)throw r.error;
+    if(!r.data?.id)throw Error('Save not confirmed. Check Admin permissions.');
+    const idx=adminRows.findIndex(x=>x.id===r.data.id);
+    if(idx>=0)adminRows[idx]={...adminRows[idx],...r.data};else adminRows.push(r.data);
+    adminRows.sort((a,b)=>String(a.service_name).localeCompare(String(b.service_name)));
+    window.slvLinksAdminRender();
+    lastLoadedAt=0;
+    window.slvLinksClear();
+    status.textContent='✓ Saved successfully. '+adminRows.length+' links. Employee list refreshes on next open.';slvLinkSaveFeedback('success','Saved successfully! ✓');
+  }catch(e){const message=e?.message||String(e);status.textContent='Save failed: '+message;slvLinkSaveFeedback('error','Save failed: '+message);}
+  finally{slvLinkSaveBusy=false;if(saveButton){saveButton.disabled=false;saveButton.textContent='💾 Save Quick Link';}}
+};
+window.slvLinksDelete=async function(id,name){if(!confirm('Delete service link "'+name+'"?'))return;const status=el('slvLinksAdminStatus');try{const db=await client(true);const r=await db.from('slv_service_links').delete().eq('id',id).select('id');if(r.error)throw r.error;if(r.data?.length!==1)throw Error('Delete not confirmed.');lastLoadedAt=0;await window.slvLinksAdminLoad();status.textContent='✓ Deleted.';}catch(e){status.textContent='Delete failed: '+e.message;}};
 let employeeWasVisible=false;function shortcut(){const v=el('employeeView');const visible=!!(v&&!v.classList.contains('hidden'));el('slvLinksShortcut').classList.toggle('slv-visible',visible);if(visible&&!employeeWasVisible)load();employeeWasVisible=visible;if(!visible)window.slvLinksClose();}
 new MutationObserver(shortcut).observe(el('employeeView'),{attributes:true,attributeFilter:['class']});shortcut();
 })();
