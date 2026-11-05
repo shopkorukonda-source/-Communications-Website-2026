@@ -780,6 +780,11 @@ body:has(#servicesView.slv-centered-popup:not(.hidden)) .slv-pending-floating{di
 #employeeView .slv-service-link-menu + .side-menu-caption{margin-top:12px}
 @media(max-width:720px){#employeeView{padding:11px!important}#employeeView .employee-topbar{padding:10px!important}#employeeView .attendance-stats{grid-template-columns:repeat(2,minmax(0,1fr))}#employeeView .grid{grid-template-columns:repeat(2,minmax(0,1fr))}#employeeView .tile{padding:12px 7px!important}#employeeView .cash-wallet-employee-card{gap:6px}}
 
+
+/* Services Counter at the top of Employee Dashboard */
+#employeeView .slv-service-top-action{margin:12px 0 15px}
+#employeeView .slv-service-top-action .tile{min-height:70px;display:flex;align-items:center;justify-content:center;gap:12px;font-size:16px}
+#employeeView .slv-service-top-action .tile span{display:inline;margin:0;font-size:24px}
 </style>
 <style id="slvPersonalGreetingStyle">
 .slv-personal-greeting{display:flex;flex-direction:column;gap:7px;margin:14px 0 18px;padding:19px 22px;border:1px solid #dce9fb;border-left:5px solid #1e6bc4;border-radius:14px;background:linear-gradient(105deg,#f0f6ff,#fff);box-shadow:0 5px 16px rgba(17,54,101,.05)}
@@ -1255,6 +1260,7 @@ body.slv-xerox-selected #servicesView.slv-centered-popup #slvTxSave:disabled{opa
       <button class="side-menu-link slv-service-link-menu" onclick="slvLinksOpen()">🌐 Service Links</button>
       <button class="side-menu-link side-logout" onclick="logout()">🚪 Logout</button>
     </aside>
+    <div class="slv-service-top-action"><div class="tile" role="button" tabindex="0" onclick="showView('servicesView')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showView('servicesView')}"><span>💼</span>Services Counter</div></div>
     <button type="button" onclick="slvPanOpen()" class="btn-green">🧾 PAN Receipt Generator</button><div id="holidayAlert" class="banner">🚨 HOLIDAY: <span id="holidayText"></span></div>
     <div class="slab-box slv-extra-employee"><b>🕒 Assigned Shift:</b> <span id="shiftInfo" style="color:#1a73e8">Loading...</span></div>
     <section id="attendancePanel" class="section-box attendance-panel">
@@ -1283,7 +1289,7 @@ body.slv-xerox-selected #servicesView.slv-centered-popup #slvTxSave:disabled{opa
       <small>Cash IN / OUT updated balance</small>
     </div>
     <div class="grid">
-      <div class="tile" onclick="showView('servicesView')"><span>💼</span>Services Counter</div>
+
       <div class="tile" onclick="document.getElementById('slvLeaveDetails').open=true;document.getElementById('slvLeaveDetails').scrollIntoView({behavior:'smooth'})"><span>🌴</span>Apply Leave</div>
     </div>
     <button class="btn-orange shift-close-trigger" onclick="openShiftClose()">🔒 Shift Off / Cash Tally</button>
@@ -3554,6 +3560,8 @@ body.slv-service-modal-open{overflow:hidden}
   const employee=document.getElementById('employeeView');
   if(employee?.classList.contains('hidden'))oldShow.call(this,'employeeView');
   const panel=document.getElementById('servicesView');
+  // Start a new draft only when reopening the counter, not while it is already open.
+  if(!panel.classList.contains('slv-centered-popup') && typeof window.slvResetServiceDraft==='function')window.slvResetServiceDraft();
   panel.classList.remove('hidden');
   panel.classList.add('slv-centered-popup');
   panel.setAttribute('role','dialog');
@@ -3568,6 +3576,36 @@ body.slv-service-modal-open{overflow:hidden}
  document.getElementById('slvServiceModalBackdrop').addEventListener('click',()=>window.showView('employeeView'));
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('servicesView')?.classList.contains('slv-centered-popup'))window.showView('employeeView')});
 })();
+</script>
+
+<script>
+/* Fresh billing draft on each Services Counter reopening; no Supabase records are changed. */
+window.slvResetServiceDraft=function(){
+ const byId=id=>document.getElementById(id);
+ const set=(id,value)=>{const node=byId(id);if(node)node.value=value;};
+ set('slvServiceSearch','');
+ const suggestions=byId('slvServiceSuggestions');if(suggestions)suggestions.hidden=true;
+ byId('slvServiceSearch')?.setAttribute('aria-expanded','false');
+ set('slvTxService','');
+ set('slvTxCustomer','Walk-in Customer');set('slvTxMobile','');
+ set('slvTxQty','1');set('slvUniversalCustomerAmount','0');
+ set('slvTxCash','0');set('slvTxUpi','0');set('slvTxMode','now');
+ set('slvSelectedWallet','');
+ set('xeroxDiscount','0');set('xeroxPaid','0');set('xeroxManualRate','2');
+ const manual=byId('xeroxManual');if(manual)manual.checked=false;
+ if(typeof xeroxItems!=='undefined'){
+   xeroxItems=[{id:1,size:'A4',side:'Single',papers:'',sets:'',countMode:'pages',jobType:'Xerox'}];
+   xeroxExtra=false;xeroxNextId=2;
+   if(typeof xeroxRender==='function')xeroxRender();
+ }
+ document.body.classList.remove('slv-xerox-selected');
+ byId('slvXeroxPanel')?.classList.add('hidden');
+ for(const id of ['slvTxStatus','slvSaveFeedback']){const e=byId(id);if(e)e.textContent='';}
+ const selected=byId('slvTxService');
+ // Dispatch change to invalidate the previous quote and processing-wallet mapping.
+ selected?.dispatchEvent(new Event('change',{bubbles:true}));
+ if(typeof window.slvTxUpdatePreview==='function')window.slvTxUpdatePreview();
+};
 </script>
 
 <!-- Lunch break service-access warning: UI guard; cloud save guard remains intact. -->
