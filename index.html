@@ -1104,7 +1104,7 @@ body.slv-xerox-selected #servicesView.slv-centered-popup #slvTxSave:disabled{opa
           <p id="slvProcessingWalletCount" class="muted">No processing wallets selected.</p>
           </div>
         </div>
-        <p class="muted">Cost ₹0: no processing wallet required. Changes apply to new completed transactions.</p>
+        <p class="muted">Cost ₹0: choose No Processing Wallet Required. Customer fee should be credited to Todays Profit by the server transaction function; verify that server rule before live use. Changes apply to new completed transactions.</p>
         <button type="button" class="btn-green" onclick="slvMapSave()">Save Cloud Mapping</button>
         <p id="slvMapStatus" class="muted" role="status">Load cloud data to begin.</p>
       </div>
@@ -2895,11 +2895,13 @@ try {
   ]);
   for(const result of [s,w,m,aw])if(result.error)throw result.error;
   services=s.data||[];wallets=w.data||[];mappings=m.data||[];allowed=aw.data||[];
+  const requested=window.slvRequestedMapServiceId||el('slvMapService').value;
   fill('slvMapService',services.map(x=>({id:x.id,label:x.service_name+' • Rate ₹'+x.customer_rate+' / Cost ₹'+x.internal_cost})));
   const opts=wallets.map(x=>({id:x.id,label:x.wallet_name+' • ₹'+Number(x.balance||0).toFixed(2)}));
   for(const id of ['slvMapCash','slvMapUpi','slvMapCost'])fill(id,opts); const multi=el('slvAllowedWallets');multi.replaceChildren();wallets.forEach(w=>multi.add(new Option(w.wallet_name,w.id)));
   el('slvMapService').onchange=apply;
-  if(services.length)el('slvMapService').value=services[0].id;
+  if(services.length)el('slvMapService').value=services.some(x=>x.id===requested)?requested:services[0].id;
+  window.slvRequestedMapServiceId=null;
   apply();status(services.length+' services, '+wallets.length+' active wallets loaded. Mapping changes only after Save.');
  });
  window.slvMapSave=()=>run(async()=>{
@@ -4085,10 +4087,14 @@ window.slvChangeCloudAssignment=async function(mode){
      }
      const q=editingId?db.from('services').update(payload).eq('id',editingId):db.from('services').insert(payload);
      const r=await q.select('id');if(r.error)throw r.error;if(!r.data?.length)throw Error('Save not confirmed. Verify Admin INSERT/UPDATE RLS policy.');
+     const savedId=r.data[0].id;
      window.cancelServiceEdit();
      await refresh();
+     window.slvRequestedMapServiceId=savedId;
      try{await window.slvMapRefresh?.()}catch(e){console.warn('Wallet mapping refresh:',e)}
-     alert('Service saved in Supabase Cloud. The wallet dropdown above is a preview only. To save a wallet link, use Cloud Service → Wallet Mapping below and press Save Cloud Mapping.');
+     const mappingPanel=document.getElementById('slvCloudServiceMap');
+     if(mappingPanel){mappingPanel.scrollIntoView({behavior:'smooth',block:'start'});}
+     alert('Service saved in Supabase. Its wallet assignment is now selected below. Choose Cash / UPI / Processing wallets and click Save Cloud Mapping. For a zero-cost service, choose No Processing Wallet Required.');
    }catch(e){showError(e)}finally{busy=false}
  };
  const oldMenu=window.adminMenuGo;
