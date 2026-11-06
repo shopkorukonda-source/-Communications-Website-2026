@@ -1250,6 +1250,7 @@ body.slv-xerox-selected #servicesView.slv-centered-popup #slvTxSave:disabled{opa
 
   <!-- EMPLOYEE -->
   <main id="employeeView" class="card hidden">
+    <div id="slvPanBuildCheck" style="padding:10px 14px;margin:0 0 12px;background:#e9f8f0;border:1px solid #b5e2c8;border-radius:9px;color:#11663e;font-weight:700;font-size:12px">✓ SLV PAN Application Update — Version 06 NOV 2026</div>
     <div class="topbar employee-topbar">
       <button class="hamburger-btn" onclick="toggleEmployeeMenu()" aria-label="Open menu">☰</button>
       <strong id="empSubTitle">Employee Workspace · Clean v2.1</strong>
@@ -1260,14 +1261,14 @@ body.slv-xerox-selected #servicesView.slv-centered-popup #slvTxSave:disabled{opa
     <aside id="employeeSideMenu" class="employee-side-menu">
       <div class="side-menu-head"><b>SLV Communications</b><button onclick="toggleEmployeeMenu(false)">✕</button></div>
       <button class="side-menu-link" onclick="employeeMenuGo('employeeView')">🏠 Dashboard</button>
-      <button class="side-menu-link" onclick="employeeMenuGo('servicesView')">💼 Services</button><button class="side-menu-link" onclick="slvPanOpen()">🧾 PAN Receipts</button><button class="side-menu-link" onclick="slvTrackingOpen()">📋 PAN Tracking</button>
+      <button class="side-menu-link" onclick="employeeMenuGo('servicesView')">💼 Services</button><button class="side-menu-link" onclick="slvPanOpen()">🧾 PAN Receipts</button><button class="side-menu-link" onclick="slv93Open();toggleEmployeeMenu(false)">📄 PAN Application (Form 93)</button><button class="side-menu-link" onclick="slvTrackingOpen();toggleEmployeeMenu(false)">📋 PAN Tracking</button>
       <div class="side-menu-caption">Assigned Wallets</div>
       <div id="employeeAssignedWallets" class="assigned-wallet-list"></div>
       <button class="side-menu-link slv-service-link-menu" onclick="slvLinksOpen()">⚡ Quick Links</button>
       <button class="side-menu-link side-logout" onclick="logout()">🚪 Logout</button>
     </aside>
     <div class="slv-service-top-action"><div class="tile" role="button" tabindex="0" onclick="showView('servicesView')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showView('servicesView')}"><span>💼</span>Services Counter</div></div>
-    <button type="button" onclick="slvPanOpen()" class="btn-green">🧾 PAN Receipt Generator</button><button type="button" onclick="slv93Open()" class="btn-green">📄 PAN Form 93</button><button type="button" onclick="slvTrackingOpen()" class="btn-green">📋 PAN Tracking</button><div id="holidayAlert" class="banner">🚨 HOLIDAY: <span id="holidayText"></span></div>
+    <button type="button" onclick="slvPanOpen()" class="btn-green">🧾 PAN Receipt Generator</button><button type="button" onclick="slv93Open()" class="btn-green">📄 PAN Application (Form 93)</button><button type="button" onclick="slvTrackingOpen()" class="btn-green">📋 PAN Tracking</button><div id="holidayAlert" class="banner">🚨 HOLIDAY: <span id="holidayText"></span></div>
     <div class="slab-box slv-extra-employee"><b>🕒 Assigned Shift:</b> <span id="shiftInfo" style="color:#1a73e8">Loading...</span></div>
     <section id="attendancePanel" class="section-box attendance-panel">
       <h4>🕘 Today's Attendance & Shift</h4>
