@@ -908,6 +908,29 @@ body:has(#loginView:not(.hidden)){background:radial-gradient(circle at 20% 12%,#
 @keyframes slvDiwaliAppear{from{opacity:0;transform:translateY(20px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
 @media(prefers-reduced-motion:reduce){.slv-diwali-card{animation:none}}
 </style>
+<style id="slv-diwali-dashboard-2026">
+/* Scoped visual theme: admin and employee dashboard only. */
+body:has(#adminView:not(.hidden)),body:has(#employeeView:not(.hidden)){
+ background:radial-gradient(circle at 8% 10%,rgba(255,195,87,.25),transparent 31%),radial-gradient(circle at 90% 15%,rgba(217,127,230,.21),transparent 32%),linear-gradient(135deg,#fff7e9,#f8f0ff 48%,#fff0ec)!important;
+}
+#adminView:not(.hidden),#employeeView:not(.hidden){background:linear-gradient(160deg,#fffefa,#fff8f3 55%,#faf5ff)!important;border:1px solid #edcc9c!important;box-shadow:0 18px 55px rgba(123,54,112,.13)!important}
+#adminView .topbar,#employeeView .topbar{background:linear-gradient(105deg,#512061,#8a317c 49%,#c26341)!important;border:1px solid #f2c97d!important;box-shadow:0 10px 25px rgba(120,43,104,.22)!important}
+#adminView .topbar strong,#employeeView .topbar strong{color:#fff6dc!important}
+.slv-diwali-dashboard-banner{position:relative;overflow:hidden;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 20px;margin:12px 0 18px;border:1px solid #e9bb6c;border-radius:16px;background:radial-gradient(circle at 83% 10%,rgba(255,229,152,.28),transparent 40%),linear-gradient(105deg,#572265,#943b73,#c45f49);box-shadow:0 8px 22px rgba(128,57,99,.14);color:#fff8df}
+.slv-diwali-dashboard-banner strong{font-size:clamp(15px,2.3vw,22px);color:#ffe4a2;letter-spacing:.3px}
+.slv-diwali-dashboard-banner small{display:block;margin-top:5px;color:#ffefdb;font-size:12px}
+.slv-diwali-dashboard-banner .slv-festival-diyas{font-size:clamp(24px,4vw,38px);white-space:nowrap}
+#adminView .admin-section.active-admin-section,#employeeView .section-box{border-color:#f0d6b5!important;border-left-color:#e29b45!important;box-shadow:0 7px 22px rgba(137,66,100,.07)!important}
+#employeeView .tile{background:linear-gradient(145deg,#fff2d7,#ffdfc3)!important;color:#844126!important;border:1px solid #f2c78b!important;box-shadow:0 7px 18px rgba(162,88,58,.1)!important}
+#employeeView .tile:nth-child(3n+2){background:linear-gradient(145deg,#ffe8f4,#f3dfff)!important;color:#773d88!important;border-color:#e9c6e7!important}
+#employeeView .tile:nth-child(3n){background:linear-gradient(145deg,#e8fff1,#d9f5eb)!important;color:#206b58!important;border-color:#bde9d2!important}
+#adminView .slv-admin-shortcuts button,#adminView .slv-admin-shortcuts select{border:1px solid #e9c486!important}
+#adminView .admin-wallet-top-strip{background:linear-gradient(115deg,#fff0d8,#fff6ed,#f8eaff)!important;border-color:#f0d0a0!important}
+#adminView .admin-wallet-chip{border-color:#efd5b4!important;background:linear-gradient(145deg,#fff,#fff7ec)!important}
+#adminView .side-menu-link,#employeeView .side-menu-link{background:#f7eafa!important;color:#51245d!important}
+#adminView .side-menu-link:hover,#employeeView .side-menu-link:hover{background:#ffe5bf!important}
+@media(max-width:600px){.slv-diwali-dashboard-banner{padding:12px;gap:6px}.slv-diwali-dashboard-banner small{font-size:10px}.slv-diwali-dashboard-banner .slv-festival-diyas{font-size:23px}}
+</style>
 </head>
 <body>
 <div id="slvTxSuccess" class="slv-tx-success" role="status" aria-live="polite" aria-label="Transaction successful"><div class="slv-tx-success-card"><div class="slv-tx-success-check">✓</div><h3>Transaction Successful</h3><p>SLV Communications • Payment Recorded</p><div class="slv-tx-success-amount" id="slvTxSuccessAmount">₹0.00</div><p id="slvTxSuccessCount">Wallet balances updated</p><div class="slv-tx-success-line"></div></div></div>
@@ -956,6 +979,7 @@ body:has(#loginView:not(.hidden)){background:radial-gradient(circle at 20% 12%,#
 
   <!-- ADMIN -->
   <main id="adminView" class="card hidden">
+    <div class="slv-diwali-dashboard-banner" aria-label="Diwali greeting"><div><strong>✨ Happy Diwali — Admin Workspace</strong><small>SLV Communications • Wishing you prosperity &amp; success</small></div><span class="slv-festival-diyas" aria-hidden="true">🪔 ✨ 🪔</span></div>
     <div class="topbar admin-topbar">
       <button class="hamburger-btn" onclick="toggleAdminMenu()" aria-label="Open admin menu">☰</button>
       <strong>SLV • Admin Command Center</strong>
@@ -1265,6 +1289,7 @@ body:has(#loginView:not(.hidden)){background:radial-gradient(circle at 20% 12%,#
 
   <!-- EMPLOYEE -->
   <main id="employeeView" class="card hidden">
+    <div class="slv-diwali-dashboard-banner" aria-label="Diwali greeting"><div><strong>✨ Happy Diwali — Employee Workspace</strong><small>SLV Communications • Celebrate the festival of lights</small></div><span class="slv-festival-diyas" aria-hidden="true">🪔 ✨ 🪔</span></div>
     <div id="slvPanBuildCheck" style="padding:10px 14px;margin:0 0 12px;background:#e9f8f0;border:1px solid #b5e2c8;border-radius:9px;color:#11663e;font-weight:700;font-size:12px">✓ SLV PAN Application Update — Version 06 NOV 2026</div>
     <div class="topbar employee-topbar">
       <button class="hamburger-btn" onclick="toggleEmployeeMenu()" aria-label="Open menu">☰</button>
