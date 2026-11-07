@@ -29,6 +29,17 @@ footer a{color:#f4cb69}
 small{color:#60728a}
 footer small{color:#c5d4e8}
 @media(max-width:500px){header h1{font-size:23px}.hero h2{font-size:26px}section{padding:19px}}
+
+.admin-form{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.admin-form input{padding:12px;border:1px solid #cbd5e1;border-radius:8px;min-width:180px;flex:1}
+.admin-form button,.admin-action{cursor:pointer;background:#0d4b91;color:white;border:0;border-radius:8px;padding:11px 16px}
+.admin-action:disabled{opacity:.5;cursor:wait}
+.admin-item{padding:16px 0;border-bottom:1px solid #e2e8f0;overflow-wrap:anywhere}
+.admin-item h3{margin:0 0 6px;font-size:17px}
+.admin-item p{margin:5px 0}
+.admin-item a{color:#0d4b91}
+#admin-message{margin:10px 0;white-space:pre-wrap}
+.admin-hidden{display:none!important}
 </style>
 </head>
 <body>
@@ -42,6 +53,7 @@ footer small{color:#c5d4e8}
 <a href="#how">How It Works</a>
 <a href="#about">About</a>
 <a href="#contact">Contact</a>
+<a href="#admin">Admin</a>
 <a href="#privacy">Privacy</a>
 <a href="#terms">Terms</a>
 <a href="#refund">Refunds</a>
@@ -96,6 +108,24 @@ footer small{color:#c5d4e8}
 <p>3. Search available job notifications through our WhatsApp Bot once launched.</p>
 <p>4. Open official recruitment links to verify eligibility and apply.</p>
 <p>Notifications depend on availability and verification of official sources.</p>
+</section>
+
+
+<section id="admin">
+<h2>Admin — Notification Review</h2>
+<p>Only authorized SLV Job Alerts administrators can approve draft notices. The public website does not contain a service-role key.</p>
+<div id="admin-setup" class="notice">Admin connection is not configured yet. Set the Supabase project URL and publishable/anon key in the website configuration, then enable the database authorization policy before use.</div>
+<div id="admin-login" class="admin-form admin-hidden">
+<input id="admin-email" type="email" autocomplete="username" placeholder="Admin email" aria-label="Admin email">
+<input id="admin-password" type="password" autocomplete="current-password" placeholder="Password" aria-label="Password">
+<button id="admin-signin" type="button">Sign in</button>
+</div>
+<div id="admin-panel" class="admin-hidden">
+<p><strong>Draft notifications</strong> — review the official PDF before approving.</p>
+<div class="admin-form"><button id="admin-refresh" type="button">Refresh drafts</button><button id="admin-signout" type="button">Sign out</button></div>
+<div id="admin-notices"></div>
+</div>
+<p id="admin-message" role="status" aria-live="polite"></p>
 </section>
 
 <section id="about">
@@ -155,5 +185,62 @@ footer small{color:#c5d4e8}
 <small>© 2026 SLV Communications. All Rights Reserved.</small>
 </footer>
 
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+// Public project URL and publishable/anon key ONLY. NEVER put a service_role key here.
+const SUPABASE_URL = 'PASTE_JOB_ALERTS_SUPABASE_URL';
+const SUPABASE_PUBLISHABLE_KEY = 'PASTE_JOB_ALERTS_PUBLISHABLE_OR_ANON_KEY';
+const ready = /^https:\/\/.+\.supabase\.co$/.test(SUPABASE_URL) && !SUPABASE_PUBLISHABLE_KEY.startsWith('PASTE_');
+const el = id => document.getElementById(id);
+const message = text => { el('admin-message').textContent = text; };
+const toggle = (id, visible) => el(id).classList.toggle('admin-hidden', !visible);
+if (ready) {
+  const db = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  toggle('admin-setup', false);
+  toggle('admin-login', true);
+  async function showSession() {
+    const {data:{session},error} = await db.auth.getSession();
+    if (error) { message(error.message); return; }
+    toggle('admin-login', !session);
+    toggle('admin-panel', !!session);
+    if (session) await loadDrafts();
+  }
+  async function loadDrafts() {
+    const container = el('admin-notices');
+    container.replaceChildren();
+    message('Loading drafts...');
+    const {data,error} = await db.from('jobs').select('id,title,organization,category,published_date,official_url,status').eq('status','draft').order('created_at',{ascending:false}).limit(100);
+    if (error) { message('Cannot load drafts: '+error.message+' (check admin authorization/RLS)'); return; }
+    message(`${data.length} draft notice(s) returned.`);
+    for (const job of data) {
+      const article = document.createElement('article'); article.className='admin-item';
+      const title = document.createElement('h3'); title.textContent=job.title;
+      const meta = document.createElement('p'); meta.textContent=`${job.organization} | ${job.category||'Uncategorized'} | ${job.published_date||'Date unknown'}`;
+      const link = document.createElement('a'); link.href=job.official_url; link.textContent='View official notice'; link.target='_blank'; link.rel='noopener noreferrer';
+      const actions=document.createElement('div');
+      const approve=document.createElement('button'); approve.className='admin-action'; approve.textContent='Approve';
+      approve.addEventListener('click', async () => {
+        if (!confirm('Have you checked the official PDF and category? Approve this notice?')) return;
+        approve.disabled=true;
+        const {data:updated,error} = await db.from('jobs').update({status:'active'}).eq('id',job.id).eq('status','draft').select('id');
+        if (error || !updated?.length) { message('Approval failed. Verify admin permissions: '+(error?.message||'No row updated')); approve.disabled=false; return; }
+        message('Notice approved.'); await loadDrafts();
+      });
+      actions.append(approve); article.append(title,meta,link,actions); container.append(article);
+    }
+  }
+  el('admin-signin').addEventListener('click', async () => {
+    message('Signing in...');
+    const {error}=await db.auth.signInWithPassword({email:el('admin-email').value.trim(),password:el('admin-password').value});
+    el('admin-password').value='';
+    if(error) { message(error.message); return; }
+    message('Signed in.'); await showSession();
+  });
+  el('admin-signout').addEventListener('click', async()=>{await db.auth.signOut(); el('admin-notices').replaceChildren(); message('Signed out.'); await showSession();});
+  el('admin-refresh').addEventListener('click',loadDrafts);
+  await showSession();
+}
+</script>
 </body>
 </html>
