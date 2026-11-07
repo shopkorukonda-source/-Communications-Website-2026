@@ -49,6 +49,13 @@ footer small{color:#c5d4e8}
 .public-job p{margin:5px 0;color:#51627a}
 .public-job a{color:#0d4b91;font-weight:bold}
 .public-status{color:#60728a;font-size:14px}
+
+.scraper-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:12px 0}
+.scraper-grid input,.scraper-grid select{padding:11px;border:1px solid #cbd5e1;border-radius:8px;min-width:0;width:100%}
+.scraper-grid label{font-size:13px;font-weight:bold}
+.scraper-row{border:1px solid #e2e8f0;border-radius:10px;padding:13px;margin:10px 0;overflow-wrap:anywhere}
+.scraper-row button{margin:4px 5px 4px 0}
+.scraper-muted{font-size:13px;color:#64748b}
 </style>
 </head>
 <body>
@@ -148,6 +155,22 @@ footer small{color:#c5d4e8}
 <p><strong>Draft notifications</strong> — review the official PDF before approving.</p>
 <div class="admin-form"><button id="admin-refresh" type="button">Refresh drafts</button><button id="admin-signout" type="button">Sign out</button></div>
 <div id="admin-notices"></div>
+<hr style="margin:28px 0;border:0;border-top:1px solid #dce5f0">
+<h3>Master Scraper — Manage Websites</h3>
+<p class="scraper-muted">Add official sources here. The scraper checks enabled sources after the backend is configured.</p>
+<form id="scraper-form">
+  <div class="scraper-grid">
+    <label>Website Name<input id="scraper-name" maxlength="100" required placeholder="e.g. India Post"></label>
+    <label>Official Website URL<input id="scraper-url" type="url" required placeholder="https://..."></label>
+    <label>Parser Type<select id="scraper-parser"><option value="html_links">Website Links</option><option value="rss">RSS Feed</option></select></label>
+    <label>Filter Keywords (comma separated)<input id="scraper-keywords" placeholder="recruitment, notification"></label>
+  </div>
+  <button class="admin-action" id="scraper-save" type="submit">Add Website</button>
+  <button class="admin-action" id="scraper-cancel" type="button" style="background:#64748b;display:none">Cancel Edit</button>
+  <button class="admin-action" id="scraper-refresh" type="button" style="background:#334155">Refresh Websites</button>
+</form>
+<p id="scraper-message" role="status" aria-live="polite"></p>
+<div id="scraper-sources"></div>
 </div>
 <p id="admin-message" role="status" aria-live="polite"></p>
 </section>
@@ -221,6 +244,66 @@ const message = text => { el('admin-message').textContent = text; };
 const toggle = (id, visible) => el(id).classList.toggle('admin-hidden', !visible);
 if (ready) {
   const db = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  let editingSourceId = null;
+  let sourceRows = [];
+  const scraperMessage = txt => { el('scraper-message').textContent = txt; };
+  const scraperFields = () => ({
+    p_name: el('scraper-name').value.trim(),
+    p_url: el('scraper-url').value.trim(),
+    p_parser_type: el('scraper-parser').value,
+    p_include_keywords: el('scraper-keywords').value.split(',').map(x=>x.trim()).filter(Boolean)
+  });
+  function resetSourceForm(){
+    editingSourceId=null;
+    el('scraper-form').reset();
+    el('scraper-save').textContent='Add Website';
+    el('scraper-cancel').style.display='none';
+  }
+  function renderSources(){
+    const root=el('scraper-sources'); root.replaceChildren();
+    if(!sourceRows.length){root.textContent='No websites configured.';return;}
+    for(const source of sourceRows){
+      const item=document.createElement('div'); item.className='scraper-row';
+      const title=document.createElement('strong');title.textContent=source.name+' — '+(source.enabled?'Enabled':'Disabled');
+      const details=document.createElement('div');details.className='scraper-muted';
+      details.textContent=`${source.url} | ${source.parser_type} | Last checked: ${source.last_checked_at?new Date(source.last_checked_at).toLocaleString():'Never'} | Status: ${source.last_status||'Not checked'}`;
+      item.append(title,details);
+      if(source.last_error){const err=document.createElement('div');err.className='scraper-muted';err.textContent='Last error: '+source.last_error;item.append(err);}
+      const edit=document.createElement('button');edit.className='admin-action';edit.textContent='Edit';
+      edit.addEventListener('click',()=>{
+        editingSourceId=source.id;el('scraper-name').value=source.name;el('scraper-url').value=source.url;
+        el('scraper-parser').value=source.parser_type;el('scraper-keywords').value=(source.include_keywords||[]).join(', ');
+        el('scraper-save').textContent='Save Changes';el('scraper-cancel').style.display='inline-block';
+        el('scraper-name').focus();
+      });
+      const toggleBtn=document.createElement('button');toggleBtn.className='admin-action';toggleBtn.style.background=source.enabled?'#9a3412':'#166534';toggleBtn.textContent=source.enabled?'Disable':'Enable';
+      toggleBtn.addEventListener('click',async()=>{
+        toggleBtn.disabled=true;
+        const {error}=await db.rpc('slv_scraper_admin_toggle',{p_source_id:source.id,p_enabled:!source.enabled});
+        if(error){scraperMessage('Update failed: '+error.message);toggleBtn.disabled=false;return;}
+        scraperMessage('Website status updated.');await loadSources();
+      });
+      item.append(edit,toggleBtn);root.append(item);
+    }
+  }
+  async function loadSources(){
+    scraperMessage('Loading websites...');
+    const {data,error}=await db.rpc('slv_scraper_admin_list');
+    if(error){scraperMessage('Unable to load websites: '+error.message+' (run the accompanying Admin SQL first)');return;}
+    sourceRows=data||[];renderSources();scraperMessage(`${sourceRows.length} website(s) configured.`);
+  }
+  el('scraper-form').addEventListener('submit',async event=>{
+    event.preventDefault();const params=scraperFields();
+    try{const u=new URL(params.p_url);if(u.protocol!=='https:')throw Error('HTTPS URL required');}
+    catch(_){scraperMessage('Enter a valid HTTPS website URL.');return;}
+    const btn=el('scraper-save');btn.disabled=true;
+    const {error}=await db.rpc('slv_scraper_admin_upsert',{...params,p_source_id:editingSourceId});
+    btn.disabled=false;
+    if(error){scraperMessage('Save failed: '+error.message);return;}
+    resetSourceForm();await loadSources();scraperMessage('Website saved successfully.');
+  });
+  el('scraper-cancel').addEventListener('click',resetSourceForm);
+  el('scraper-refresh').addEventListener('click',loadSources);
   let publicJobs = [];
   let publicFilter = 'All';
   function renderPublicJobs() {
@@ -286,7 +369,7 @@ if (ready) {
     }
     toggle('admin-login', !session);
     toggle('admin-panel', !!session && isAdmin);
-    if (session && isAdmin) await loadDrafts();
+    if (session && isAdmin) { await loadDrafts(); await loadSources(); }
   }
   async function loadDrafts() {
     const container = el('admin-notices');
@@ -327,7 +410,7 @@ if (ready) {
     if(error) { message(error.message); return; }
     message('Signed in.'); await showSession();
   });
-  el('admin-signout').addEventListener('click', async()=>{await db.auth.signOut(); el('admin-notices').replaceChildren(); message('Signed out.'); await showSession();});
+  el('admin-signout').addEventListener('click', async()=>{await db.auth.signOut(); el('admin-notices').replaceChildren(); el('scraper-sources').replaceChildren(); sourceRows=[]; resetSourceForm(); scraperMessage(''); message('Signed out.'); await showSession();});
   el('admin-refresh').addEventListener('click',loadDrafts);
   await showSession();
 } else {
