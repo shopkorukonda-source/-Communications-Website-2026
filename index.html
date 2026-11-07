@@ -785,6 +785,16 @@ body:has(#servicesView.slv-centered-popup:not(.hidden)) .slv-pending-floating{di
 #employeeView .slv-service-top-action{margin:12px 0 15px}
 #employeeView .slv-service-top-action .tile{min-height:70px;display:flex;align-items:center;justify-content:center;gap:12px;font-size:16px}
 #employeeView .slv-service-top-action .tile span{display:inline;margin:0;font-size:24px}
+
+/* SLV Job Alerts: prominent, polished animated login-only CTA */
+#loginView .slv-job-alerts-link{position:relative;isolation:isolate;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;min-height:76px;margin-top:23px;padding:18px 21px;border:2px solid #e7bd5a;border-radius:17px;background:linear-gradient(115deg,#071d3d 0%,#0c3975 62%,#1457a0 100%);color:#fff;text-decoration:none;font-size:clamp(18px,2.7vw,23px);font-weight:900;letter-spacing:.3px;box-shadow:0 9px 23px rgba(11,51,106,.22),0 0 0 0 rgba(226,177,67,.32);animation:slvJobGlow 2.6s ease-in-out infinite;transition:transform .2s ease,box-shadow .2s ease}
+#loginView .slv-job-alerts-link span{font-size:clamp(11px,1.6vw,13px);color:#ffe6a0;font-weight:800;white-space:nowrap}
+#loginView .slv-job-alerts-link:before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.16) 48%,transparent 65%);transform:translateX(-110%);animation:slvJobShine 4s ease-in-out infinite}
+#loginView .slv-job-alerts-link:hover,#loginView .slv-job-alerts-link:focus-visible{transform:translateY(-2px);box-shadow:0 13px 28px rgba(11,51,106,.3),0 0 0 4px rgba(231,189,90,.2);outline:2px solid #e7bd5a;outline-offset:3px}
+@keyframes slvJobGlow{0%,100%{box-shadow:0 9px 23px rgba(11,51,106,.22),0 0 0 0 rgba(226,177,67,.26);border-color:#d5a43e}50%{box-shadow:0 12px 28px rgba(11,51,106,.3),0 0 0 6px rgba(226,177,67,.12);border-color:#ffe5a0}}
+@keyframes slvJobShine{0%,28%{transform:translateX(-110%)}55%,100%{transform:translateX(110%)}}
+@media(max-width:520px){#loginView .slv-job-alerts-link{min-height:70px;padding:15px 13px;font-size:18px;gap:7px}#loginView .slv-job-alerts-link span{font-size:10px}}
+@media(prefers-reduced-motion:reduce){#loginView .slv-job-alerts-link,#loginView .slv-job-alerts-link:before{animation:none!important}}
 </style>
 <style id="slvPersonalGreetingStyle">
 .slv-personal-greeting{display:flex;flex-direction:column;gap:7px;margin:14px 0 18px;padding:19px 22px;border:1px solid #dce9fb;border-left:5px solid #1e6bc4;border-radius:14px;background:linear-gradient(105deg,#f0f6ff,#fff);box-shadow:0 5px 16px rgba(17,54,101,.05)}
@@ -931,6 +941,22 @@ body:has(#adminView:not(.hidden)),body:has(#employeeView:not(.hidden)){
 #adminView .side-menu-link:hover,#employeeView .side-menu-link:hover{background:#ffe5bf!important}
 @media(max-width:600px){.slv-diwali-dashboard-banner{padding:12px;gap:6px}.slv-diwali-dashboard-banner small{font-size:10px}.slv-diwali-dashboard-banner .slv-festival-diyas{font-size:23px}}
 </style>
+<style id="slv-simple-dashboard-2026">
+/* Presentation-only simplification; existing IDs, database and billing functions remain unchanged. */
+.slv-simple-actions{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin:14px 0 18px}
+.slv-simple-actions button{min-width:0;min-height:54px;margin:0;padding:11px 7px;background:#edf4ff;color:#123e78;border:1px solid #d5e4f7;box-shadow:none;font-size:12px}
+.slv-simple-actions button:first-child{background:#11539e;color:#fff}
+.slv-simple-actions .slv-more-btn{background:#fff;color:#344963;border:1px dashed #afc2d8}
+.slv-employee-actions{grid-template-columns:repeat(4,minmax(0,1fr))}
+#adminView>.slv-diwali-dashboard-banner,#employeeView>.slv-diwali-dashboard-banner,#slvPanBuildCheck{display:none!important}
+#adminView .topbar,#employeeView .topbar{margin-bottom:10px}
+#employeeView .slv-extra-employee{display:none!important}
+#employeeView .attendance-panel{margin-top:12px}
+#adminView .slv-clock-style,#employeeView .slv-clock-style{display:none}
+#adminView .slv-clock-face,#employeeView .slv-clock-face{display:none}
+#adminView .slv-clock,#employeeView .slv-clock{font-size:11px}
+@media(max-width:700px){.slv-simple-actions{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.slv-simple-actions button{min-height:50px;font-size:12px}.slv-employee-actions{grid-template-columns:repeat(2,minmax(0,1fr))}#adminView .topbar,#employeeView .topbar{gap:6px}#adminView .slv-clock,#employeeView .slv-clock{display:none}}
+</style>
 </head>
 <body>
 <div id="slvTxSuccess" class="slv-tx-success" role="status" aria-live="polite" aria-label="Transaction successful"><div class="slv-tx-success-card"><div class="slv-tx-success-check">✓</div><h3>Transaction Successful</h3><p>SLV Communications • Payment Recorded</p><div class="slv-tx-success-amount" id="slvTxSuccessAmount">₹0.00</div><p id="slvTxSuccessCount">Wallet balances updated</p><div class="slv-tx-success-line"></div></div></div>
@@ -973,6 +999,8 @@ body:has(#adminView:not(.hidden)),body:has(#employeeView:not(.hidden)){
       <div class="slv-password-field"><input id="loginPass" type="password" autocomplete="current-password" placeholder="Enter your password"><button type="button" class="slv-password-toggle" onclick="slvTogglePassword()" aria-label="Show or hide password" title="Show / hide password">Show</button></div>
       <button class="slv-signin-btn" onclick="handleLogin()">Secure Sign In <span aria-hidden="true">→</span></button>
       <div class="slv-login-trust"><span>◈ Secure access</span><span>● Authorized staff only</span></div>
+      <a class="slv-job-alerts-link" href="/job-alerts/" target="_blank" rel="noopener noreferrer" aria-label="Open SLV Job Alerts website">💼 SLV Job Alerts <span>Open Job Alerts ↗</span></a>
+
     </div>
     <div class="slv-login-bottom">SLV COMMUNICATIONS <span>•</span> KORUKONDA</div>
   </main>
@@ -982,11 +1010,17 @@ body:has(#adminView:not(.hidden)),body:has(#employeeView:not(.hidden)){
     <div class="slv-diwali-dashboard-banner" aria-label="Diwali greeting"><div><strong>✨ Happy Diwali — Admin Workspace</strong><small>SLV Communications • Wishing you prosperity &amp; success</small></div><span class="slv-festival-diyas" aria-hidden="true">🪔 ✨ 🪔</span></div>
     <div class="topbar admin-topbar">
       <button class="hamburger-btn" onclick="toggleAdminMenu()" aria-label="Open admin menu">☰</button>
-      <strong>SLV • Admin Command Center</strong>
+      <strong>Admin Dashboard</strong>
       <div class="slv-clock" data-mode="digital" aria-label="Live India date and time"><div class="slv-clock-face" aria-hidden="true"><i class="slv-clock-hand slv-clock-hour"></i><i class="slv-clock-hand slv-clock-minute"></i><i class="slv-clock-hand slv-clock-second"></i><i class="slv-clock-dot"></i></div><div><div class="slv-clock-date">Loading date...</div><div class="slv-clock-time">--:--:--</div></div><select class="slv-clock-style" aria-label="Choose clock model" title="Change clock model"><option value="digital">Digital</option><option value="analog">Analog</option><option value="compact">Compact</option></select></div>
       <button class="btn-secondary btn-small" onclick="logout()">Logout</button>
     </div>
-    <div class="slv-admin-shortcuts"><button type="button" onclick="adminMenuGo('adminServices')">🛠 Services</button><button type="button" onclick="adminMenuGo('adminWallets')">💼 Wallets</button><button type="button" onclick="adminMenuGo('adminEmployees');slvLoadCloudAssignments()">👥 Assign Employee Wallet</button><button type="button" onclick="adminMenuGo('adminReconcile')">🧮 Real Cash & Tally</button><select aria-label="Leave and shift reports" onchange="if(this.value){adminMenuGo(this.value);this.value=''}"><option value="">🌴 Leaves & Shifts ▾</option><option value="adminLeaves">Leave Requests</option><option value="adminAttendance">Attendance & Shifts</option></select></div><button type="button" onclick="slvPanOpen()" class="btn-green">🧾 PAN Receipt Generator</button><button type="button" class="btn-green" onclick="slv93Open()">📄 PAN Form 93 Auto Fill</button><button type="button" onclick="slvTrackingOpen()">📋 PAN Tracking</button><div id="adminWalletTopStrip" class="admin-wallet-top-strip" aria-label="All wallet balances">
+    <div class="slv-simple-actions" aria-label="Admin quick actions">
+<button type="button" onclick="adminMenuGo('adminTransactions')">📊 Transactions</button>
+<button type="button" onclick="adminMenuGo('adminWallets')">💼 Wallets</button>
+<button type="button" onclick="adminMenuGo('adminServices')">🛠 Services & Slabs</button>
+<button type="button" onclick="adminMenuGo('adminEmployees')">👥 Employees</button>
+<button type="button" class="slv-more-btn" onclick="toggleAdminMenu(true)">☰ More Options</button>
+</div><div id="adminWalletTopStrip" class="admin-wallet-top-strip" aria-label="All wallet balances">
       <div class="wallet-strip-heading">💼 Live Wallet Balances</div>
       <div id="adminWalletTopCards" class="admin-wallet-top-cards"></div>
     </div>
@@ -994,7 +1028,7 @@ body:has(#adminView:not(.hidden)),body:has(#employeeView:not(.hidden)){
     <aside id="adminSideMenu" class="employee-side-menu admin-side-menu">
       <div class="side-menu-head"><b>SLV • ADMIN WORKSPACE</b><button onclick="toggleAdminMenu(false)">✕</button></div>
       <button class="side-menu-link" onclick="adminMenuGo('adminSettings')">⚙️ Shop Settings</button>
-      <button class="side-menu-link" onclick="adminMenuGo('adminServices')">🛠️ Services & Profit Rules</button><button class="side-menu-link" onclick="slvPanOpen()">🧾 PAN Receipts</button><button class="side-menu-link" onclick="slvTrackingOpen()">📋 PAN Tracking</button><button class="side-menu-link" onclick="slv93Open()">📄 PAN Form 93 Auto Fill</button><button class="side-menu-link" onclick="slvTrackingOpen()">📋 PAN Tracking</button>
+      <button class="side-menu-link" onclick="adminMenuGo('adminServices')">🛠️ Services & Profit Rules</button><button class="side-menu-link" onclick="slvPanOpen()">🧾 PAN Receipts</button><button class="side-menu-link" onclick="slvTrackingOpen()">📋 PAN Tracking</button><button class="side-menu-link" onclick="slv93Open()">📄 PAN Form 93 Auto Fill</button>
       <button class="side-menu-link" onclick="adminMenuGo('adminWallets')">💼 Wallet Management</button>
       <button class="side-menu-link" onclick="adminMenuGo('adminReconcile')">🧮 Real Cash & Wallet Tally</button>
       <button class="side-menu-link" onclick="adminMenuGo('adminTarget')">🎯 Monthly Target Wallet</button>
@@ -1148,7 +1182,9 @@ body:has(#adminView:not(.hidden)),body:has(#employeeView:not(.hidden)){
         <p id="slvMapStatus" class="muted" role="status">Load cloud data to begin.</p>
       </div>
 
+<section id="slvFinancialAdmin" class="section-box" style="margin-top:18px;border:1px solid #c8d9f5"><h4>🏦 AEPS & PhonePe — Amount-wise Slabs (Cloud)</h4><p class="muted">Separate slabs per transaction type. Charges are not configured until you save them. This module does not transfer money or change wallet balances.</p><label>Transaction Type</label><select id="finAdminType" onchange="slvFinLoad()"><option value="aeps">AEPS Cash Withdrawal</option><option value="cash_upi">PhonePe Cash → UPI</option><option value="upi_cash">PhonePe UPI → Cash</option></select><label>Customer Charge Slabs (from-to=charge)</label><textarea id="finSlabs" rows="6" placeholder="1-1000=10&#10;1001-5000=20"></textarea><label>Processing Cost Slabs (from-to=cost)</label><textarea id="finCosts" rows="6" placeholder="1-1000=0&#10;1001-5000=0"></textarea><div class="row"><button type="button" class="btn-green" onclick="slvFinSave()">💾 Save Cloud Slabs</button><button type="button" class="btn-red" onclick="slvFinDelete()">Delete Rules</button></div><p id="finAdminStatus" role="status" class="muted">Run the supplied Supabase SQL first.</p></section>
     </div>
+
 
     <div id="adminWallets" class="section-box admin-section" style="border-left:4px solid #137333">
       <h4>💼 Wallet Management</h4>
@@ -1293,7 +1329,7 @@ body:has(#adminView:not(.hidden)),body:has(#employeeView:not(.hidden)){
     <div id="slvPanBuildCheck" style="padding:10px 14px;margin:0 0 12px;background:#e9f8f0;border:1px solid #b5e2c8;border-radius:9px;color:#11663e;font-weight:700;font-size:12px">✓ SLV PAN Application Update — Version 06 NOV 2026</div>
     <div class="topbar employee-topbar">
       <button class="hamburger-btn" onclick="toggleEmployeeMenu()" aria-label="Open menu">☰</button>
-      <strong id="empSubTitle">Employee Workspace · Clean v2.1</strong>
+      <strong id="empSubTitle">Employee Dashboard</strong>
       <div class="slv-clock" data-mode="digital" aria-label="Live India date and time"><div class="slv-clock-face" aria-hidden="true"><i class="slv-clock-hand slv-clock-hour"></i><i class="slv-clock-hand slv-clock-minute"></i><i class="slv-clock-hand slv-clock-second"></i><i class="slv-clock-dot"></i></div><div><div class="slv-clock-date">Loading date...</div><div class="slv-clock-time">--:--:--</div></div><select class="slv-clock-style" aria-label="Choose clock model" title="Change clock model"><option value="digital">Digital</option><option value="analog">Analog</option><option value="compact">Compact</option></select></div>
       <button class="btn-secondary btn-small" onclick="logout()">Logout</button>
     </div>
@@ -1307,8 +1343,12 @@ body:has(#adminView:not(.hidden)),body:has(#employeeView:not(.hidden)){
       <button class="side-menu-link slv-service-link-menu" onclick="slvLinksOpen()">⚡ Quick Links</button>
       <button class="side-menu-link side-logout" onclick="logout()">🚪 Logout</button>
     </aside>
-    <div class="slv-service-top-action"><div class="tile" role="button" tabindex="0" onclick="showView('servicesView')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showView('servicesView')}"><span>💼</span>Services Counter</div></div>
-    <button type="button" onclick="slvPanOpen()" class="btn-green">🧾 PAN Receipt Generator</button><button type="button" onclick="slv93Open()" class="btn-green">📄 PAN Application (Form 93)</button><button type="button" onclick="slvTrackingOpen()" class="btn-green">📋 PAN Tracking</button><div id="holidayAlert" class="banner">🚨 HOLIDAY: <span id="holidayText"></span></div>
+    <div class="slv-simple-actions slv-employee-actions" aria-label="Employee quick actions">
+<button type="button" class="btn-green" onclick="showView('servicesView')">➕ New Billing</button>
+<button type="button" onclick="slvPanOpen()">🧾 PAN Receipt</button>
+<button type="button" onclick="slvLinksOpen()">⚡ Quick Links</button>
+<button type="button" class="slv-more-btn" onclick="toggleEmployeeMenu(true)">☰ More Options</button>
+</div><div id="holidayAlert" class="banner">🚨 HOLIDAY: <span id="holidayText"></span></div>
     <div class="slab-box slv-extra-employee"><b>🕒 Assigned Shift:</b> <span id="shiftInfo" style="color:#1a73e8">Loading...</span></div>
     <section id="attendancePanel" class="section-box attendance-panel">
       <h4>🕘 Today's Attendance & Shift</h4>
@@ -1329,7 +1369,7 @@ body:has(#adminView:not(.hidden)),body:has(#employeeView:not(.hidden)){
       <b id="drawerTitle">💵 Cash Drawer:</b>
       <div style="font-size:22px;font-weight:bold;color:#137333">₹ <span id="drawerCash">0</span></div>
     </div>
-    <h3 style="margin-top:18px">⚡ Quick Actions</h3>
+    
     <div class="cash-wallet-employee-card">
       <span>💵 Live Cash Wallet</span>
       <strong>₹<b id="employeeCashWalletBalance">0.00</b></strong>
@@ -1365,6 +1405,8 @@ body:has(#adminView:not(.hidden)),body:has(#employeeView:not(.hidden)){
 <div id="xeroxResult" class="xerox-result" aria-live="polite"></div>
 <p class="xerox-note">Pages = printed sides. Papers = physical sheets. Both-side printing uses 2 pages per paper. Final rate follows Admin Cloud Pricing.</p>
 </section>
+
+<section id="slvFinancialBilling" class="section-box" style="border:1px solid #b8d5f5"><h3>🏦 AEPS / PhonePe Billing</h3><div class="grid"><div><label>Service</label><select id="finBillType" onchange="slvFinQuote();slvFinWallets()"><option value="aeps">AEPS Withdrawal</option><option value="cash_upi">Cash → UPI</option><option value="upi_cash">UPI → Cash</option></select></div><div><label>Amount ₹</label><input id="finBillAmount" type="number" min="1" step="0.01" oninput="slvFinQuote()"></div><div><label>Wallet</label><select id="finBillWallet"><option value="">Choose wallet</option></select></div><div><label>Charge ₹ (Auto Slab)</label><input id="finBillCharge" type="text" readonly></div><div><label>Charge Type</label><select id="finBillMode" onchange="slvFinQuote()"><option value="extra">Extra</option><option value="deduct">Deduct</option></select></div></div><p id="finBillResult" class="total">Enter amount</p><button id="finBillSave" type="button" class="btn-green" onclick="slvFinPost()">☁️ Save Billing</button><p id="finBillStatus" role="status" class="muted"></p><small>Provider transaction must already be completed. Wallet names only; balances hidden.</small></section>
     <section id="slvCloudCheckout" class="section-box" style="margin:12px 0">
       <h3>💳 Payment & Save</h3>
       
@@ -4822,6 +4864,22 @@ window.slv93RegisterTracking=async v=>{const note=$('pan93TrackingNote');if(wind
   if(visible&&!wasVisible){popup.classList.add('open');popup.setAttribute('aria-hidden','false');btn.focus()}
   if(!visible)close();wasVisible=visible;
  }).observe(emp,{attributes:true,attributeFilter:['class']});
+})();
+</script>
+
+<script>
+(function(){'use strict';const $=id=>document.getElementById(id);let seq=0,quote=null,posting=false;const names={aeps:'AEPS',cash_upi:'Cash to UPI',upi_cash:'UPI to Cash'};
+const status=(id,t)=>{if($(id))$(id).textContent=t};
+async function db(){const d=window.slvSupabase;if(!d)throw Error('Cloud unavailable');const u=await d.auth.getUser();if(!u.data?.user)throw Error('Login required');return d}
+function parse(t){const out=[];for(const line of t.split(/\n/).map(x=>x.trim()).filter(Boolean)){const m=line.match(/^(\d+(?:\.\d{1,2})?)-(\d+(?:\.\d{1,2})?)\s*=\s*(\d+(?:\.\d{1,2})?)$/);if(!m)throw Error('Use from-to=rate: '+line);const x={from:+m[1],to:+m[2],rate:+m[3]};if(x.from<=0||x.to<x.from||(out.length&&x.from<=out.at(-1).to))throw Error('Slabs overlap or invalid');out.push(x)}if(!out.length)throw Error('Enter slabs');return out}
+const fmt=a=>(a||[]).map(x=>`${x.from}-${x.to}=${x.rate}`).join('\n');
+window.slvFinLoad=async()=>{try{const d=await db(),r=await d.from('slv_financial_slabs').select('*').eq('service_key',$('finAdminType').value).single();if(r.error)throw r.error;$('finSlabs').value=fmt(r.data.charge_slabs);$('finCosts').value=fmt(r.data.cost_slabs);status('finAdminStatus','Cloud slabs loaded')}catch(e){status('finAdminStatus',e.message)}};
+window.slvFinSave=async()=>{try{const d=await db(),charge_slabs=parse($('finSlabs').value),cost_slabs=parse($('finCosts').value);if(!confirm('Save slabs?'))return;const r=await d.from('slv_financial_slabs').upsert({service_key:$('finAdminType').value,charge_slabs,cost_slabs,updated_at:new Date().toISOString()},{onConflict:'service_key'}).select();if(r.error||!r.data?.length)throw Error(r.error?.message||'Save not confirmed');status('finAdminStatus','✓ Saved');window.slvFinQuote()}catch(e){status('finAdminStatus',e.message)}};
+window.slvFinDelete=async()=>{try{const d=await db();if(!confirm('Clear this service slabs?'))return;const r=await d.from('slv_financial_slabs').update({charge_slabs:[],cost_slabs:[]}).eq('service_key',$('finAdminType').value).select();if(r.error||!r.data?.length)throw Error(r.error?.message||'Not saved');$('finSlabs').value='';$('finCosts').value='';status('finAdminStatus','Cleared')}catch(e){status('finAdminStatus',e.message)}};
+window.slvFinWallets=async()=>{const sel=$('finBillWallet');if(!sel)return;sel.replaceChildren(new Option('Choose wallet',''));try{const d=await db(),key=$('finBillType').value;const r=await d.rpc('slv_financial_wallet_choices',{p_service_key:key});if(r.error)throw r.error;for(const w of r.data||[])sel.add(new Option(w.wallet_name,w.wallet_id));status('finBillStatus',(r.data||[]).length?'Select wallet':'No eligible wallet. Admin must activate a matching wallet.')}catch(e){status('finBillStatus','Wallet list: '+e.message)}};
+window.slvFinQuote=async()=>{const token=++seq;quote=null;const a=+$('finBillAmount').value,key=$('finBillType').value,mode=$('finBillMode').value;$('finBillCharge').value='';if(!Number.isFinite(a)||a<=0){$('finBillResult').textContent='Enter amount';return}try{const d=await db(),r=await d.rpc('slv_financial_quote',{p_service_key:key,p_amount:a,p_charge_mode:mode});if(token!==seq)return;if(r.error)throw r.error;quote=r.data;$('finBillCharge').value=Number(quote.charge).toFixed(2);$('finBillResult').textContent=`Charge ₹${Number(quote.charge).toFixed(2)} · Profit ₹${Number(quote.profit).toFixed(2)} · Cash ₹${Number(quote.cash_movement).toFixed(2)} · Digital ₹${Number(quote.digital_movement).toFixed(2)}`;status('finBillStatus','Ready to save (provider transaction must be complete)')}catch(e){if(token!==seq)return;status('finBillStatus',e.message);$('finBillResult').textContent='Slab unavailable'}};
+window.slvFinPost=async()=>{if(posting)return;const key=$('finBillType').value,amount=+$('finBillAmount').value,mode=$('finBillMode').value,wallet=$('finBillWallet').value;if(!quote||!wallet||!Number.isFinite(amount)||amount<=0){status('finBillStatus','Enter amount, wait for quote and select wallet');return}if(!confirm(`Provider completed? Save ${names[key]} ₹${amount.toFixed(2)}?`))return;posting=true;$('finBillSave').disabled=true;const request=crypto.randomUUID();try{const d=await db(),r=await d.rpc('slv_financial_post',{p_request_id:request,p_service_key:key,p_amount:amount,p_charge_mode:mode,p_wallet_id:wallet});if(r.error)throw r.error;status('finBillStatus','✓ Saved · Ref '+request.slice(0,8));$('finBillAmount').value='';$('finBillCharge').value='';$('finBillResult').textContent='Saved successfully';quote=null}catch(e){status('finBillStatus','Save failed: '+e.message+' — Check transaction history before retrying')}finally{posting=false;$('finBillSave').disabled=false}};
+const old=window.adminMenuGo;if(typeof old==='function')window.adminMenuGo=function(id,...args){const r=old.call(this,id,...args);if(id==='adminServices')window.slvFinLoad();return r};const show=window.showView;if(typeof show==='function')window.showView=function(id,...args){const r=show.call(this,id,...args);if(id==='servicesView'){window.slvFinWallets();window.slvFinQuote()}return r};
 })();
 </script>
 </body>
