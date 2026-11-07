@@ -114,7 +114,7 @@ footer small{color:#c5d4e8}
 <section id="admin">
 <h2>Admin — Notification Review</h2>
 <p>Only authorized SLV Job Alerts administrators can approve draft notices. The public website does not contain a service-role key.</p>
-<div id="admin-setup" class="notice">Admin connection is not configured yet. Set the Supabase project URL and publishable/anon key in the website configuration, then enable the database authorization policy before use.</div>
+<div id="admin-setup" class="notice">Admin connection is not configured yet.</div>
 <div id="admin-login" class="admin-form admin-hidden">
 <input id="admin-email" type="email" autocomplete="username" placeholder="Admin email" aria-label="Admin email">
 <input id="admin-password" type="password" autocomplete="current-password" placeholder="Password" aria-label="Password">
@@ -189,8 +189,8 @@ footer small{color:#c5d4e8}
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 // Public project URL and publishable/anon key ONLY. NEVER put a service_role key here.
-const SUPABASE_URL = 'PASTE_JOB_ALERTS_SUPABASE_URL';
-const SUPABASE_PUBLISHABLE_KEY = 'PASTE_JOB_ALERTS_PUBLISHABLE_OR_ANON_KEY';
+const SUPABASE_URL = 'https://ofhtblsmtjiipjocwaps.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_TTE02TDAGInS20ebYBdOlA_NoMSD9nh';
 const ready = /^https:\/\/.+\.supabase\.co$/.test(SUPABASE_URL) && !SUPABASE_PUBLISHABLE_KEY.startsWith('PASTE_');
 const el = id => document.getElementById(id);
 const message = text => { el('admin-message').textContent = text; };
@@ -202,9 +202,16 @@ if (ready) {
   async function showSession() {
     const {data:{session},error} = await db.auth.getSession();
     if (error) { message(error.message); return; }
+    let isAdmin = false;
+    if (session) {
+      const {data:membership,error:memberError} = await db.from('slv_job_admins').select('user_id').eq('user_id',session.user.id).maybeSingle();
+      if (memberError) message('Admin check failed: '+memberError.message);
+      isAdmin = !!membership;
+      if (!isAdmin && !memberError) message('This account is not an SLV Job Alerts admin.');
+    }
     toggle('admin-login', !session);
-    toggle('admin-panel', !!session);
-    if (session) await loadDrafts();
+    toggle('admin-panel', !!session && isAdmin);
+    if (session && isAdmin) await loadDrafts();
   }
   async function loadDrafts() {
     const container = el('admin-notices');
@@ -223,11 +230,19 @@ if (ready) {
       approve.addEventListener('click', async () => {
         if (!confirm('Have you checked the official PDF and category? Approve this notice?')) return;
         approve.disabled=true;
-        const {data:updated,error} = await db.from('jobs').update({status:'active'}).eq('id',job.id).eq('status','draft').select('id');
-        if (error || !updated?.length) { message('Approval failed. Verify admin permissions: '+(error?.message||'No row updated')); approve.disabled=false; return; }
+        const {error} = await db.rpc('slv_approve_job',{p_job_id:job.id,p_action:'approve'});
+        if (error) { message('Approval failed: '+error.message); approve.disabled=false; return; }
         message('Notice approved.'); await loadDrafts();
       });
-      actions.append(approve); article.append(title,meta,link,actions); container.append(article);
+      const reject=document.createElement('button'); reject.className='admin-action'; reject.textContent='Reject'; reject.style.marginLeft='8px'; reject.style.background='#8b2731';
+      reject.addEventListener('click', async () => {
+        if (!confirm('Reject this draft notice?')) return;
+        reject.disabled=true; approve.disabled=true;
+        const {error}=await db.rpc('slv_approve_job',{p_job_id:job.id,p_action:'reject'});
+        if (error) { message('Reject failed: '+error.message); reject.disabled=false; approve.disabled=false; return; }
+        await loadDrafts();
+      });
+      actions.append(approve,reject); article.append(title,meta,link,actions); container.append(article);
     }
   }
   el('admin-signin').addEventListener('click', async () => {
