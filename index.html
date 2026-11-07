@@ -1406,12 +1406,13 @@ body:has(#adminView:not(.hidden)),body:has(#employeeView:not(.hidden)){
 <p class="xerox-note">Pages = printed sides. Papers = physical sheets. Both-side printing uses 2 pages per paper. Final rate follows Admin Cloud Pricing.</p>
 </section>
 
-<section id="slvFinancialBilling" class="section-box" style="border:1px solid #b8d5f5"><h3>🏦 AEPS / PhonePe Billing</h3><div class="grid"><div><label>Service</label><select id="finBillType" onchange="slvFinQuote();slvFinWallets()"><option value="aeps">AEPS Withdrawal</option><option value="cash_upi">Cash → UPI</option><option value="upi_cash">UPI → Cash</option></select></div><div><label>Amount ₹</label><input id="finBillAmount" type="number" min="1" step="0.01" oninput="slvFinQuote()"></div><div><label>Wallet</label><select id="finBillWallet"><option value="">Choose wallet</option></select></div><div><label>Charge ₹ (Auto Slab)</label><input id="finBillCharge" type="text" readonly></div><div><label>Charge Type</label><select id="finBillMode" onchange="slvFinQuote()"><option value="extra">Extra</option><option value="deduct">Deduct</option></select></div></div><p id="finBillResult" class="total">Enter amount</p><button id="finBillSave" type="button" class="btn-green" onclick="slvFinPost()">☁️ Save Billing</button><p id="finBillStatus" role="status" class="muted"></p><small>Provider transaction must already be completed. Wallet names only; balances hidden.</small></section>
+
     <section id="slvCloudCheckout" class="section-box" style="margin:12px 0">
       <h3>💳 Payment & Save</h3>
       
       <label for="slvServiceSearch">🔎 Search Service</label><div class="slv-service-picker"><input id="slvServiceSearch" type="search" autocomplete="off" placeholder="Type service name (PAN, Xerox, Aadhaar...)" aria-controls="slvServiceSuggestions" aria-expanded="false"><div id="slvServiceSuggestions" class="slv-service-suggestions" role="listbox" hidden></div></div><label for="slvTxService" class="slv-native-service-label">Selected Service</label><select id="slvTxService" aria-label="Selected Cloud Service"><option value="">Load services first</option></select>
       <button type="button" class="btn-secondary btn-small" onclick="slvTxLoadServices()">↻ Load Cloud Services</button>
+<section id="slvFinancialBilling" class="section-box hidden" style="border:1px solid #b8d5f5"><h3>🏦 AEPS / PhonePe Billing</h3><div class="grid"><div><label>Service</label><select id="finBillType" onchange="slvFinQuote();slvFinWallets()"><option value="aeps">AEPS Withdrawal</option><option value="cash_upi">Cash → UPI</option><option value="upi_cash">UPI → Cash</option></select></div><div><label>Amount ₹</label><input id="finBillAmount" type="number" min="1" step="0.01" oninput="slvFinQuote()"></div><div><label>Wallet</label><select id="finBillWallet"><option value="">Choose wallet</option></select></div><div><label>Charge ₹ (Auto Slab)</label><input id="finBillCharge" type="text" readonly></div><div><label>Charge Type</label><select id="finBillMode" onchange="slvFinQuote()"><option value="extra">Extra</option><option value="deduct">Deduct</option></select></div></div><p id="finBillResult" class="total">Enter amount</p><button id="finBillSave" type="button" class="btn-green" onclick="slvFinPost()">☁️ Save Billing</button><p id="finBillStatus" role="status" class="muted"></p><small>Provider transaction must already be completed. Wallet names only; balances hidden.</small></section>
       <input id="slvTxCustomer" type="hidden" value="Walk-in Customer">
       <input id="slvTxMobile" type="hidden" value="">
       <div id="slvUniversalCustomerBasis" class="hidden"><label for="slvUniversalCustomerAmount">Customer-entered Amount ₹ (percentage basis)</label><input id="slvUniversalCustomerAmount" type="number" min="0" step="0.01" value="0" oninput="slvTxUpdatePreview()"></div><label for="slvTxQty">Quantity</label><input id="slvTxQty" type="number" min="1" max="10000" step="1" value="1" oninput="slvTxUpdatePreview()">
@@ -4880,6 +4881,39 @@ window.slvFinWallets=async()=>{const sel=$('finBillWallet');if(!sel)return;sel.r
 window.slvFinQuote=async()=>{const token=++seq;quote=null;const a=+$('finBillAmount').value,key=$('finBillType').value,mode=$('finBillMode').value;$('finBillCharge').value='';if(!Number.isFinite(a)||a<=0){$('finBillResult').textContent='Enter amount';return}try{const d=await db(),r=await d.rpc('slv_financial_quote',{p_service_key:key,p_amount:a,p_charge_mode:mode});if(token!==seq)return;if(r.error)throw r.error;quote=r.data;$('finBillCharge').value=Number(quote.charge).toFixed(2);$('finBillResult').textContent=`Charge ₹${Number(quote.charge).toFixed(2)} · Profit ₹${Number(quote.profit).toFixed(2)} · Cash ₹${Number(quote.cash_movement).toFixed(2)} · Digital ₹${Number(quote.digital_movement).toFixed(2)}`;status('finBillStatus','Ready to save (provider transaction must be complete)')}catch(e){if(token!==seq)return;status('finBillStatus',e.message);$('finBillResult').textContent='Slab unavailable'}};
 window.slvFinPost=async()=>{if(posting)return;const key=$('finBillType').value,amount=+$('finBillAmount').value,mode=$('finBillMode').value,wallet=$('finBillWallet').value;if(!quote||!wallet||!Number.isFinite(amount)||amount<=0){status('finBillStatus','Enter amount, wait for quote and select wallet');return}if(!confirm(`Provider completed? Save ${names[key]} ₹${amount.toFixed(2)}?`))return;posting=true;$('finBillSave').disabled=true;const request=crypto.randomUUID();try{const d=await db(),r=await d.rpc('slv_financial_post',{p_request_id:request,p_service_key:key,p_amount:amount,p_charge_mode:mode,p_wallet_id:wallet});if(r.error)throw r.error;status('finBillStatus','✓ Saved · Ref '+request.slice(0,8));$('finBillAmount').value='';$('finBillCharge').value='';$('finBillResult').textContent='Saved successfully';quote=null}catch(e){status('finBillStatus','Save failed: '+e.message+' — Check transaction history before retrying')}finally{posting=false;$('finBillSave').disabled=false}};
 const old=window.adminMenuGo;if(typeof old==='function')window.adminMenuGo=function(id,...args){const r=old.call(this,id,...args);if(id==='adminServices')window.slvFinLoad();return r};const show=window.showView;if(typeof show==='function')window.showView=function(id,...args){const r=show.call(this,id,...args);if(id==='servicesView'){window.slvFinWallets();window.slvFinQuote()}return r};
+})();
+</script>
+
+<style>
+/* Financial billing opens only after selecting its service in Services. */
+#slvCloudCheckout.slv-financial-selected > :not(.slv-service-picker):not(.slv-native-service-label):not(#slvTxService):not(#slvFinancialBilling):not(#slvServiceSearch):not(label[for="slvServiceSearch"]):not(button[onclick="slvTxLoadServices()"]){display:none!important}
+#slvCloudCheckout.slv-financial-selected #slvFinancialBilling{display:block!important}
+#slvCloudCheckout.slv-financial-selected #slvFinancialBilling .grid{display:grid!important}
+</style>
+<script>
+(function(){
+ const sel=document.getElementById('slvTxService');
+ const checkout=document.getElementById('slvCloudCheckout');
+ const panel=document.getElementById('slvFinancialBilling');
+ if(!sel||!checkout||!panel)return;
+ function update(){
+   const name=(sel.selectedOptions[0]?.textContent||'').toLowerCase();
+   let key='';
+   if(/aeps/.test(name))key='aeps';
+   else if(/upi\s*(?:to|→|2)\s*cash|phonepe.*upi.*cash/.test(name))key='upi_cash';
+   else if(/cash\s*(?:to|→|2)\s*upi|phonepe.*cash.*upi/.test(name))key='cash_upi';
+   else if(/phonepe/.test(name))key='upi_cash';
+   const active=!!key;
+   checkout.classList.toggle('slv-financial-selected',active);
+   panel.classList.toggle('hidden',!active);
+   if(active){
+     const type=document.getElementById('finBillType');
+     if(type && type.value!==key){type.value=key;window.slvFinQuote?.();window.slvFinWallets?.()}
+   }
+ }
+ sel.addEventListener('change',update);
+ new MutationObserver(update).observe(sel,{childList:true,subtree:true});
+ update();
 })();
 </script>
 </body>
