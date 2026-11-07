@@ -4962,6 +4962,55 @@ const old=window.adminMenuGo;if(typeof old==='function')window.adminMenuGo=funct
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',window.slvFinRenderRows);else window.slvFinRenderRows();
 })();
 </script>
+
+<!-- SLV employee financial service visibility fix: virtual service choices, no DB mutations -->
+<script>
+(function(){
+ const select=document.getElementById('slvTxService');
+ if(!select)return;
+ const choices=[
+  {key:'aeps',label:'AEPS Cash Withdrawal'},
+  {key:'upi_cash',label:'PhonePe UPI to Cash'},
+  {key:'cash_upi',label:'PhonePe Cash to UPI'}
+ ];
+ let busy=false;
+ function ensure(){
+  if(busy)return;
+  busy=true;
+  try{
+   const labels=Array.from(select.options).map(o=>o.textContent.toLowerCase());
+   for(const item of choices){
+    const exists=labels.some(label=>item.key==='aeps'? /aeps/.test(label):item.key==='upi_cash'? /upi\s*(?:to|→|2)\s*cash/.test(label):/cash\s*(?:to|→|2)\s*upi/.test(label));
+    if(!exists){const opt=new Option(item.label,'slv-fin-'+item.key);opt.dataset.financialService=item.key;select.add(opt);}
+   }
+  }finally{busy=false;}
+ }
+ new MutationObserver(ensure).observe(select,{childList:true});
+ ensure();
+ // Virtual financial entries are used only for the financial RPC billing panel.
+ // Prevent generic service wallet lookups on these non-UUID entries.
+ select.addEventListener('change',function(e){
+  const option=select.selectedOptions[0];
+  if(!option?.dataset.financialService)return;
+  e.stopImmediatePropagation();
+  const key=option.dataset.financialService;
+  const checkout=document.getElementById('slvCloudCheckout');
+  const panel=document.getElementById('slvFinancialBilling');
+  checkout?.classList.add('slv-financial-selected');
+  panel?.classList.remove('hidden');
+  const type=document.getElementById('finBillType');
+  if(type)type.value=key;
+  window.slvFinWallets?.();
+  window.slvFinQuote?.();
+ },true);
+ // When a normal service is selected, allow the existing handler to run.
+ select.addEventListener('change',function(){
+  if(select.selectedOptions[0]?.dataset.financialService)return;
+  document.getElementById('slvCloudCheckout')?.classList.remove('slv-financial-selected');
+  document.getElementById('slvFinancialBilling')?.classList.add('hidden');
+ });
+})();
+</script>
 </body>
 </html>
 
