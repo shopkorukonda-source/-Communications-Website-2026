@@ -40,6 +40,15 @@ footer small{color:#c5d4e8}
 .admin-item a{color:#0d4b91}
 #admin-message{margin:10px 0;white-space:pre-wrap}
 .admin-hidden{display:none!important}
+
+.public-toolbar{display:flex;flex-wrap:wrap;gap:9px;margin:15px 0}
+.public-filter{background:#e8eef7;border:1px solid #c8d5e6;border-radius:8px;padding:9px 13px;cursor:pointer;color:#17355a}
+.public-filter.selected{background:#0d4b91;color:#fff}
+.public-job{padding:15px 0;border-bottom:1px solid #e2e8f0;overflow-wrap:anywhere}
+.public-job h3{font-size:17px;margin:0 0 6px}
+.public-job p{margin:5px 0;color:#51627a}
+.public-job a{color:#0d4b91;font-weight:bold}
+.public-status{color:#60728a;font-size:14px}
 </style>
 </head>
 <body>
@@ -50,6 +59,7 @@ footer small{color:#c5d4e8}
 <nav>
 <a href="#home">Home</a>
 <a href="#plans">Plans</a>
+<a href="#notifications">Latest Updates</a>
 <a href="#how">How It Works</a>
 <a href="#about">About</a>
 <a href="#contact">Contact</a>
@@ -99,6 +109,20 @@ footer small{color:#c5d4e8}
 
 </div>
 <p class="notice"><strong>Pre-launch Notice:</strong> Customer registration, Razorpay payment and WhatsApp Bot are being configured. Payments are not currently accepted through this page.</p>
+</section>
+
+<section id="notifications">
+<h2>Latest Government Job &amp; Exam Updates</h2>
+<p>Only administrator-reviewed official notices are displayed. Check the official PDF for full details before applying or taking action.</p>
+<div class="public-toolbar" id="public-filters" aria-label="Notification categories">
+<button class="public-filter selected" type="button" data-filter="All">All Updates</button>
+<button class="public-filter" type="button" data-filter="Job Notifications">Jobs</button>
+<button class="public-filter" type="button" data-filter="Exam Updates">Exam Updates</button>
+<button class="public-filter" type="button" data-filter="Results">Results</button>
+<button class="public-filter" type="button" data-filter="Other Notices">Other Notices</button>
+</div>
+<p id="public-status" class="public-status" role="status" aria-live="polite">Loading approved notifications...</p>
+<div id="public-notices"></div>
 </section>
 
 <section id="how">
@@ -197,6 +221,57 @@ const message = text => { el('admin-message').textContent = text; };
 const toggle = (id, visible) => el(id).classList.toggle('admin-hidden', !visible);
 if (ready) {
   const db = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  let publicJobs = [];
+  let publicFilter = 'All';
+  function renderPublicJobs() {
+    const holder = el('public-notices');
+    holder.replaceChildren();
+    const rows = publicJobs.filter(job => publicFilter === 'All' || job.category === publicFilter);
+    el('public-status').textContent = rows.length ? `${rows.length} approved notice(s) shown.` : 'No approved notifications in this category yet.';
+    for (const job of rows) {
+      const item = document.createElement('article');
+      item.className = 'public-job';
+      const title = document.createElement('h3');
+      title.textContent = job.title;
+      const info = document.createElement('p');
+      info.textContent = `${job.organization || 'Government'} | ${job.category || 'Other Notices'} | ${job.published_date || 'Date not available'}`;
+      const link = document.createElement('a');
+      link.textContent = 'View official notification';
+      try {
+        const target = new URL(job.official_url);
+        if (target.protocol === 'https:' && target.hostname.endsWith('.gov.in')) {
+          link.href = target.href;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+        } else {
+          link.textContent = 'Official link unavailable';
+        }
+      } catch (_) { link.textContent = 'Official link unavailable'; }
+      item.append(title, info, link);
+      holder.append(item);
+    }
+  }
+  async function loadPublicJobs() {
+    const {data,error} = await db.from('jobs')
+      .select('title,organization,category,published_date,official_url')
+      .eq('status','active')
+      .order('published_date',{ascending:false,nullsFirst:false})
+      .limit(100);
+    if (error) {
+      el('public-status').textContent = 'Unable to load updates right now. Please try again later.';
+      return;
+    }
+    publicJobs = data || [];
+    renderPublicJobs();
+  }
+  el('public-filters').addEventListener('click', event => {
+    const button = event.target.closest('button[data-filter]');
+    if (!button) return;
+    publicFilter = button.dataset.filter;
+    el('public-filters').querySelectorAll('button').forEach(b => b.classList.toggle('selected',b === button));
+    renderPublicJobs();
+  });
+  await loadPublicJobs();
   toggle('admin-setup', false);
   toggle('admin-login', true);
   async function showSession() {
@@ -232,7 +307,7 @@ if (ready) {
         approve.disabled=true;
         const {error} = await db.rpc('slv_approve_job',{p_job_id:job.id,p_action:'approve'});
         if (error) { message('Approval failed: '+error.message); approve.disabled=false; return; }
-        message('Notice approved.'); await loadDrafts();
+        message('Notice approved.'); await loadDrafts(); await loadPublicJobs();
       });
       const reject=document.createElement('button'); reject.className='admin-action'; reject.textContent='Reject'; reject.style.marginLeft='8px'; reject.style.background='#8b2731';
       reject.addEventListener('click', async () => {
@@ -240,7 +315,7 @@ if (ready) {
         reject.disabled=true; approve.disabled=true;
         const {error}=await db.rpc('slv_approve_job',{p_job_id:job.id,p_action:'reject'});
         if (error) { message('Reject failed: '+error.message); reject.disabled=false; approve.disabled=false; return; }
-        await loadDrafts();
+        await loadDrafts(); await loadPublicJobs();
       });
       actions.append(approve,reject); article.append(title,meta,link,actions); container.append(article);
     }
@@ -255,6 +330,8 @@ if (ready) {
   el('admin-signout').addEventListener('click', async()=>{await db.auth.signOut(); el('admin-notices').replaceChildren(); message('Signed out.'); await showSession();});
   el('admin-refresh').addEventListener('click',loadDrafts);
   await showSession();
+} else {
+  el('public-status').textContent = 'Public updates are temporarily unavailable.';
 }
 </script>
 </body>
