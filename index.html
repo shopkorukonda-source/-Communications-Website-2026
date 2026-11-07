@@ -1182,7 +1182,7 @@ body:has(#adminView:not(.hidden)),body:has(#employeeView:not(.hidden)){
         <p id="slvMapStatus" class="muted" role="status">Load cloud data to begin.</p>
       </div>
 
-<section id="slvFinancialAdmin" class="section-box" style="margin-top:18px;border:1px solid #c8d9f5"><h4>🏦 AEPS & PhonePe — Amount-wise Slabs (Cloud)</h4><p class="muted">Separate slabs per transaction type. Charges are not configured until you save them. This module does not transfer money or change wallet balances.</p><label>Transaction Type</label><select id="finAdminType" onchange="slvFinLoad()"><option value="aeps">AEPS Cash Withdrawal</option><option value="cash_upi">PhonePe Cash → UPI</option><option value="upi_cash">PhonePe UPI → Cash</option></select><label>Customer Charge Slabs (from-to=charge)</label><textarea id="finSlabs" rows="6" placeholder="1-1000=10&#10;1001-5000=20"></textarea><label>Processing Cost Slabs (from-to=cost)</label><textarea id="finCosts" rows="6" placeholder="1-1000=0&#10;1001-5000=0"></textarea><div class="row"><button type="button" class="btn-green" onclick="slvFinSave()">💾 Save Cloud Slabs</button><button type="button" class="btn-red" onclick="slvFinDelete()">Delete Rules</button></div><p id="finAdminStatus" role="status" class="muted">Run the supplied Supabase SQL first.</p></section>
+<section id="slvFinancialAdmin" class="section-box" style="margin-top:18px;border:1px solid #c8d9f5"><h4>🏦 AEPS & PhonePe — Amount-wise Slabs (Cloud)</h4><p class="muted">Separate slabs per transaction type. Charges are not configured until you save them. This module does not transfer money or change wallet balances.</p><label>Transaction Type</label><select id="finAdminType" onchange="slvFinLoad()"><option value="aeps">AEPS Cash Withdrawal</option><option value="cash_upi">PhonePe Cash → UPI</option><option value="upi_cash">PhonePe UPI → Cash</option></select><label>Customer Charge Slabs (from-to=charge)</label><div id="finChargeRows" class="fin-slab-rows"></div><button type="button" class="btn-secondary" onclick="slvFinAddRow('charge')">＋ Add Charge Slab</button><textarea id="finSlabs" class="hidden" aria-hidden="true"></textarea><label>Processing Cost Slabs (from-to=cost)</label><div id="finCostRows" class="fin-slab-rows"></div><button type="button" class="btn-secondary" onclick="slvFinAddRow('cost')">＋ Add Cost Slab</button><textarea id="finCosts" class="hidden" aria-hidden="true"></textarea><div class="row"><button type="button" class="btn-green" onclick="slvFinSave()">💾 Save Cloud Slabs</button><button type="button" class="btn-red" onclick="slvFinDelete()">Delete Rules</button></div><p id="finAdminStatus" role="status" class="muted">Run the supplied Supabase SQL first.</p></section>
     </div>
 
 
@@ -4874,9 +4874,9 @@ const status=(id,t)=>{if($(id))$(id).textContent=t};
 async function db(){const d=window.slvSupabase;if(!d)throw Error('Cloud unavailable');const u=await d.auth.getUser();if(!u.data?.user)throw Error('Login required');return d}
 function parse(t){const out=[];for(const line of t.split(/\n/).map(x=>x.trim()).filter(Boolean)){const m=line.match(/^(\d+(?:\.\d{1,2})?)-(\d+(?:\.\d{1,2})?)\s*=\s*(\d+(?:\.\d{1,2})?)$/);if(!m)throw Error('Use from-to=rate: '+line);const x={from:+m[1],to:+m[2],rate:+m[3]};if(x.from<=0||x.to<x.from||(out.length&&x.from<=out.at(-1).to))throw Error('Slabs overlap or invalid');out.push(x)}if(!out.length)throw Error('Enter slabs');return out}
 const fmt=a=>(a||[]).map(x=>`${x.from}-${x.to}=${x.rate}`).join('\n');
-window.slvFinLoad=async()=>{try{const d=await db(),r=await d.from('slv_financial_slabs').select('*').eq('service_key',$('finAdminType').value).single();if(r.error)throw r.error;$('finSlabs').value=fmt(r.data.charge_slabs);$('finCosts').value=fmt(r.data.cost_slabs);status('finAdminStatus','Cloud slabs loaded')}catch(e){status('finAdminStatus',e.message)}};
-window.slvFinSave=async()=>{try{const d=await db(),charge_slabs=parse($('finSlabs').value),cost_slabs=parse($('finCosts').value);if(!confirm('Save slabs?'))return;const r=await d.from('slv_financial_slabs').upsert({service_key:$('finAdminType').value,charge_slabs,cost_slabs,updated_at:new Date().toISOString()},{onConflict:'service_key'}).select();if(r.error||!r.data?.length)throw Error(r.error?.message||'Save not confirmed');status('finAdminStatus','✓ Saved');window.slvFinQuote()}catch(e){status('finAdminStatus',e.message)}};
-window.slvFinDelete=async()=>{try{const d=await db();if(!confirm('Clear this service slabs?'))return;const r=await d.from('slv_financial_slabs').update({charge_slabs:[],cost_slabs:[]}).eq('service_key',$('finAdminType').value).select();if(r.error||!r.data?.length)throw Error(r.error?.message||'Not saved');$('finSlabs').value='';$('finCosts').value='';status('finAdminStatus','Cleared')}catch(e){status('finAdminStatus',e.message)}};
+window.slvFinLoad=async()=>{try{const d=await db(),r=await d.from('slv_financial_slabs').select('*').eq('service_key',$('finAdminType').value).single();if(r.error)throw r.error;$('finSlabs').value=fmt(r.data.charge_slabs);$('finCosts').value=fmt(r.data.cost_slabs);window.slvFinRenderRows();status('finAdminStatus','Cloud slabs loaded')}catch(e){status('finAdminStatus',e.message)}};
+window.slvFinSave=async()=>{try{window.slvFinSyncRows();const d=await db(),charge_slabs=parse($('finSlabs').value),cost_slabs=parse($('finCosts').value);if(!confirm('Save slabs?'))return;const r=await d.from('slv_financial_slabs').upsert({service_key:$('finAdminType').value,charge_slabs,cost_slabs,updated_at:new Date().toISOString()},{onConflict:'service_key'}).select();if(r.error||!r.data?.length)throw Error(r.error?.message||'Save not confirmed');status('finAdminStatus','✓ Saved');window.slvFinQuote()}catch(e){status('finAdminStatus',e.message)}};
+window.slvFinDelete=async()=>{try{const d=await db();if(!confirm('Clear this service slabs?'))return;const r=await d.from('slv_financial_slabs').update({charge_slabs:[],cost_slabs:[]}).eq('service_key',$('finAdminType').value).select();if(r.error||!r.data?.length)throw Error(r.error?.message||'Not saved');$('finSlabs').value='';$('finCosts').value='';window.slvFinRenderRows();status('finAdminStatus','Cleared')}catch(e){status('finAdminStatus',e.message)}};
 window.slvFinWallets=async()=>{const sel=$('finBillWallet');if(!sel)return;sel.replaceChildren(new Option('Choose wallet',''));try{const d=await db(),key=$('finBillType').value;const r=await d.rpc('slv_financial_wallet_choices',{p_service_key:key});if(r.error)throw r.error;for(const w of r.data||[])sel.add(new Option(w.wallet_name,w.wallet_id));status('finBillStatus',(r.data||[]).length?'Select wallet':'No eligible wallet. Admin must activate a matching wallet.')}catch(e){status('finBillStatus','Wallet list: '+e.message)}};
 window.slvFinQuote=async()=>{const token=++seq;quote=null;const a=+$('finBillAmount').value,key=$('finBillType').value,mode=$('finBillMode').value;$('finBillCharge').value='';if(!Number.isFinite(a)||a<=0){$('finBillResult').textContent='Enter amount';return}try{const d=await db(),r=await d.rpc('slv_financial_quote',{p_service_key:key,p_amount:a,p_charge_mode:mode});if(token!==seq)return;if(r.error)throw r.error;quote=r.data;$('finBillCharge').value=Number(quote.charge).toFixed(2);$('finBillResult').textContent=`Charge ₹${Number(quote.charge).toFixed(2)} · Profit ₹${Number(quote.profit).toFixed(2)} · Cash ₹${Number(quote.cash_movement).toFixed(2)} · Digital ₹${Number(quote.digital_movement).toFixed(2)}`;status('finBillStatus','Ready to save (provider transaction must be complete)')}catch(e){if(token!==seq)return;status('finBillStatus',e.message);$('finBillResult').textContent='Slab unavailable'}};
 window.slvFinPost=async()=>{if(posting)return;const key=$('finBillType').value,amount=+$('finBillAmount').value,mode=$('finBillMode').value,wallet=$('finBillWallet').value;if(!quote||!wallet||!Number.isFinite(amount)||amount<=0){status('finBillStatus','Enter amount, wait for quote and select wallet');return}if(!confirm(`Provider completed? Save ${names[key]} ₹${amount.toFixed(2)}?`))return;posting=true;$('finBillSave').disabled=true;const request=crypto.randomUUID();try{const d=await db(),r=await d.rpc('slv_financial_post',{p_request_id:request,p_service_key:key,p_amount:amount,p_charge_mode:mode,p_wallet_id:wallet});if(r.error)throw r.error;status('finBillStatus','✓ Saved · Ref '+request.slice(0,8));$('finBillAmount').value='';$('finBillCharge').value='';$('finBillResult').textContent='Saved successfully';quote=null}catch(e){status('finBillStatus','Save failed: '+e.message+' — Check transaction history before retrying')}finally{posting=false;$('finBillSave').disabled=false}};
@@ -4914,6 +4914,52 @@ const old=window.adminMenuGo;if(typeof old==='function')window.adminMenuGo=funct
  sel.addEventListener('change',update);
  new MutationObserver(update).observe(sel,{childList:true,subtree:true});
  update();
+})();
+</script>
+
+<style>
+.fin-slab-rows{display:flex;flex-direction:column;gap:9px;margin:10px 0}
+.fin-slab-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:9px;align-items:end;padding:10px;background:#f5f8ff;border:1px solid #dce6f5;border-radius:10px}
+.fin-slab-row label{margin:0;font-size:12px}.fin-slab-row input{margin:5px 0 0;min-width:0}
+.fin-slab-row button{margin:0 0 1px;padding:12px}
+@media(max-width:550px){.fin-slab-row{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;padding:7px}.fin-slab-row input{padding:9px 5px;font-size:12px}.fin-slab-row button{grid-column:1/-1;padding:7px}}
+</style>
+<script>
+(function(){
+ const el=id=>document.getElementById(id);
+ const config={charge:['finChargeRows','finSlabs'],cost:['finCostRows','finCosts']};
+ function add(kind,values={}){
+  const container=el(config[kind][0]);if(!container)return;
+  const row=document.createElement('div');row.className='fin-slab-row';
+  for(const [key,title] of [['from','From ₹'],['to','To ₹'],['rate',kind==='charge'?'Charge ₹':'Cost ₹']]){
+   const label=document.createElement('label');label.textContent=title;
+   const input=document.createElement('input');input.type='number';input.min=key==='rate'?'0':'0.01';input.step='0.01';input.placeholder=title;input.dataset.field=key;
+   input.value=values[key]??'';label.appendChild(input);row.appendChild(label);
+  }
+  const remove=document.createElement('button');remove.type='button';remove.className='btn-red';remove.textContent='✕ Remove';remove.onclick=()=>row.remove();row.appendChild(remove);container.appendChild(row);
+ }
+ window.slvFinAddRow=kind=>add(kind);
+ window.slvFinRenderRows=function(){
+  for(const kind of Object.keys(config)){
+   const [rows,textarea]=config[kind];el(rows).replaceChildren();
+   const lines=el(textarea).value.split(/\n/).map(x=>x.trim()).filter(Boolean);
+   for(const line of lines){const match=line.match(/^(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)\s*=\s*(\d+(?:\.\d+)?)$/);if(match)add(kind,{from:match[1],to:match[2],rate:match[3]});}
+   if(!lines.length)add(kind);
+  }
+ };
+ window.slvFinSyncRows=function(){
+  for(const kind of Object.keys(config)){
+   const [rows,textarea]=config[kind],entries=[];
+   for(const row of el(rows).querySelectorAll('.fin-slab-row')){
+    const fields=[...row.querySelectorAll('input')].map(x=>x.value.trim());
+    if(fields.every(x=>x===''))continue;
+    if(fields.some(x=>x===''))throw Error('Complete From, To and Rate in every slab');
+    entries.push(fields[0]+'-'+fields[1]+'='+fields[2]);
+   }
+   el(textarea).value=entries.join('\n');
+  }
+ };
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',window.slvFinRenderRows);else window.slvFinRenderRows();
 })();
 </script>
 </body>
