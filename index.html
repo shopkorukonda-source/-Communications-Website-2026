@@ -5011,6 +5011,56 @@ const old=window.adminMenuGo;if(typeof old==='function')window.adminMenuGo=funct
  });
 })();
 </script>
+
+<!-- Employee quick-services financial entries: independent of external website links -->
+<style>
+#slvEmployeeServiceGrid .slv-fin-quick-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;min-height:112px;background:#eaf3ff;color:#153e77;border:1px solid #c8dcfa;border-radius:13px;padding:12px 7px;cursor:pointer;font:inherit;font-weight:750;text-align:center;box-shadow:none}
+#slvEmployeeServiceGrid .slv-fin-quick-card span{font-size:27px}
+</style>
+<script>
+(function(){
+ 'use strict';
+ const options=[['aeps','AEPS Cash Withdrawal','🏧'],['upi_cash','PhonePe UPI to Cash','📱'],['cash_upi','PhonePe Cash to UPI','💵']];
+ function ensureOptions(){
+  const sel=document.getElementById('slvTxService');if(!sel)return;
+  options.forEach(([key,label])=>{
+   if(!Array.from(sel.options).some(o=>o.value==='slv-fin-'+key)){
+    const opt=new Option(label,'slv-fin-'+key);opt.dataset.financialService=key;sel.add(opt);
+   }
+  });
+ }
+ function openFinancial(key){
+  if(typeof window.showView==='function')window.showView('servicesView');
+  ensureOptions();
+  const sel=document.getElementById('slvTxService');if(!sel)return;
+  sel.value='slv-fin-'+key;
+  const checkout=document.getElementById('slvCloudCheckout');
+  const panel=document.getElementById('slvFinancialBilling');
+  checkout?.classList.add('slv-financial-selected');
+  panel?.classList.remove('hidden');
+  const type=document.getElementById('finBillType');if(type)type.value=key;
+  const search=document.getElementById('slvServiceSearch');if(search)search.value=options.find(x=>x[0]===key)[1];
+  window.slvFinWallets?.();window.slvFinQuote?.();
+  panel?.scrollIntoView({block:'nearest'});
+ }
+ window.slvOpenEmployeeFinancial=openFinancial;
+ function render(){
+  const grid=document.getElementById('slvEmployeeServiceGrid');if(!grid)return;
+  const q=(document.getElementById('slvQuickSearch')?.value||'').toLowerCase().trim();
+  options.forEach(([key,label,emoji])=>{
+   let b=grid.querySelector('[data-slv-fin-quick="'+key+'"]');
+   if(!label.toLowerCase().includes(q)) {b?.remove();return;}
+   if(!b){b=document.createElement('button');b.type='button';b.className='slv-fin-quick-card';b.dataset.slvFinQuick=key;b.innerHTML='<span aria-hidden="true">'+emoji+'</span><b>'+label+'</b>';b.onclick=()=>openFinancial(key);grid.prepend(b);}
+  });
+ }
+ const original=window.slvQuickRender;
+ window.slvQuickRender=function(){if(typeof original==='function')original.apply(this,arguments);render();};
+ const grid=document.getElementById('slvEmployeeServiceGrid');
+ if(grid){let pending=false;new MutationObserver(()=>{if(pending)return;pending=true;queueMicrotask(()=>{pending=false;render()})}).observe(grid,{childList:true});}
+ const sel=document.getElementById('slvTxService');if(sel){new MutationObserver(ensureOptions).observe(sel,{childList:true});ensureOptions();}
+ render();
+})();
+</script>
 </body>
 </html>
 
