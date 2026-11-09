@@ -252,6 +252,37 @@ if (ready) {
         link.href=job.official_url; link.textContent='View official notice'; link.target='_blank'; link.rel='noopener noreferrer';
         article.append(link);
       }
+      const actions=document.createElement('div');
+      actions.style.marginTop='10px';
+      const approve=document.createElement('button');
+      approve.className='admin-action'; approve.type='button'; approve.textContent='Approve & Publish';
+      const reject=document.createElement('button');
+      reject.className='admin-action'; reject.type='button'; reject.textContent='Reject';
+      reject.style.marginLeft='8px'; reject.style.background='#8b2731';
+      const feedback=document.createElement('p'); feedback.setAttribute('role','status');
+      async function review(action) {
+        const question=action==='approve'
+          ? 'Have you verified the official notice and confirmed it should be published publicly?'
+          : 'Reject this scraper notice? It will not be published.';
+        if (!window.confirm(question)) return;
+        approve.disabled=true; reject.disabled=true;
+        feedback.textContent=action==='approve'?'Publishing notice...':'Rejecting notice...';
+        try {
+          const {data:result,error}=await db.rpc('slv_review_scraper_candidate',{
+            p_candidate_id:job.id,p_action:action
+          });
+          if (error) throw error;
+          heading.textContent=String(result||'Review saved')+'. Refreshing scraper drafts...';
+          await loadScraperDrafts();
+        } catch(err) {
+          feedback.textContent='Review failed: '+(err?.message||String(err));
+          approve.disabled=false; reject.disabled=false;
+        }
+      }
+      approve.addEventListener('click',()=>review('approve'));
+      reject.addEventListener('click',()=>review('reject'));
+      actions.append(approve,reject);
+      article.append(actions,feedback);
       container.append(article);
     }
   }
