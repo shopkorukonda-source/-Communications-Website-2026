@@ -40,6 +40,23 @@ footer small{color:#c5d4e8}
 .admin-item a{color:#0d4b91}
 #admin-message{margin:10px 0;white-space:pre-wrap}
 .admin-hidden{display:none!important}
+
+/* Public job listings */
+.jobs-toolbar{display:flex;flex-wrap:wrap;gap:10px;margin:15px 0}
+.jobs-toolbar input,.jobs-toolbar select{flex:1;min-width:170px;padding:12px;border:1px solid #cbd5e1;border-radius:9px;background:white;color:#1c2c43}
+.job-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:14px;margin-top:15px}
+.job-card{border:1px solid #dce5f0;border-radius:12px;padding:18px;background:#fff;overflow-wrap:anywhere}
+.job-card h3{font-size:17px;margin:8px 0}
+.job-card{position:relative}
+.job-new{position:absolute;top:12px;right:12px;background:#c62828;color:white;border-radius:5px;padding:3px 9px;font-size:11px;font-weight:800;letter-spacing:.7px;animation:slvNewBlink 1.1s ease-in-out infinite;box-shadow:0 0 0 2px #fff}
+@keyframes slvNewBlink{0%,100%{opacity:1}50%{opacity:.3}}
+@media(prefers-reduced-motion:reduce){.job-new{animation:none}}
+.job-card:has(.job-new) .job-tag{margin-right:60px}
+.job-card p{margin:7px 0}
+.job-tag{display:inline-block;border-radius:20px;background:#e9f2ff;color:#164c83;padding:3px 10px;font-size:12px;font-weight:bold}
+.job-card .btn{padding:9px 13px;font-size:13px;margin-top:8px}
+.job-muted{color:#52647b;font-size:13px}
+#jobs-status{margin-top:12px;color:#52647b}
 </style>
 </head>
 <body>
@@ -49,6 +66,7 @@ footer small{color:#c5d4e8}
 <p>Government Job Information Service</p>
 <nav>
 <a href="#home">Home</a>
+<a href="#jobs">Latest Jobs</a>
 <a href="#plans">Plans</a>
 <a href="#how">How It Works</a>
 <a href="#about">About</a>
@@ -65,10 +83,24 @@ footer small{color:#c5d4e8}
 <p>Andhra Pradesh & Central Government Job Notifications</p>
 <p>Official Notifications • Eligibility • Last Dates • Application Links</p>
 <p><strong>Independent Information Service — Not a Government Website</strong></p>
-<a class="btn" href="#plans">View Subscription Plans</a>
+<a class="btn" href="#jobs">Browse Latest Jobs</a>
 </div>
 
 <main class="container">
+
+
+<section id="jobs">
+<h2>Latest Government Job Notifications</h2>
+<p>Verified by SLV Admin before publishing. Always confirm dates and eligibility on the official website.</p>
+<div class="jobs-toolbar">
+<input id="jobs-search" type="search" placeholder="Search job title or department" aria-label="Search jobs">
+<select id="jobs-region" aria-label="Filter job region"><option value="all">All Jobs</option><option value="ap">AP Jobs</option><option value="central">Central Jobs</option></select>
+<select id="jobs-source" aria-label="Filter source"><option value="all">All Departments</option></select>
+<button class="admin-action" id="jobs-refresh" type="button">Refresh</button>
+</div>
+<p id="jobs-status" role="status" aria-live="polite">Loading approved notifications...</p>
+<div id="public-jobs" class="job-grid"></div>
+</section>
 
 <section id="plans">
 <h2>Our Subscription Plans</h2>
@@ -200,6 +232,73 @@ const message = text => { el('admin-message').textContent = text; };
 const toggle = (id, visible) => el(id).classList.toggle('admin-hidden', !visible);
 if (ready) {
   const db = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+  // Public job board: read only, never displays drafts.
+  let publicJobs = [];
+  const normalize = value => String(value ?? '').toLowerCase().trim();
+  const safeOfficialUrl = value => {
+    try { const u = new URL(value); return u.protocol === 'https:' ? u.href : null; }
+    catch { return null; }
+  };
+  const jobRegion = job => {
+    const combined = normalize([job.category,job.organization,job.title].join(' '));
+    return /\b(appsc|andhra pradesh|ap government|ap state|apsrtc|ap police|ap jobs)\b/.test(combined) ? 'ap' : 'central';
+  };
+  function renderPublicJobs() {
+    const query = normalize(el('jobs-search').value);
+    const region = el('jobs-region').value;
+    const source = el('jobs-source').value;
+    const matches = publicJobs.filter(job => {
+      const haystack = normalize([job.title,job.organization,job.category].join(' '));
+      return (!query || haystack.includes(query)) && (region === 'all' || jobRegion(job) === region) && (source === 'all' || normalize(job.organization) === source);
+    });
+    const target = el('public-jobs'); target.replaceChildren();
+    el('jobs-status').textContent = `${matches.length} of ${publicJobs.length} approved notifications shown`;
+    if (!matches.length) {
+      const empty=document.createElement('p'); empty.textContent='No matching approved notifications. Try another search or filter.'; target.append(empty); return;
+    }
+    for (const job of matches) {
+      const card=document.createElement('article'); card.className='job-card';
+      const tag=document.createElement('span'); tag.className='job-tag'; tag.textContent=job.category || 'Government Jobs';
+      const createdAt=job.created_at ? new Date(job.created_at).getTime() : NaN;
+      // NEW is shown for 48 hours after the database record was created.
+      // For exact approval-based timing, add an approved_at timestamp in Supabase later.
+      if(Number.isFinite(createdAt) && createdAt <= Date.now() && Date.now()-createdAt < 48*60*60*1000){
+        const badge=document.createElement('span'); badge.className='job-new'; badge.textContent='NEW'; badge.setAttribute('aria-label','New notification'); card.append(badge);
+      }
+      const title=document.createElement('h3'); title.textContent=job.title || 'Government Job Notification';
+      const org=document.createElement('p'); org.textContent=job.organization || 'Government Department';
+      const date=document.createElement('p'); date.className='job-muted';
+      const rawDate=job.published_date || job.created_at;
+      const parsed=rawDate ? new Date(rawDate) : null;
+      date.textContent='Date: '+(parsed && !Number.isNaN(parsed.getTime()) ? parsed.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : 'Not provided');
+      card.append(tag,title,org,date);
+      const url=safeOfficialUrl(job.official_url);
+      if(url) { const link=document.createElement('a'); link.className='btn'; link.href=url; link.target='_blank'; link.rel='noopener noreferrer'; link.textContent='Official Notification / Apply'; card.append(link); }
+      target.append(card);
+    }
+  }
+  async function loadPublicJobs() {
+    el('jobs-status').textContent='Loading approved notifications...';
+    const {data,error}=await db.from('jobs')
+      .select('id,title,organization,category,published_date,official_url,created_at')
+      .eq('status','active').order('created_at',{ascending:false}).limit(200);
+    if(error) { el('jobs-status').textContent='Unable to load approved jobs: '+error.message+'. Check public read policy for active jobs.'; return; }
+    publicJobs=data || [];
+    const selected=el('jobs-source').value;
+    const select=el('jobs-source'); select.replaceChildren();
+    const all=document.createElement('option'); all.value='all'; all.textContent='All Departments'; select.append(all);
+    const orgs=[...new Set(publicJobs.map(j=>j.organization).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+    for(const org of orgs){const opt=document.createElement('option'); opt.value=normalize(org); opt.textContent=org; select.append(opt);}
+    if([...select.options].some(o=>o.value===selected)) select.value=selected;
+    renderPublicJobs();
+  }
+  el('jobs-search').addEventListener('input',renderPublicJobs);
+  el('jobs-region').addEventListener('change',renderPublicJobs);
+  el('jobs-source').addEventListener('change',renderPublicJobs);
+  el('jobs-refresh').addEventListener('click',loadPublicJobs);
+  await loadPublicJobs();
+
   toggle('admin-setup', false);
   toggle('admin-login', true);
   async function showSession() {
