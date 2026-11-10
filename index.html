@@ -1003,7 +1003,61 @@ button.btn-orange,.btn-orange{background:#e9f0f4!important;color:#365c72!importa
 .main-header .slv-wordmark-header span{visibility:visible!important;opacity:1!important;color:#284b60!important;-webkit-text-fill-color:#284b60!important;text-shadow:none!important}
 .main-header .slv-brand-mark{display:inline-block!important;visibility:visible!important;opacity:1!important;flex-shrink:0!important}
 @media(max-width:650px){#adminView .slv-five-buttons,#employeeView .slv-five-buttons{grid-template-columns:repeat(2,minmax(0,1fr))!important}#adminView .slv-five-buttons button,#employeeView .slv-five-buttons button{min-height:106px!important}#adminView .slv-five-buttons button b,#employeeView .slv-five-buttons button b{font-size:12.5px!important}}
-</style></head>
+</style><style id="slv-lightblue-white-labels-v1">
+:root{--slv-blue:#5a9bd2;--slv-blue-hover:#478bc5;--slv-bg:#f4f9fe;--slv-ink:#243c53}
+body{background:#f4f9fe!important;color:var(--slv-ink)}
+#adminView,#employeeView{background:#f4f9fe!important}
+#adminView .slv2026-hub,#employeeView .slv2026-hub{background:#edf6ff!important;border:1px solid #d5e7f5!important;box-shadow:none!important}
+#adminView .slv2026-grid button,#employeeView .slv2026-grid button,
+#adminView .slv-six-grid button,#employeeView .slv-six-grid button,
+#adminView [class*="category-grid"] button,#employeeView [class*="category-grid"] button,
+#adminView [class*="category-card"],#employeeView [class*="category-card"],
+#adminView [class*="slv-category"] button,#employeeView [class*="slv-category"] button{
+ background:#5a9bd2!important;color:#fff!important;border:1px solid #4b8fc9!important;
+ box-shadow:0 2px 6px rgba(42,102,150,.10)!important;text-shadow:none!important;
+}
+#adminView .slv2026-grid button *,#employeeView .slv2026-grid button *,
+#adminView [class*="category-card"] *,#employeeView [class*="category-card"] *{
+ color:#fff!important;-webkit-text-fill-color:#fff!important;
+}
+#adminView .slv2026-grid button:hover,#employeeView .slv2026-grid button:hover,
+#adminView [class*="category-grid"] button:hover,#employeeView [class*="category-grid"] button:hover{background:#478bc5!important}
+#adminView .slv2026-grid button svg,#employeeView .slv2026-grid button svg,
+#adminView [class*="category-card"] svg,#employeeView [class*="category-card"] svg{stroke:#fff!important;fill:none!important}
+#adminView input,#employeeView input,#adminView select,#employeeView select,#adminView textarea,#employeeView textarea{background:#fff!important;color:#243c53!important}
+#adminView input::placeholder,#employeeView input::placeholder{color:#72869a!important}
+#adminView .slv2026-hub h3,#employeeView .slv2026-hub h3{color:#244967!important}
+@media(prefers-reduced-motion:reduce){#adminView *,#employeeView *{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+<style id="slv-wallet-services-unified-blue-v1">
+/* Unified light-blue appearance for wallet and service workspaces. */
+:root{--slv-surface:#f4f9fe;--slv-panel:#fff;--slv-action:#5a9bd2;--slv-action-hover:#478bc5;--slv-border:#d6e6f3;--slv-text:#243c53}
+#adminView,#employeeView,#servicesView{background:var(--slv-surface)!important;color:var(--slv-text)!important}
+#adminView :is(.card,.panel,.section,.wallet-card,.service-card),#employeeView :is(.card,.panel,.section,.wallet-card,.service-card),#servicesView :is(.card,.panel,.section,.wallet-card,.service-card){border-color:var(--slv-border)!important;box-shadow:none!important}
+/* Controls: blue background and legible white labels across wallets and services. */
+#adminView :is(button,.btn,[role="button"]):not(.close):not(.btn-close),#employeeView :is(button,.btn,[role="button"]):not(.close):not(.btn-close),#servicesView :is(button,.btn,[role="button"]):not(.close):not(.btn-close){background:#5a9bd2!important;background-image:none!important;color:#fff!important;-webkit-text-fill-color:#fff!important;border:1px solid #4b8fc9!important;border-radius:10px!important;text-shadow:none!important;box-shadow:none!important}
+#adminView :is(button,.btn,[role="button"]):not(.close):not(.btn-close) *,#employeeView :is(button,.btn,[role="button"]):not(.close):not(.btn-close) *,#servicesView :is(button,.btn,[role="button"]):not(.close):not(.btn-close) *{color:#fff!important;-webkit-text-fill-color:#fff!important}
+#adminView button svg,#employeeView button svg,#servicesView button svg{stroke:currentColor!important}
+#adminView button:hover:not(:disabled),#employeeView button:hover:not(:disabled),#servicesView button:hover:not(:disabled){background:#478bc5!important}
+#adminView button:disabled,#employeeView button:disabled,#servicesView button:disabled{opacity:.55!important;cursor:not-allowed!important}
+#adminView :is(input,select,textarea),#employeeView :is(input,select,textarea),#servicesView :is(input,select,textarea){background:#fff!important;background-image:none!important;color:#243c53!important;-webkit-text-fill-color:#243c53!important;border:1px solid #bcd3e6!important;border-radius:9px!important;box-shadow:none!important}
+#adminView :is(input,select,textarea)::placeholder,#employeeView :is(input,select,textarea)::placeholder,#servicesView :is(input,select,textarea)::placeholder{color:#71879b!important;-webkit-text-fill-color:#71879b!important}
+#adminView :is(input,select,textarea):focus,#employeeView :is(input,select,textarea):focus,#servicesView :is(input,select,textarea):focus{outline:2px solid #a7d4f2!important;outline-offset:1px!important}
+#adminView :is(h1,h2,h3,h4,label),#employeeView :is(h1,h2,h3,h4,label),#servicesView :is(h1,h2,h3,h4,label){text-shadow:none!important}
+#adminView :is(table,thead,tbody,tr,td,th),#employeeView :is(table,thead,tbody,tr,td,th),#servicesView :is(table,thead,tbody,tr,td,th){border-color:#d6e6f3!important}
+#adminView :is(th,thead),#employeeView :is(th,thead),#servicesView :is(th,thead){background:#eaf4fd!important;color:#243c53!important}
+#adminView :is(td,tbody),#employeeView :is(td,tbody),#servicesView :is(td,tbody){color:#243c53!important}
+#adminView .slv-five-buttons button,#employeeView .slv-five-buttons button{background:#5a9bd2!important;border-color:#4b8fc9!important}
+#adminView .slv-five-buttons button b,#employeeView .slv-five-buttons button b{color:#fff!important;-webkit-text-fill-color:#fff!important}
+#adminView .slv-five-buttons button .slv-category-icon,#employeeView .slv-five-buttons button .slv-category-icon{color:#fff!important;stroke:#fff!important}
+#adminView .slv-five-buttons button.active,#employeeView .slv-five-buttons button.active{background:#397eae!important;border-color:#2f6f9d!important}
+@media(prefers-reduced-motion:reduce){#servicesView *{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+
+<style id="slv-final-plain-blue-background">
+:root{color-scheme:light!important}html,body{background:#dceeff!important;background-image:none!important;color:#24445e!important}body::before,body::after{background-image:none!important}#loginView,#adminView,#employeeView,#servicesView,main.card,.card,.panel,.modal-content,.dialog-content{background-color:#f3f9ff!important;background-image:none!important}input,textarea,select{background:#fff!important;color:#203a50!important;border-color:#b8d5e9!important}button,.btn,[role="button"]{text-shadow:none}button:not(.ghost):not(.secondary):not(.outline),.btn-primary{background:#5a9bd2;color:#fff}table{background:#fff}thead,th{background:#cce5fa;color:#254b69}h1,h2,h3,h4,p,label{opacity:1} 
+</style>
+</head>
 <body>
 <div aria-label="Transaction successful" aria-live="polite" class="slv-tx-success" id="slvTxSuccess" role="status"><div class="slv-tx-success-card"><div class="slv-tx-success-check">✓</div><h3>Transaction Successful</h3><p>SLV Communications • Payment Recorded</p><div class="slv-tx-success-amount" id="slvTxSuccessAmount">₹0.00</div><p id="slvTxSuccessCount">Wallet balances updated</p><div class="slv-tx-success-line"></div></div></div>
 <div aria-label="SLV loading" aria-live="polite" id="slvLoadingOverlay">
