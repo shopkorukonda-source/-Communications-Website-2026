@@ -1196,6 +1196,17 @@ body:has(#adminView:not(.hidden)),body:has(#employeeView:not(.hidden)){
       </div>
       <button class="btn-green" onclick="saveWallet()" style="display:none">+ Add Wallet (Local Only)</button>
 
+
+<div id="slvEveningProfit" class="section-box" style="margin-top:18px;border-left:4px solid #168653">
+ <h4>🌙 Evening Profit Settlement — Admin</h4>
+ <p class="muted">Withdraw recorded profit from an available Cash / UPI / Bank wallet. Processing recharge reserves and pending settlements must be checked first. This does not reduce reported profit.</p>
+ <button type="button" onclick="slvProfitLoad()">↻ Refresh Today's Profit</button>
+ <div id="slvProfitSummary" class="total" style="font-size:15px">Press Refresh to load cloud profit.</div>
+ <label for="slvProfitWallet">Withdraw from Wallet</label><select id="slvProfitWallet"><option value="">— Refresh wallets —</option></select>
+ <label for="slvProfitAmount">Amount to Withdraw ₹</label><input id="slvProfitAmount" type="number" min="0.01" step="0.01" placeholder="0.00">
+ <button type="button" class="btn-green" id="slvProfitWithdrawButton" onclick="slvProfitWithdraw()">Withdraw Profit</button>
+ <p class="muted" id="slvProfitMessage" role="status">Admin only. Run the accompanying Supabase SQL first.</p>
+</div>
       <div id="slvCloudWalletPanel" class="section-box" style="border:1px solid #d3dff8;background:#f8fbff;margin:18px 0">
         <h4>☁️ Cloud Wallet Management — Admin</h4>
         <p class="muted">Rename, Change Logo (PNG/JPG/WebP up to 80 KB), Credit / Debit with reason, Archive / Restore. All changes are saved in Supabase.</p>
@@ -5076,6 +5087,18 @@ const old=window.adminMenuGo;if(typeof old==='function')window.adminMenuGo=funct
  if(grid){let pending=false;new MutationObserver(()=>{if(pending)return;pending=true;queueMicrotask(()=>{pending=false;render()})}).observe(grid,{childList:true});}
  const sel=document.getElementById('slvTxService');if(sel){new MutationObserver(ensureOptions).observe(sel,{childList:true});ensureOptions();}
  render();
+})();
+</script>
+
+<script id="slv-evening-profit-settlement">
+(function(){'use strict';
+ const $=id=>document.getElementById(id);let busy=false,summary=null;
+ const msg=t=>{if($('slvProfitMessage'))$('slvProfitMessage').textContent=t};
+ async function client(){const db=window.slvSupabase;if(!db)throw Error('Cloud not connected');const u=await db.auth.getUser();if(!u.data?.user)throw Error('Login required');const p=await db.from('profiles').select('role,is_active').eq('id',u.data.user.id).single();if(p.error||p.data?.role!=='admin'||p.data?.is_active!==true)throw Error('Active Admin required');return db}
+ const money=x=>'₹'+Number(x||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+ window.slvProfitLoad=async()=>{try{msg('Loading cloud balances and profit…');const db=await client();const [r,w]=await Promise.all([db.rpc('slv_profit_settlement_summary'),db.from('wallets').select('id,wallet_name,balance,wallet_type').eq('is_active',true).is('owner_user_id',null).in('wallet_type',['cash','upi','bank']).order('wallet_name')]);if(r.error)throw r.error;if(w.error)throw w.error;summary=r.data;const s=$('slvProfitSummary');s.textContent='Recorded Profit: '+money(summary.recorded_profit)+' | Withdrawn: '+money(summary.withdrawn)+' | Remaining: '+money(summary.remaining);const sel=$('slvProfitWallet'),prior=sel.value;sel.replaceChildren(new Option('— Choose Wallet —',''));(w.data||[]).forEach(x=>sel.add(new Option(x.wallet_name+' — '+money(x.balance),x.id)));if([...sel.options].some(o=>o.value===prior))sel.value=prior;msg('Only posted transactions.profit included. Check available funds and recharge reserves before withdrawing.')}catch(e){summary=null;msg('Unable to load: '+e.message)}};
+ window.slvProfitWithdraw=async()=>{if(busy)return;const wallet=$('slvProfitWallet').value,amount=Number($('slvProfitAmount').value);if(!summary||!wallet||!Number.isFinite(amount)||amount<=0||Math.round(amount*100)!==amount*100)return msg('Refresh, select wallet and enter a valid amount');if(amount>Number(summary.remaining))return msg('Amount exceeds remaining recorded profit');if(!confirm('Withdraw '+money(amount)+' from selected wallet? Check processing recharge reserve and actual available funds.'))return;busy=true;$('slvProfitWithdrawButton').disabled=true;const request=crypto.randomUUID();try{const db=await client();const r=await db.rpc('slv_withdraw_evening_profit',{p_request_id:request,p_wallet_id:wallet,p_amount:amount});if(r.error)throw r.error;$('slvProfitAmount').value='';await window.slvProfitLoad();msg('✓ Profit withdrawal saved. Transaction ID: '+request.slice(0,8));if(typeof window.slvCloudRefresh==='function')window.slvCloudRefresh()}catch(e){msg('Not confirmed: '+e.message+' — Check wallet history before retrying.')}finally{busy=false;$('slvProfitWithdrawButton').disabled=false}};
+ const old=window.adminMenuGo;if(typeof old==='function')window.adminMenuGo=function(id,...args){const result=old.call(this,id,...args);if(id==='adminWallets')window.slvProfitLoad();return result};
 })();
 </script>
 </body>
