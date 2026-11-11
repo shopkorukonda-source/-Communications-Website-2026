@@ -1378,6 +1378,7 @@ input:focus,select:focus,textarea:focus{border-color:#b9954e!important;box-shado
 <select id="srvType">
 <option value="Fixed">Fixed Fee</option>
 <option value="Slab">Slab Based</option>
+<option value="Manual">Manual — Main Amount + Service Charge</option>
 <option value="Percentage">Percentage (%) Based</option>
 <option value="CC_Refund">Credit Card (Refund/Deduct)</option>
 </select>
@@ -1402,6 +1403,7 @@ input:focus,select:focus,textarea:focus{border-color:#b9954e!important;box-shado
 <label for="srvWallet">Link Service to Wallet</label>
 <select id="srvWallet"></select>
 <button class="btn-orange" onclick="saveService()">+ Save Service Rule</button>
+<p class="muted" id="slvNewPricingHelp">Manual: employee enters Main Amount + Service Charge. Slab: create service, then configure Universal Pricing below.</p>
 <div id="servicesAdminList"></div><div class="section-box" id="slvCatalogPanel" style="margin-top:18px"><h4>📚 SLV Service Catalog — Add to Cloud</h4><p class="muted">Add missing services only. New services are INACTIVE with ₹0 rates until Admin configures rates and cloud wallet mappings. Existing services are preserved.</p><div class="row"><button onclick="slvCatalogPreview()" type="button">Preview Missing Services</button><button class="btn-green" onclick="slvCatalogImport()" type="button">Add Missing Services</button></div><p class="muted" id="slvCatalogStatus"></p><div id="slvCatalogPreview"></div></div>
 <div class="section-box" id="slvUniversalPricing" style="margin-top:18px;border:1px solid #b8d5f5"><h4>🧮 Universal Pricing — Cloud Rules</h4><p class="muted">Fixed / Percentage / Slab rules. Profit is always Customer Charge − Processing Cost. Xerox and Current Bill keep their separate rules.</p><label>Service</label><select id="upService" onchange="slvUPLoad()"><option value="">Load services</option></select><label>Pricing Target</label><select id="upTarget" onchange="slvUPLoad()"><option value="charge">Customer Charge</option><option value="cost">Processing Cost</option></select><label>Rule Type</label><select id="upType" onchange="slvUPFields()"><option value="fixed">Fixed per Unit</option><option value="percentage">Percentage</option><option value="slab">Slab</option></select><div id="upValueBox"><label>Rate ₹ / Percentage %</label><input id="upValue" min="0" step="0.01" type="number" value="0"/></div><div class="hidden" id="upBasisBox"><label>Percentage Basis</label><select id="upBasis"><option value="fixed_rate">Service Fixed Rate</option><option value="customer">Customer Amount</option></select></div><div class="hidden" id="upSlabBox"><div class="row"><div><label>Slab Method</label><select id="upMethod"><option value="flat">Flat / Matching Slab</option><option value="progressive">Progressive / Tiered</option></select></div><div><label>Slab Charge Type</label><select id="upUnit"><option value="per_unit">Per Unit Rate</option><option value="fixed_charge">Fixed Slab Charge</option></select></div></div><label>Slabs: from-to=rate (one per line, ascending, no overlaps)</label><textarea id="upSlabs" placeholder="1-10=2
 11-50=1.5"></textarea></div><div class="row"><button class="btn-green" onclick="slvUPSave()" type="button">Save Cloud Rule</button><button class="btn-secondary" onclick="slvUPDelete()" type="button">Remove Rule (use Service defaults)</button></div><p class="muted" id="upStatus" role="status"></p></div>
@@ -1697,6 +1699,14 @@ input:focus,select:focus,textarea:focus{border-color:#b9954e!important;box-shado
 <label for="slvServiceSearch">🔎 Search Service</label><div class="slv-service-picker"><input aria-controls="slvServiceSuggestions" aria-expanded="false" autocomplete="off" id="slvServiceSearch" placeholder="Type service name (PAN, Xerox, Aadhaar...)" type="search"/><div class="slv-service-suggestions" hidden="" id="slvServiceSuggestions" role="listbox"></div></div><label class="slv-native-service-label" for="slvTxService">Selected Service</label><select aria-label="Selected Cloud Service" id="slvTxService"><option value="">Load services first</option></select>
 <button class="btn-secondary btn-small" onclick="slvTxLoadServices()" type="button">↻ Load Cloud Services</button>
 <section class="section-box hidden" id="slvFinancialBilling" style="border:1px solid #b8d5f5"><h3>🏦 AEPS / PhonePe Billing</h3><div class="grid"><div><label>Service</label><select id="finBillType" onchange="slvFinQuote();slvFinWallets()"><option value="aeps">AEPS Withdrawal</option><option value="cash_upi">Cash → UPI</option><option value="upi_cash">UPI → Cash</option></select></div><div><label>Amount ₹</label><input id="finBillAmount" min="1" oninput="slvFinQuote()" step="0.01" type="number"/></div><div><label>Wallet</label><select id="finBillWallet"><option value="">Choose wallet</option></select></div><div><label>Charge ₹ (Auto Slab)</label><input id="finBillCharge" readonly="" type="text"/></div><div><label>Charge Type</label><select id="finBillMode" onchange="slvFinQuote()"><option value="extra">Extra</option><option value="deduct">Deduct</option></select></div></div><p class="total" id="finBillResult">Enter amount</p><button class="btn-green" id="finBillSave" onclick="slvFinPost()" type="button">☁️ Save Billing</button><p class="muted" id="finBillStatus" role="status"></p><small>Provider transaction must already be completed. Wallet names only; balances hidden.</small></section>
+<section id="slvManualBilling" class="section-box hidden" style="border:2px solid #d7b96c;background:#fffcf3">
+<h3>🧾 Manual Service Billing</h3><p class="muted">Main Amount is debited from the Admin-approved Processing Wallet. Customer Total is credited to Cash/UPI Wallets. Service Charge is recorded as profit, not credited again.</p>
+<div class="row"><div><label>Main Amount ₹</label><input id="slvManualMain" type="number" min="0" step="0.01" value="0" oninput="slvManualPreview()"/></div><div><label>Service Charge ₹</label><input id="slvManualFee" type="number" min="0.01" step="0.01" value="0" oninput="slvManualPreview()"/></div></div>
+<div class="total" id="slvManualTotal">Customer Total ₹0.00</div>
+<div class="row"><div><label>Cash Received ₹</label><input id="slvManualCash" type="number" min="0" step="0.01" value="0" oninput="slvManualPreview()"/></div><div><label>UPI Received ₹</label><input id="slvManualUpi" type="number" min="0" step="0.01" value="0" oninput="slvManualPreview()"/></div></div>
+<label>Processing Wallet (Admin assigned)</label><select id="slvManualWallet"><option value="">Loading wallets…</option></select><p class="muted" id="slvManualWalletInfo"></p>
+<p id="slvManualStatus" role="status"></p><button class="btn-green" id="slvManualSave" type="button" onclick="slvManualSave()" style="width:100%">☁️ Save Manual Transaction</button>
+</section>
 <input id="slvTxCustomer" type="hidden" value="Walk-in Customer"/>
 <input id="slvTxMobile" type="hidden" value=""/>
 <div class="hidden" id="slvUniversalCustomerBasis"><label for="slvUniversalCustomerAmount">Customer-entered Amount ₹ (percentage basis)</label><input id="slvUniversalCustomerAmount" min="0" oninput="slvTxUpdatePreview()" step="0.01" type="number" value="0"/></div><label for="slvTxQty">Quantity</label><input id="slvTxQty" max="10000" min="1" oninput="slvTxUpdatePreview()" step="1" type="number" value="1"/>
@@ -5476,6 +5486,76 @@ async function init(){
 const observer=new MutationObserver(()=>{if(!$('adminServices').classList.contains('active-admin-section')||$('adminView').classList.contains('hidden'))return;init()});
 observer.observe($('adminServices'),{attributes:true,attributeFilter:['class']});
 window.slvUWRefresh=init;
+})();
+</script>
+
+<style>
+#slvCloudCheckout.slv-manual-mode #slvUniversalCustomerBasis,
+#slvCloudCheckout.slv-manual-mode #slvTxQty,
+#slvCloudCheckout.slv-manual-mode label[for="slvTxQty"],
+#slvCloudCheckout.slv-manual-mode .slv-payment-shortcuts,
+#slvCloudCheckout.slv-manual-mode #slvTxCash,
+#slvCloudCheckout.slv-manual-mode label[for="slvTxCash"],
+#slvCloudCheckout.slv-manual-mode #slvTxUpi,
+#slvCloudCheckout.slv-manual-mode label[for="slvTxUpi"],
+#slvCloudCheckout.slv-manual-mode #slvUnmappedUpiBox,
+#slvCloudCheckout.slv-manual-mode #slvSelectedWalletBox,
+#slvCloudCheckout.slv-manual-mode #slvTxMode,
+#slvCloudCheckout.slv-manual-mode label[for="slvTxMode"],
+#slvCloudCheckout.slv-manual-mode #slvAdditionalTransactions,
+#slvCloudCheckout.slv-manual-mode #slvTxPreview,
+#slvCloudCheckout.slv-manual-mode #slvTxSave{display:none!important}
+</style>
+<script>
+/* Manual billing extension; original fixed and universal cloud posting retained. */
+(function(){
+ const $=id=>document.getElementById(id);let manualService=null,allowed=[],request=null,busy=false,serial=0;
+ const cents=id=>{const t=$(id).value.trim();if(!/^\d+(?:\.\d{1,2})?$/.test(t))return NaN;return Math.round(Number(t)*100)};
+ const fmt=c=>'₹'+(c/100).toFixed(2);
+ const status=(msg,err=false)=>{$('slvManualStatus').textContent=msg;$('slvManualStatus').style.color=err?'#b91c1c':'#16734f'};
+ window.slvManualPreview=function(){const m=cents('slvManualMain'),f=cents('slvManualFee'),c=cents('slvManualCash'),u=cents('slvManualUpi');$('slvManualTotal').textContent=Number.isFinite(m+f)?'Customer Total '+fmt(m+f):'Enter valid amounts';if(Number.isFinite(m+f+c+u))status(c+u===m+f?'✓ Payment matches customer total':'Cash + UPI must equal '+fmt(m+f),c+u!==m+f)};
+ async function sync(){
+  const seq=++serial,id=$('slvTxService')?.value;if(!id)return;
+  try{const db=window.slvSupabase;if(!db)return;const r=await db.from('services').select('id,settings,service_name').eq('id',id).single();if(r.error)throw r.error;if(seq!==serial)return;
+   manualService=r.data?.settings?.slv_billing_mode==='manual'?r.data:null;
+   $('slvCloudCheckout').classList.toggle('slv-manual-mode',!!manualService);$('slvManualBilling').classList.toggle('hidden',!manualService);
+   if(!manualService)return;
+   const w=await db.rpc('slv_get_checkout_wallets',{p_service_id:id});if(w.error)throw w.error;if(seq!==serial)return;
+   allowed=w.data?.allowed||[];const sel=$('slvManualWallet');sel.replaceChildren(new Option('— Select Processing Wallet —',''));allowed.forEach(x=>sel.add(new Option(x.wallet_name,x.wallet_id)));if(allowed.length===1)sel.value=allowed[0].wallet_id;
+   $('slvManualWalletInfo').textContent=allowed.length+' Admin-assigned processing wallet(s). Balances hidden.';window.slvManualPreview();
+  }catch(e){status(e.message||String(e),true)}
+ }
+ const selector=$('slvTxService');if(selector){selector.addEventListener('change',()=>{request=null;sync()});}
+ const oldLoad=window.slvTxLoadServices;if(typeof oldLoad==='function')window.slvTxLoadServices=async function(...args){const result=await oldLoad(...args);await sync();return result};
+ window.slvManualSave=async function(){if(busy)return;if(!manualService||manualService.id!==$('slvTxService').value)return status('Select Manual Service',true);
+  const m=cents('slvManualMain'),f=cents('slvManualFee'),c=cents('slvManualCash'),u=cents('slvManualUpi');if(![m,f,c,u].every(Number.isSafeInteger)||m<0||f<=0||c<0||u<0||m>10000000000||f>10000000000||c+u!==m+f)return status('Enter valid amounts: Cash + UPI must equal Main Amount + Service Charge',true);
+  const wallet=m>0?$('slvManualWallet').value:null;if(m>0&&!allowed.some(x=>x.wallet_id===wallet))return status('Select an Admin-assigned Processing Wallet',true);
+  const name=$('slvTxCustomer').value.trim()||'Walk-in Customer',mobile=$('slvTxMobile').value.trim();const payload=JSON.stringify([manualService.id,name,mobile,m,f,c,u,wallet]);if(request&&request.payload!==payload)return status('Previous save uncertain. Retry unchanged or verify Cloud Transactions before editing.',true);
+  if(!confirm('Save '+manualService.service_name+'? Total '+fmt(m+f)+' • Main '+fmt(m)+' • Profit '+fmt(f)))return;
+  if(!request)request={id:crypto.randomUUID(),payload};busy=true;$('slvManualSave').disabled=true;
+  try{const db=window.slvSupabase;const a=await db.auth.getUser();if(a.error||!a.data?.user)throw Error('Cloud login required');const p=await db.from('profiles').select('role,is_active').eq('id',a.data.user.id).single();if(p.error||!p.data?.is_active||!['employee','admin'].includes(p.data.role))throw Error('Active staff login required');
+   const result=await db.rpc('slv_post_manual_billing',{p_request_id:request.id,p_service_id:manualService.id,p_customer_name:name,p_customer_mobile:mobile,p_main_amount:m/100,p_service_charge:f/100,p_cash_amount:c/100,p_upi_amount:u/100,p_cost_wallet_id:wallet});if(result.error)throw result.error;
+   request=null;status('✓ Saved Cloud Transaction: '+result.data);['slvManualMain','slvManualFee','slvManualCash','slvManualUpi'].forEach(id=>$(id).value='0');window.slvManualPreview();window.slvPendingRefresh?.();
+  }catch(e){status('Not confirmed: '+(e.message||String(e))+'. Retry same values; verify Cloud Transactions.',true)}finally{busy=false;$('slvManualSave').disabled=false}
+ };
+ // Manual services are created in Supabase with an explicit server-validated flag.
+ const oldSave=window.saveService;
+ window.saveService=async function(){
+  const type=$('srvType').value;if(type!=='Manual'&&type!=='Slab')return oldSave();
+  const name=$('srvName').value.trim();if(!name||name.length>150)return alert('Enter valid service name');
+  if(type==='Slab'){
+   alert('Slab Service: first create a Fixed service with a base rate, then select it in Universal Pricing → Slab → Save Cloud Rule. This uses the existing secure server-side slab calculator.');
+   $('slvUniversalPricing')?.scrollIntoView({behavior:'smooth',block:'start'});return;
+  }
+  const db=window.slvSupabase;if(!db)return alert('Cloud connection unavailable');
+  try{const a=await db.auth.getUser();if(a.error||!a.data?.user)throw Error('Login required');const p=await db.from('profiles').select('role,is_active').eq('id',a.data.user.id).single();if(p.error||p.data?.role!=='admin'||p.data?.is_active!==true)throw Error('Cloud Admin required');
+   // New Manual service only; existing services are never overwritten.
+   if(!confirm('Create NEW Manual Service "'+name+'"? Main Amount + Service Charge entered by employee. Set wallet mapping afterward.'))return;
+   const r=await db.from('services').insert({service_name:name,category:'Manual',customer_rate:0,internal_cost:0,is_active:true,settings:{slv_billing_mode:'manual'}}).select('id').single();if(r.error)throw r.error;
+   $('srvName').value='';$('srvType').value='Fixed';window.slvRequestedMapServiceId=r.data.id;await window.renderServicesAdmin?.();await window.slvMapRefresh?.();$('slvCloudServiceMap')?.scrollIntoView({behavior:'smooth',block:'start'});
+   alert('Manual Service created. IMPORTANT: configure Cash, UPI and allowed Processing Wallets before billing.');
+  }catch(e){alert('Manual Service: '+(e.message||String(e)))}
+ };
 })();
 </script>
 </body>
