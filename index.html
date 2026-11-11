@@ -1431,6 +1431,17 @@ input:focus,select:focus,textarea:focus{border-color:#b9954e!important;box-shado
 <p class="muted" id="slvBillStatus" role="status">Cloud Admin login తర్వాత Refresh Slabs నొక్కండి.</p>
 <div id="slvBillRows" style="overflow-x:auto"></div>
 </div>
+
+<div class="section-box" id="slvUniversalWalletPanel" style="margin-top:18px;border:1px solid #d5c18b">
+<h4>💳 Universal Engine — Wallet Modes</h4>
+<p class="muted">Admin configuration only. Existing checkout and wallet posting remain unchanged until the Universal Checkout backend is enabled.</p>
+<label for="uwService">Select Cloud Service</label><select id="uwService"><option value="">Loading services...</option></select>
+<label for="uwMode">Wallet Mode</label><select id="uwMode" onchange="slvUWModeChanged()"><option value="three">3 Wallets</option><option value="multiple">Multiple Wallets</option></select>
+<p class="muted" id="uwModeHelp">Choose one Receiving, one Processing and one Profit wallet. Processing and Profit may be left unassigned where not applicable.</p>
+<div id="uwAssignments"></div>
+<div class="row"><button type="button" class="btn-secondary" id="uwAdd" onclick="slvUWAddRow()">+ Add Wallet</button><button type="button" class="btn-green" id="uwSave" onclick="slvUWSave()">Save Wallet Configuration</button><button type="button" class="btn-secondary" onclick="slvUWLoad()">Reload</button></div>
+<p class="muted" id="uwStatus" role="status"></p>
+</div>
 <div class="section-box" id="slvCloudServiceMap" style="margin-top:18px;border:1px solid #d3dff8;background:#f8fbff">
 <h4>☁️ Cloud Service → Wallet Mapping (Admin) <small style="font-size:11px;color:#168653">v2.1 • No Processing Wallet</small></h4>
 <p class="muted">Supabase services and cloud wallets only. Existing browser-local services and balances are not changed.</p>
@@ -5378,6 +5389,93 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     line.append(left,right);box.append(line)}
   }catch(e){box.textContent='History unavailable: '+e.message}
  };
+})();
+</script>
+<script>
+/* SLV Universal Wallet configuration — admin only; never posts money. */
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+let wallets=[], services=[], loadedService='', saving=false;
+const roles=['receiving','processing','profit'];
+function status(t){$('uwStatus').textContent=t||'';}
+async function admin(){
+ const db=window.slvSupabase;if(!db)throw Error('Cloud connection unavailable');
+ const a=await db.auth.getUser();if(a.error||!a.data?.user)throw Error('Please log in');
+ const p=await db.from('profiles').select('role,is_active').eq('id',a.data.user.id).single();
+ if(p.error||p.data?.role!=='admin'||p.data?.is_active!==true)throw Error('Active admin required');
+ return db;
+}
+function row(role='receiving',wallet='',priority=1){
+ const d=document.createElement('div');d.className='row uw-row';d.style.alignItems='end';
+ const r=document.createElement('select');r.className='uw-role';roles.forEach(x=>r.add(new Option(x[0].toUpperCase()+x.slice(1),x)));r.value=role;
+ const w=document.createElement('select');w.className='uw-wallet';w.add(new Option('— Select wallet —',''));wallets.forEach(x=>w.add(new Option(x.wallet_name,x.id)));w.value=wallet;
+ const pr=document.createElement('input');pr.className='uw-priority';pr.type='number';pr.min='1';pr.max='10000';pr.step='1';pr.value=priority;pr.title='Allocation priority';
+ const remove=document.createElement('button');remove.type='button';remove.className='btn-red btn-small';remove.textContent='Remove';remove.onclick=()=>{d.remove();modeChanged()};
+ d.append(r,w,pr,remove);$('uwAssignments').append(d);
+ r.onchange=modeChanged;
+ return d;
+}
+function modeChanged(){
+ const three=$('uwMode').value==='three';
+ $('uwAdd').classList.toggle('hidden',three);
+ $('uwModeHelp').textContent=three?'3 Wallets: one Receiving, one Processing, one Profit. Empty roles are allowed; at least one Receiving wallet is required.':'Multiple Wallets: add receiving / processing / profit allocations. Priority determines display order, not financial split.';
+ const rows=[...document.querySelectorAll('#uwAssignments .uw-row')];
+ if(three){
+  const saved=new Map();rows.forEach(d=>{const r=d.querySelector('.uw-role').value;if(!saved.has(r))saved.set(r,d.querySelector('.uw-wallet').value)});
+  $('uwAssignments').replaceChildren();roles.forEach((r,i)=>{const d=row(r,saved.get(r)||'',i+1);d.querySelector('.uw-role').disabled=true;d.querySelector('.uw-priority').disabled=true;d.querySelector('button').classList.add('hidden')});
+ }else{rows.forEach(d=>{d.querySelector('.uw-role').disabled=false;d.querySelector('.uw-priority').disabled=false;d.querySelector('button').classList.remove('hidden')});if(!rows.length)row()}
+}
+window.slvUWModeChanged=modeChanged;
+window.slvUWAddRow=()=>{if($('uwMode').value==='multiple')row('receiving','',document.querySelectorAll('.uw-row').length+1)};
+window.slvUWLoad=async function(){
+ try{
+  const db=await admin();const id=$('uwService').value;if(!id)return;
+  status('Loading wallet configuration...');
+  const [sr,ar]=await Promise.all([db.from('services').select('wallet_mode').eq('id',id).single(),db.from('slv_universal_wallet_assignments').select('wallet_id,wallet_role,allocation_priority').eq('service_id',id).eq('is_active',true).order('allocation_priority')]);
+  if(sr.error)throw sr.error;if(ar.error)throw ar.error;
+  loadedService=id;$('uwMode').value=sr.data.wallet_mode==='multiple'?'multiple':'three';$('uwAssignments').replaceChildren();
+  const entries=ar.data||[];
+  if($('uwMode').value==='three'){
+   roles.forEach((role,i)=>{const x=entries.find(a=>a.wallet_role===role);row(role,x?.wallet_id||'',i+1)});
+  }else{entries.forEach(x=>row(x.wallet_role,x.wallet_id,x.allocation_priority));if(!entries.length)row()}
+  modeChanged();status('Configuration loaded. No money is moved by this screen.');
+ }catch(e){status('Error: '+e.message)}
+};
+window.slvUWSave=async function(){
+ if(saving)return;
+ try{
+  const db=await admin(),id=$('uwService').value,mode=$('uwMode').value;
+  if(!id||loadedService!==id)throw Error('Select and load a service first');
+  const assignments=[...document.querySelectorAll('#uwAssignments .uw-row')].map(d=>({wallet_id:d.querySelector('.uw-wallet').value,wallet_role:d.querySelector('.uw-role').value,allocation_priority:Number(d.querySelector('.uw-priority').value)})).filter(x=>x.wallet_id);
+  if(!assignments.some(x=>x.wallet_role==='receiving'))throw Error('Select at least one Receiving wallet');
+  if(assignments.some(x=>!Number.isInteger(x.allocation_priority)||x.allocation_priority<1||x.allocation_priority>10000))throw Error('Invalid priority');
+  if(mode==='three'&&(assignments.length>3||roles.some(r=>assignments.filter(x=>x.wallet_role===r).length>1)))throw Error('3 Wallet mode allows one wallet per role');
+  const keys=assignments.map(x=>x.wallet_role+':'+x.wallet_id);if(new Set(keys).size!==keys.length)throw Error('Duplicate wallet role assignment');
+  if(!confirm('Save configuration for this service? This will not post transactions.'))return;
+  saving=true;$('uwSave').disabled=true;status('Saving...');
+  // Table has admin-only RLS. Changes are made in stages; show explicit errors on partial failure.
+  const m=await db.rpc('slv_set_universal_wallet_mode',{p_service_id:id,p_wallet_mode:mode});if(m.error)throw m.error;
+  const del=await db.from('slv_universal_wallet_assignments').delete().eq('service_id',id);if(del.error)throw del.error;
+  if(assignments.length){const ins=await db.from('slv_universal_wallet_assignments').insert(assignments.map(x=>({...x,service_id:id,is_active:true})));if(ins.error)throw ins.error}
+  status('Saved. Universal Checkout posting is not yet enabled.');await window.slvUWLoad();
+ }catch(e){status('Save failed: '+e.message+' — reload to verify configuration.')}finally{saving=false;$('uwSave').disabled=false}
+};
+async function init(){
+ try{
+  const db=await admin();const [s,w]=await Promise.all([db.from('services').select('id,service_name').order('service_name'),db.from('wallets').select('id,wallet_name').is('owner_user_id',null).eq('is_active',true).order('wallet_name')]);
+  if(s.error)throw s.error;if(w.error)throw w.error;
+  services=s.data||[];wallets=w.data||[];
+  const previous=$('uwService').value;$('uwService').replaceChildren(new Option('— Select Service —',''));
+  services.forEach(x=>$('uwService').add(new Option(x.service_name,x.id)));
+  if(services.some(x=>x.id===previous))$('uwService').value=previous;
+  $('uwService').onchange=()=>window.slvUWLoad();
+  if($('uwService').value)await window.slvUWLoad();else{loadedService='';$('uwAssignments').replaceChildren();modeChanged();status('Select a service to configure wallet mode.');}
+ }catch(e){status('Unable to load: '+e.message)}
+}
+const observer=new MutationObserver(()=>{if(!$('adminServices').classList.contains('active-admin-section')||$('adminView').classList.contains('hidden'))return;init()});
+observer.observe($('adminServices'),{attributes:true,attributeFilter:['class']});
+window.slvUWRefresh=init;
 })();
 </script>
 </body>
