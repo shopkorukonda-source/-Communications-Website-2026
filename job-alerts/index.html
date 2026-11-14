@@ -116,13 +116,13 @@ header{position:relative;box-shadow:none;padding:10px max(16px,calc((100vw - 118
 <section class="portal-panel" id="today-updates"><h3>⚡ Today Updates <em>LIVE FEED</em></h3><div class="portal-items" id="portal-today"><div class="portal-empty">Loading today's updates…</div></div></section>
 </div>
 <section id="portal-new-updates"><div class="section-top"><h2>📰 New Updates</h2><a class="portal-more" href="#jobs">View All Notifications →</a></div><div class="portal-items" id="portal-recent"><div class="portal-empty">Loading updates…</div></div></section>
-<section id="education"><div class="section-top"><h2>🎓 Jobs by Education</h2><span class="portal-subtle">Browse available job titles; confirm qualification in the official PDF</span></div><div class="portal-education"><button data-edu="10th">10th Pass</button><button data-edu="12th">12th / Inter</button><button data-edu="iti">ITI</button><button data-edu="diploma">Diploma</button><button data-edu="degree">Degree</button><button data-edu="post graduate">Post Graduation</button></div><p class="portal-note">Qualification-based matching will be available after verified eligibility data is added to Supabase. These buttons currently open the job search.</p></section>
+<section id="education"><div class="section-top"><h2>🎓 Jobs by Education</h2><span class="portal-subtle">Browse available job titles; confirm qualification in the official PDF</span></div><div class="portal-education"><button data-edu="10th">10th Pass</button><button data-edu="12th">12th / Inter</button><button data-edu="iti">ITI</button><button data-edu="diploma">Diploma</button><button data-edu="degree">Degree</button><button data-edu="post graduate">Post Graduation</button></div><p class="portal-note">Only jobs with recorded qualification information appear in qualification-specific results. Check the official PDF before applying.</p></section>
 <section id="notification-columns"><div class="section-top"><h2>📋 Notifications by Type</h2><span class="portal-subtle">Approved official updates only</span></div><div class="portal-trio"><div class="portal-panel"><h3>Job Notifications</h3><div class="portal-items" id="portal-recruitment"></div><a href="#jobs" class="portal-more" data-portal-filter="all">View All →</a></div><div class="portal-panel"><h3>Admit Cards</h3><div class="portal-items" id="portal-admits"></div><a href="#jobs" class="portal-more" data-portal-filter="hall">View All →</a></div><div class="portal-panel"><h3>Results</h3><div class="portal-items" id="portal-results"></div><a href="#jobs" class="portal-more" data-portal-filter="result">View All →</a></div></div></section>
 <section id="jobs">
 <div class="section-top"><div><h2>Latest Government Job Updates</h2><div class="subtle">Only approved notifications from SLV Job Alerts. Always verify on the official website.</div></div><span class="subtle" id="jobs-count">Loading...</span></div>
 <input class="job-search" id="job-search" type="search" placeholder="Search job title, organization or category..." aria-label="Search approved jobs">
-<div class="filterbar" id="job-filters"><button class="active" data-filter="all" type="button">All Updates</button><button data-filter="ap" type="button">Andhra Pradesh</button><button data-filter="tg" type="button">Telangana</button><button data-filter="central" type="button">Central Jobs</button><button data-filter="hall" type="button">Hall Tickets</button><button data-filter="result" type="button">Results</button></div>
-<div id="public-jobs" class="job-grid"><div class="empty-state">Loading approved job notifications...</div></div>
+<div class="filterbar" id="job-filters"><button class="active" data-filter="all" type="button">All Updates</button><button data-filter="ap" type="button">Andhra Pradesh</button><button data-filter="tg" type="button">Telangana</button><button data-filter="central" type="button">Central Jobs</button><button data-filter="hall" type="button">Hall Tickets</button><button data-filter="result" type="button">Results</button><button data-filter="answer" type="button">Answer Keys</button><button data-filter="exam" type="button">Exam Dates</button></div>
+<div class="filterbar" id="qualification-filters" aria-label="Qualification filters"><button type="button" class="active" data-qualification="all">All Qualifications</button><button type="button" data-qualification="10th">10th</button><button type="button" data-qualification="12th">Inter</button><button type="button" data-qualification="iti">ITI</button><button type="button" data-qualification="diploma">Diploma</button><button type="button" data-qualification="degree">Degree</button><button type="button" data-qualification="engineering">B.Tech</button><button type="button" data-qualification="pg">PG</button></div><p class="subtle" id="qualification-note">Qualification filters use verified eligibility fields when available; jobs with missing eligibility remain under All Qualifications.</p><div id="public-jobs" class="job-grid"><div class="empty-state">Loading approved job notifications...</div></div>
 </section>
 <section id="categories"><div class="section-top"><h2>Browse Job Updates</h2><span class="subtle">Choose a category to filter notifications</span></div><div class="quick-grid"><a href="#jobs" data-quick="ap"><span>🏛️</span>AP Jobs</a><a href="#jobs" data-quick="tg"><span>📍</span>Telangana Jobs</a><a href="#jobs" data-quick="central"><span>🇮🇳</span>Central Jobs</a><a href="#jobs" data-quick="hall"><span>🎫</span>Hall Tickets</a><a href="#jobs" data-quick="result"><span>📋</span>Results</a><a href="#jobs" data-quick="all"><span>🔎</span>All Notifications</a></div></section>
 <section id="plans">
@@ -176,7 +176,7 @@ header{position:relative;box-shadow:none;padding:10px max(16px,calc((100vw - 118
 <button id="admin-signin" type="button">Sign in</button>
 </div>
 <div id="admin-panel" class="admin-hidden">
-<p><strong>Scraper Draft Notices</strong> — review these incoming notices. Approval for scraper candidates will be connected separately.</p>
+<p><strong>Scraper Draft Notices</strong> — review these incoming notices. Review official notices before approving. Scraper approval requires the secure Supabase approval function.</p>
 <div class="admin-form"><button id="admin-refresh" type="button">Refresh drafts</button><button id="admin-signout" type="button">Sign out</button></div>
 <p id="scraper-status" role="status" aria-live="polite"></p>
 <div id="scraper-notices"></div>
@@ -268,18 +268,40 @@ if (ready) {
 
   // Public job feed: approved jobs only. Supabase RLS must independently enforce public visibility.
   const publicGrid = el('public-jobs');
-  let publicJobs = [], activeFilter = 'all';
+  let publicJobs = [], activeFilter = 'all', activeQualification = 'all';
   const normalize = value => String(value || '').toLowerCase();
+  const jobType = job => {
+    const explicit = normalize(job.notification_type || job.update_type || job.notice_type || job.type);
+    const text = normalize([job.title,job.category].join(' '));
+    if (/answer.?key/.test(explicit)||/answer.?key/.test(text)) return 'answer';
+    if (/result|merit|shortlist|selection.?list/.test(explicit)||/result|merit|shortlist|selection.?list/.test(text)) return 'result';
+    if (/hall.?ticket|admit.?card|call.?letter|city.?intimation/.test(explicit)||/hall.?ticket|admit.?card|call.?letter|city.?intimation/.test(text)) return 'hall';
+    if (/exam.?date|exam.?schedule/.test(explicit)||/exam.?date|exam.?schedule/.test(text)) return 'exam';
+    return 'recruitment';
+  };
   const categoryMatch = (job, filter) => {
-    if (filter === 'all') return true;
-    const c = normalize(job.category), org = normalize(job.organization), title = normalize(job.title);
-    const combined = c+' '+org+' '+title;
-    if (filter === 'ap') return /andhra|\bap\b|appsc|apslprb|ap high court/.test(combined);
-    if (filter === 'tg') return /telangana|\btg\b|tspsc|tgpsc|tgsprb/.test(combined);
-    if (filter === 'hall') return /hall.?ticket|admit.?card|call.?letter|city intimation/.test(combined);
-    if (filter === 'result') return /result|merit|shortlist|selection list/.test(combined);
-    if (filter === 'central') return /central|india|ssc|upsc|rrb|railway|bank|ibps|defence|isro|drdo|nta|navy|army|air force/.test(combined) && !/andhra|telangana|appsc|tgpsc/.test(combined);
+    if(filter === 'all') return true;
+    if(['hall','result','answer','exam','recruitment'].includes(filter)) return jobType(job)===filter;
+    const combined=normalize([job.region,job.state,job.category,job.organization,job.title].join(' '));
+    if(filter==='ap') return /andhra|\bap\b|appsc|apslprb|ap high court/.test(combined);
+    if(filter==='tg') return /telangana|\btg\b|tspsc|tgpsc|tgsprb/.test(combined);
+    if(filter==='central') return /central|india|ssc|upsc|rrb|railway|bank|ibps|defence|isro|drdo|nta|navy|army|air force/.test(combined)&&!/andhra|telangana|appsc|tgpsc/.test(combined);
     return true;
+  };
+  const qualificationMatch=(job,filter)=>{
+    if(filter==='all')return true;
+    const q=normalize([job.qualification,job.eligibility,job.education,job.educational_qualification].filter(Boolean).join(' '));
+    if(!q)return false;
+    const rules={
+      '10th':/10th|ssc pass|matric|secondary school/,
+      '12th':/12th|intermediate|inter pass|higher secondary|10\+2/,
+      'iti':/\biti\b|industrial training/,
+      'diploma':/diploma|polytechnic/,
+      'degree':/degree|graduat|b\.?a\.?|b\.?sc|b\.?com|bachelor/,
+      'engineering':/b\.?tech|b\.?e\.?|engineering degree|bachelor of engineering/,
+      'pg':/post.?graduat|master|m\.?tech|m\.?sc|m\.?com|m\.?a\.?|mba|mca/
+    };
+    return rules[filter]?.test(q)||false;
   };
   const detailOverlay = el('job-detail-overlay');
   const detailContent = el('job-detail-content');
@@ -298,8 +320,8 @@ if (ready) {
     el('job-detail-title').textContent=job.title||'Job Notification';
     el('job-detail-org').textContent=job.organization||'Official recruitment';
     detailContent.replaceChildren();
-    detailContent.append(detailSection('Overview', [['Organization',job.organization],['Post / Notification',job.title],['Category',job.category],['Published Date',job.published_date]]));
-    detailContent.append(detailSection('Eligibility', [['Minimum Age',job.min_age],['Maximum Age',job.max_age],['Age Relaxation',job.age_relaxation],['Qualification',job.qualification],['Experience',job.experience],['Nationality / Domicile',job.domicile]]));
+    detailContent.append(detailSection('Overview', [['Organization',job.organization],['Post / Notification',job.title],['Category',job.category],['Update Type',job.notification_type||jobType(job)],['Published Date',job.published_date]]));
+    detailContent.append(detailSection('Eligibility', [['Minimum Age',job.min_age],['Maximum Age',job.max_age],['Age Relaxation',job.age_relaxation],['Qualification',job.qualification||job.educational_qualification||job.education||job.eligibility],['Experience',job.experience],['Nationality / Domicile',job.domicile]]));
     detailContent.append(detailSection('Vacancies & Pay', [['Total Vacancies',job.vacancies],['Salary / Pay Scale',job.salary],['Job Location',job.location],['Employment Type',job.employment_type]]));
     detailContent.append(detailSection('Application & Selection', [['Application Start',job.application_start],['Last Date',job.last_date],['Application Fee',job.application_fee],['Selection Process',job.selection_process],['Exam Date',job.exam_date],['Application Mode',job.application_mode]]));
     const section=document.createElement('div');section.className='detail-section';
@@ -318,13 +340,13 @@ if (ready) {
   document.addEventListener('keydown',event=>{if(detailOverlay.hidden)return;if(event.key==='Escape')closeJobDetails();if(event.key==='Tab'){const focusables=[...detailOverlay.querySelectorAll('button,a[href]')];const first=focusables[0],last=focusables[focusables.length-1];if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}}});
   function renderPublicJobs() {
     const q = normalize(el('job-search').value).trim();
-    const filtered = publicJobs.filter(j => categoryMatch(j,activeFilter) && normalize([j.title,j.organization,j.category].join(' ')).includes(q));
+    const filtered = publicJobs.filter(j => categoryMatch(j,activeFilter) && qualificationMatch(j,activeQualification) && normalize([j.title,j.organization,j.category,j.qualification,j.eligibility].join(' ')).includes(q));
     el('jobs-count').textContent = `${filtered.length} of ${publicJobs.length} approved updates`;
     publicGrid.replaceChildren();
     if (!filtered.length) {const e=document.createElement('div');e.className='empty-state';e.textContent=publicJobs.length?'No matching approved notifications. Try another search or filter.':'No approved notifications available yet. Please check back later.';publicGrid.append(e);return;}
     for (const job of filtered) {
       const card=document.createElement('article');card.className='job-card';
-      const tag=document.createElement('span');tag.className='tag';tag.textContent=job.category||'Job Update';
+      const tag=document.createElement('span');tag.className='tag';tag.textContent=({hall:'Hall Ticket',result:'Result',answer:'Answer Key',exam:'Exam Date',recruitment:'Job Notification'})[jobType(job)];
       const title=document.createElement('h3');title.textContent=job.title||'Job notification';
       const org=document.createElement('div');org.className='org';org.textContent=job.organization||'Official recruitment';
       const meta=document.createElement('div');meta.className='subtle';meta.textContent=job.published_date?'Published: '+job.published_date:'Check official notification for dates';
@@ -350,7 +372,7 @@ if (ready) {
   }
   function renderPortal(){
     const now=new Date(),today=localDay(now),soon=new Date(now);soon.setDate(soon.getDate()+7);
-    const jobs=publicJobs.filter(j=>!categoryMatch(j,'hall')&&!categoryMatch(j,'result'));
+    const jobs=publicJobs.filter(j=>jobType(j)==='recruitment');
     portalList('portal-recent',publicJobs,'No approved notifications available yet.',9);
     portalList('portal-today',publicJobs.filter(j=>String(j.published_date||'').slice(0,10)===today),'No updates published today. Check New Updates for earlier notices.',6);
     portalList('portal-recruitment',jobs,'No approved recruitment notifications yet.',8);
@@ -360,13 +382,15 @@ if (ready) {
     portalList('portal-closing',deadlines,'Closing dates will appear once verified application deadlines are stored.',6);
     el('portal-ticker-text').textContent=publicJobs.length?`${publicJobs.length} approved notifications available • Select any update to view full details.`:'No approved updates yet. Please check back later.';
   }
-  document.querySelectorAll('[data-edu]').forEach(b=>b.addEventListener('click',()=>{el('job-search').value=b.dataset.edu;renderPublicJobs();el('jobs').scrollIntoView({behavior:'smooth'});}));
+  document.querySelectorAll('[data-edu]').forEach(b=>b.addEventListener('click',()=>{setQualification(({ 'post graduate':'pg', 'degree':'degree','10th':'10th','12th':'12th','iti':'iti','diploma':'diploma'})[b.dataset.edu]||'all');el('jobs').scrollIntoView({behavior:'smooth'});}));
   document.querySelectorAll('[data-portal-filter]').forEach(a=>a.addEventListener('click',()=>setFilter(a.dataset.portalFilter)));
   async function loadPublicJobs() {
-    const {data,error}=await db.from('jobs').select('id,title,organization,category,published_date,official_url,status').eq('status','active').order('published_date',{ascending:false,nullsFirst:false}).limit(150);
+    const {data,error}=await db.from('jobs').select('*').eq('status','active').order('published_date',{ascending:false,nullsFirst:false}).limit(150);
     if(error){publicGrid.replaceChildren();const e=document.createElement('div');e.className='empty-state';e.textContent='Unable to load notifications. Please try again later.';publicGrid.append(e);el('jobs-count').textContent='Temporarily unavailable';for(const id of ['portal-recent','portal-today','portal-recruitment','portal-admits','portal-results','portal-closing'])portalList(id,[],'Unable to load notifications right now.');el('portal-ticker-text').textContent='Notifications temporarily unavailable';return;}
     publicJobs=data||[];renderPublicJobs();renderPortal();
   }
+  function setQualification(value){activeQualification=value;document.querySelectorAll('#qualification-filters button').forEach(b=>b.classList.toggle('active',b.dataset.qualification===value));renderPublicJobs();}
+  document.querySelectorAll('#qualification-filters button').forEach(b=>b.addEventListener('click',()=>setQualification(b.dataset.qualification)));
   el('job-search').addEventListener('input',renderPublicJobs);
   function setFilter(filter){activeFilter=filter;document.querySelectorAll('#job-filters button').forEach(b=>b.classList.toggle('active',b.dataset.filter===filter));renderPublicJobs();}
   document.querySelectorAll('#job-filters button').forEach(b=>b.addEventListener('click',()=>setFilter(b.dataset.filter)));
@@ -425,6 +449,27 @@ if (ready) {
         link.href=job.official_url; link.textContent='View official notice'; link.target='_blank'; link.rel='noopener noreferrer';
         article.append(link);
       }
+      const actions=document.createElement('div');
+      actions.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin-top:12px';
+      const approve=document.createElement('button');
+      approve.type='button';approve.className='admin-action';approve.textContent='Approve';
+      const reject=document.createElement('button');
+      reject.type='button';reject.className='admin-action';reject.textContent='Reject';reject.style.background='#8b2731';
+      const feedback=document.createElement('p');feedback.setAttribute('role','status');feedback.style.cssText='font-size:12px;margin-top:8px';
+      async function reviewScraper(action){
+        if(!confirm(action==='approve'?'Have you verified the official notice, category and details? Approve this scraper draft?':'Reject this scraper draft?'))return;
+        approve.disabled=true;reject.disabled=true;feedback.textContent='Processing '+action+'...';
+        // SECURITY: approval must be implemented by a server-side SECURITY DEFINER RPC
+        // which checks authenticated membership in slv_job_admins, validates candidate,
+        // and publishes a verified job atomically. Never write directly to public jobs here.
+        const {data,error}=await db.rpc('slv_review_scraper_candidate',{p_candidate_id:job.id,p_action:action});
+        if(error){feedback.textContent='Review failed: '+error.message+' (secure approval RPC may need setup)';approve.disabled=false;reject.disabled=false;return;}
+        feedback.textContent=action==='approve'?'Approved successfully.':'Rejected successfully.';
+        await Promise.allSettled([loadScraperDrafts(),loadPublicJobs()]);
+      }
+      approve.addEventListener('click',()=>reviewScraper('approve'));
+      reject.addEventListener('click',()=>reviewScraper('reject'));
+      actions.append(approve,reject);article.append(actions,feedback);
       container.append(article);
     }
   }
