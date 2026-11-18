@@ -1747,11 +1747,11 @@ let currentUser=null;
 const $=id=>document.getElementById(id);
 function read(key,fallback){try{const v=localStorage.getItem(key);return v===null?fallback:JSON.parse(v)}catch(e){return fallback}}
 function write(key,value){localStorage.setItem(key,JSON.stringify(value))}
-function saveLoginSession(user){sessionStorage.setItem(KEYS.user,JSON.stringify(user))}
+function saveLoginSession(user){sessionStorage.setItem(KEYS.user,JSON.stringify(user));if(typeof window.slvResetIdleTimer==='function')window.slvResetIdleTimer()}
 function readLoginSession(){try{return JSON.parse(sessionStorage.getItem(KEYS.user)||'null')}catch(e){return null}}
 function getEmployees(){
   let emps=read(KEYS.employees,null);
-  if(!emps){emps={SLV01:{name:'Bhanu Katakam',pass:'123456',shift:'09:00 AM - 03:00 PM'}};write(KEYS.employees,emps)}
+  if(!emps){emps={SLV01:{name:'Bhanu Katakam',shift:'09:00 AM - 03:00 PM',authManaged:true}};write(KEYS.employees,emps)}
   return emps;
 }
 let slvAuthWatchdog=null;
@@ -1835,33 +1835,10 @@ function toggleLoginInputs(){
   if(isAdmin) $('loginId').value='';
 }
 function handleLogin(){
-  const role=$('loginRole').value,pass=$('loginPass').value.trim();
-  if(!pass){alert('పాస్‌వర్డ్ ఎంటర్ చేయండి');return}
-  if(role==='Admin'){
-    const savedAdminPassword=localStorage.getItem('slvAdminPassword');
-    const validAdminPassword=savedAdminPassword!==null?pass===savedAdminPassword:(pass==='admin123'||pass==='123456');
-    if(validAdminPassword){
-      currentUser={id:'ADMIN',name:'Master Admin',role:'Admin'};saveLoginSession(currentUser);runSlvLoader('admin','Admin Login Successful • Opening Dashboard...',2050,()=>showView('adminView'));
-    }else alert('పాస్‌వర్డ్ తప్పు!');
-    return;
-  }
-  const id=$('loginId').value.trim().toUpperCase(),emps=getEmployees();
-  if(emps[id]&&emps[id].pass===pass){
-    currentUser={id,name:emps[id].name,role:'Employee',shift:emps[id].shift||'09:00 AM - 05:00 PM',openingCashBalance:getCashWalletBalance()};
-    const attendance=ensureTodayAttendance();
-    if(attendance&&attendance.shiftCloseAt){
-      currentUser=null;
-      alert('ఈ రోజు మీ Shift ఇప్పటికే Close అయింది. తిరిగి Login చేయడానికి Admin మాత్రమే Shift Reopen చేయగలరు.');
-      return;
-    }
-    if(attendance){
-      attendance.sessions=attendance.sessions||[];
-      if(!attendance.sessions.some(x=>x&&x.loginAt&&!x.logoutAt))attendance.sessions.push({loginAt:Date.now(),logoutAt:null});
-      const records=getAttendance(),idx=records.findIndex(x=>x.employeeId===id&&x.day===attendance.day);
-      if(idx>=0)records[idx]=attendance;saveAttendance(records);
-    }
-    saveLoginSession(currentUser);runSlvLoader('employee','Employee Login Successful • Opening Dashboard...',550,()=>showView('employeeView'));
-  }else alert('తప్పు యూజర్ ఐడీ లేదా పాస్‌వర్డ్!');
+  const feedback=document.getElementById('slvLoginFeedback');
+  const message='Secure cloud login is unavailable. Check your internet connection and reload this page. Local/offline login is disabled.';
+  if(feedback){feedback.textContent=message;feedback.style.display='block';}
+  alert(message);
 }
 function requireUser(){
   currentUser=readLoginSession();
@@ -1888,19 +1865,26 @@ function logout(){
   }
   sessionStorage.removeItem(KEYS.user);currentUser=null;slvClearLoginFields();showView('loginView')
 }
-function changeAdminPassword(){
+async function changeAdminPassword(){
   const current=$('currentAdminPassword').value;
   const next=$('newAdminPassword').value;
   const confirmNext=$('confirmAdminPassword').value;
-  const saved=localStorage.getItem('slvAdminPassword');
-  const validCurrent=saved!==null?current===saved:(current==='admin123'||current==='123456');
-  if(!validCurrent){alert('Current Admin Password తప్పు.');return}
-  if(next.length<6){alert('కొత్త Password కనీసం 6 characters ఉండాలి.');return}
+  if(!current||!next||!confirmNext){alert('అన్ని Password వివరాలు నమోదు చేయండి.');return}
+  if(next.length<8){alert('కొత్త Password కనీసం 8 characters ఉండాలి.');return}
   if(next!==confirmNext){alert('New Password మరియు Confirm Password match కావడం లేదు.');return}
   if(next===current){alert('కొత్త Password పాత Password కి భిన్నంగా ఉండాలి.');return}
-  localStorage.setItem('slvAdminPassword',next);
-  ['currentAdminPassword','newAdminPassword','confirmAdminPassword'].forEach(id=>$(id).value='');
-  alert('Admin Password విజయవంతంగా మార్చబడింది. తదుపరి Login కు కొత్త Password ఉపయోగించండి.');
+  try{
+    const db=window.slvSupabase;
+    if(!db)throw new Error('Supabase connection unavailable. Local password changes are disabled.');
+    const {data:{user},error:userError}=await db.auth.getUser();
+    if(userError||!user?.email)throw new Error('Active cloud Admin session required.');
+    const {error:reauthError}=await db.auth.signInWithPassword({email:user.email,password:current});
+    if(reauthError)throw new Error('Current cloud password is incorrect.');
+    const {error:updateError}=await db.auth.updateUser({password:next});
+    if(updateError)throw updateError;
+    ['currentAdminPassword','newAdminPassword','confirmAdminPassword'].forEach(id=>$(id).value='');
+    alert('Supabase Admin Password విజయవంతంగా మార్చబడింది.');
+  }catch(error){alert('Password update failed: '+error.message)}
 }
 
 function saveDrawerMode(){localStorage.setItem(KEYS.drawer,$('drawerModeSelect').value);alert('డ్రాయర్ మోడ్ సేవ్ అయింది')}
@@ -2670,10 +2654,10 @@ function processCheckout(){
 }
 (function init(){
   toggleLoginInputs();
-  const saved=readLoginSession();
-  if(saved&&saved.role==='Admin'){currentUser=saved;showView('adminView')}
-  else if(saved&&saved.role==='Employee'){currentUser=saved;showView('employeeView')}
-  else {showView('loginView');runSlvLoader('website','Loading SLV Communications...',550,()=>{});}
+  sessionStorage.removeItem(KEYS.user);
+  currentUser=null;
+  showView('loginView');
+  runSlvLoader('website','Loading SLV Communications...',550,()=>{});
 })();
 </script>
 <script>
@@ -2698,6 +2682,30 @@ function processCheckout(){
     );
 
     window.slvSupabase = db;
+
+    // Cloud-authenticated sessions expire after 30 minutes without user activity.
+    let slvIdleTimer = null;
+    const SLV_IDLE_LIMIT_MS = 30 * 60 * 1000;
+    window.slvResetIdleTimer = function () {
+      clearTimeout(slvIdleTimer);
+      if (!currentUser || !['Admin','Employee'].includes(currentUser.role)) return;
+      slvIdleTimer = setTimeout(async () => {
+        try {
+          if (typeof window.logout === 'function') await window.logout();
+          else { await db.auth.signOut(); sessionStorage.removeItem(KEYS.user); currentUser=null; showView('loginView'); }
+        } catch (e) {
+          console.error('SLV inactivity logout failed:', e);
+          try { await db.auth.signOut(); } catch (_) {}
+          sessionStorage.removeItem(KEYS.user); currentUser=null; showView('loginView');
+        }
+        alert('30 నిమిషాలు activity లేకపోవడంతో భద్రత కోసం logout అయ్యారు. మళ్లీ login చేయండి.');
+      }, SLV_IDLE_LIMIT_MS);
+    };
+    ['pointerdown','keydown','touchstart','mousemove','scroll'].forEach(type =>
+      document.addEventListener(type, () => window.slvResetIdleTimer?.(), {passive:true})
+    );
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) window.slvResetIdleTimer?.(); });
+
     if(typeof renderMonthlyTarget==='function' && !document.getElementById('adminView')?.classList.contains('hidden')) renderMonthlyTarget();
 
     // Attendance cloud sync: employee_user_id is the Supabase profiles UUID,
@@ -3007,36 +3015,37 @@ try {
 
     toggleLoginInputs();
 
-    const saved = readLoginSession();
-
-    if (saved && saved.role === 'Employee') {
-      currentUser = saved;
-      showView('employeeView');
-      return;
-    }
-
+    // Never trust a role object from sessionStorage; validate the Supabase session and profile.
     sessionStorage.removeItem(KEYS.user);
     currentUser = null;
     slvClearLoginFields();
     showView('loginView');
 
-    const { data } = await db.auth.getSession();
+    const { data: sessionData, error: sessionError } = await db.auth.getSession();
+    if (sessionError) throw sessionError;
 
-    if (data.session) {
-      const { data: profile } = await db
+    if (sessionData.session) {
+      const { data: profile, error: profileError } = await db
         .from('profiles')
-        .select('id,full_name,role,is_active')
-        .eq('id', data.session.user.id)
+        .select('id,employee_code,full_name,role,is_active')
+        .eq('id', sessionData.session.user.id)
         .single();
 
-      if (profile && profile.role === 'admin' && profile.is_active) {
-        currentUser = {
-          id: profile.id,
-          name: profile.full_name || 'Master Admin',
-          role: 'Admin'
-        };
+      if (profileError || !profile || profile.is_active !== true || !['admin','employee'].includes(profile.role)) {
+        await db.auth.signOut();
+      } else if (profile.role === 'admin') {
+        currentUser = { id: profile.id, name: profile.full_name || 'Master Admin', role: 'Admin' };
         saveLoginSession(currentUser);
         showView('adminView');
+      } else if (profile.role === 'employee' && profile.employee_code) {
+        currentUser = {
+          id: profile.employee_code,
+          authId: sessionData.session.user.id,
+          name: profile.full_name || 'Employee',
+          role: 'Employee'
+        };
+        saveLoginSession(currentUser);
+        showView('employeeView');
       } else {
         await db.auth.signOut();
       }
@@ -3044,7 +3053,14 @@ try {
   };
 
   cdn.onerror = function () {
-    alert('Supabase library load avvaledu. Internet check cheyyandi.');
+    currentUser = null;
+    sessionStorage.removeItem(KEYS.user);
+    const loginButton = document.querySelector('#loginView button[onclick*="handleLogin"], #loginView [type="submit"]');
+    if (loginButton) loginButton.disabled = true;
+    const feedback = document.getElementById('slvLoginFeedback');
+    const message = 'Supabase security library load కాలేదు. Internet check చేసి page reload చేయండి. Local login disabled.';
+    if (feedback) { feedback.textContent = message; feedback.style.display = 'block'; }
+    alert(message);
   };
 
   document.head.appendChild(cdn);
