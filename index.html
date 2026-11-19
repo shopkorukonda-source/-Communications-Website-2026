@@ -1237,6 +1237,69 @@ button:not(.btn-red):not(.btn-green):not(.btn-orange):not(.btn-secondary):not(.s
 input:focus,select:focus,textarea:focus{border-color:#b9954e!important;box-shadow:0 0 0 3px #d8ad4529!important}
 @media(max-width:720px){.main-header{border-radius:14px 14px 0 0!important}}
 </style>
+
+<!-- SLV PREMIUM THEME REFRESH 2026-11-18 -->
+<style id="slv-premium-theme-2026">
+/* SLV Communications — Premium Navy / Ivory / Gold visual refresh.
+   Presentation-only layer: all existing IDs, controls, data hooks and scripts stay intact. */
+:root{
+  --slv-navy:#0b1f3a;--slv-navy-2:#12365f;--slv-blue:#1d568d;--slv-gold:#c6a15b;
+  --slv-gold-soft:#f5ecd9;--slv-bg:#f3f6fb;--slv-paper:#fff;--slv-ink:#18283d;
+  --slv-muted:#68788d;--slv-line:#e2e8f0;--slv-shadow:0 14px 36px rgba(11,31,58,.08)
+}
+html{background:var(--slv-bg);scroll-behavior:smooth}
+body{background:radial-gradient(ellipse at 10% 0%,#eaf1fb 0,transparent 38%),var(--slv-bg)!important;color:var(--slv-ink)!important;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Arial,sans-serif!important;padding:clamp(8px,2vw,22px)!important;line-height:1.45}
+.app{max-width:1360px!important;margin:0 auto!important}
+.main-header{position:relative;overflow:hidden;background:linear-gradient(112deg,var(--slv-navy),#10345d 62%,#1a4d78)!important;border:1px solid rgba(198,161,91,.75)!important;border-radius:18px 18px 0 0!important;box-shadow:0 14px 34px rgba(11,31,58,.16)!important;padding:clamp(17px,2.5vw,27px)!important;color:#fff!important}
+.main-header:after{content:"";position:absolute;right:-75px;top:-120px;width:280px;height:280px;border:1px solid rgba(226,194,132,.25);border-radius:50%;box-shadow:0 0 0 25px rgba(255,255,255,.025),0 0 0 55px rgba(255,255,255,.02);pointer-events:none}
+.header-title{font-size:clamp(20px,2.3vw,27px)!important;letter-spacing:1.1px!important;font-weight:850!important}
+.sub-title{color:#e8edf5!important;letter-spacing:.3px}
+.card,#adminView,#employeeView{background:var(--slv-paper)!important;border:1px solid var(--slv-line)!important;border-radius:0 0 18px 18px!important;box-shadow:var(--slv-shadow)!important;padding:clamp(13px,2vw,24px)!important}
+#loginView{border-radius:0 0 18px 18px!important}
+#adminView,#employeeView{border-radius:16px!important;margin-top:14px!important}
+h1,h2,h3,h4{color:var(--slv-navy)!important;letter-spacing:-.2px}
+h2{font-size:clamp(18px,2vw,22px)!important;font-weight:800!important}
+h3{font-weight:780!important}
+.topbar{border-radius:13px!important;background:linear-gradient(105deg,var(--slv-navy),var(--slv-navy-2))!important;color:#fff!important;border:1px solid rgba(198,161,91,.6)!important;box-shadow:0 8px 20px rgba(11,31,58,.12)!important;padding:12px 15px!important;margin-bottom:14px!important}
+.topbar strong,.topbar h2,.topbar h3,.topbar span{color:#fff!important}
+.section-box,.slab-box{background:#fff!important;border:1px solid var(--slv-line)!important;border-radius:14px!important;box-shadow:0 5px 18px rgba(11,31,58,.045)!important;padding:clamp(12px,1.7vw,19px)!important;margin-top:13px!important}
+.section-box:before{display:none!important}
+label{color:#40536b!important;font-weight:720!important;font-size:12px!important;letter-spacing:.1px}
+input,select,textarea{background:#fff!important;color:var(--slv-ink)!important;border:1px solid #d4deea!important;border-radius:10px!important;min-height:42px;box-shadow:0 1px 2px rgba(11,31,58,.025)!important;transition:border-color .18s,box-shadow .18s}
+input:focus,select:focus,textarea:focus{outline:none!important;border-color:#5682b2!important;box-shadow:0 0 0 3px rgba(29,86,141,.12)!important}
+button,.link-button{border-radius:10px!important;font-weight:750!important;letter-spacing:.1px;transition:transform .16s ease,filter .16s ease,box-shadow .16s ease!important}
+button:hover,.link-button:hover{filter:brightness(1.06);transform:translateY(-1px)}
+button:focus-visible,.link-button:focus-visible{outline:3px solid rgba(198,161,91,.55)!important;outline-offset:2px}
+button:not(.btn-secondary):not(.side-menu-link):not(.hamburger-btn){box-shadow:0 4px 10px rgba(11,31,58,.09)}
+.btn-secondary,.side-menu-link,.hamburger-btn{border:1px solid #dce4ef!important}
+.tile,.slv-link-card,.slv-fin-quick-card{border:1px solid #dce5f0!important;border-radius:14px!important;background:linear-gradient(145deg,#fff,#f5f8fc)!important;color:var(--slv-navy-2)!important;box-shadow:0 5px 15px rgba(11,31,58,.045)!important}
+.tile:hover,.slv-link-card:hover,.slv-fin-quick-card:hover{border-color:#c6a15b!important;box-shadow:0 9px 22px rgba(11,31,58,.09)!important}
+.slv-simple-actions button{border-radius:11px!important;min-height:48px!important;font-weight:750!important}
+.slv-simple-actions button:first-child{background:var(--slv-navy-2)!important;color:#fff!important}
+.slv-simple-actions button:not(:first-child){background:#f4f7fb!important;color:var(--slv-navy-2)!important;border:1px solid #dce5f0!important}
+.slv-simple-actions .slv-more-btn{background:#fff!important;border:1px dashed #c6a15b!important;color:#70572b!important}
+.admin-wallet-top-strip,.wallet-strip-heading{border-radius:13px!important}
+.employee-side-menu{background:#fff!important;color:var(--slv-ink)!important;border:1px solid #dce5f0!important;box-shadow:0 18px 48px rgba(5,20,40,.2)!important}
+.side-menu-head{background:linear-gradient(110deg,var(--slv-navy),var(--slv-navy-2))!important;color:#fff!important}
+.side-menu-head b{color:#f3dfb7!important}
+.side-menu-link{background:#f7f9fc!important;color:#263e59!important;border-radius:9px!important;margin:3px 8px!important;text-align:left!important}
+.side-menu-link:hover,.side-menu-link.active{background:var(--slv-gold-soft)!important;color:#60491f!important;border-color:#e5d3ad!important}
+.menu-shade{backdrop-filter:blur(3px)}
+.slv-links-dialog,.pan-shell,.track-shell{border:1px solid #dce5f0!important;box-shadow:0 24px 70px rgba(5,20,40,.24)!important}
+.slv-links-header{background:linear-gradient(110deg,var(--slv-navy),var(--slv-navy-2))!important}
+.slv-links-header h3{color:#fff!important}
+.slv-link-card{min-height:116px!important}
+.fin-slab-row{background:#f7f9fc!important;border:1px solid #dce5f0!important;border-radius:12px!important}
+#slvXeroxPanel,.xerox-item{border-color:#dce5f0!important;border-radius:13px!important}
+#slvXeroxPanel .xerox-result{background:#f3f7fc!important;color:#1a3555!important;border:1px solid #e0e8f2}
+.slv-tx-success-card,.slv-loader-card{border-radius:20px!important}
+hr{border:0;border-top:1px solid var(--slv-line)}
+@media(max-width:760px){
+ body{padding:7px!important}.app{width:100%!important}.main-header{border-radius:14px 14px 0 0!important;padding:16px 12px!important}.card,#adminView,#employeeView{padding:12px!important;border-radius:0 0 14px 14px!important}.topbar{padding:10px!important;gap:7px!important}.slv-simple-actions{gap:7px!important}.slv-simple-actions button{min-height:44px!important;padding:9px 6px!important;font-size:11px!important}.section-box{padding:11px!important}.tile{min-height:68px!important}
+}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}
+
+</style>
 </head>
 <body>
 <div aria-label="Transaction successful" aria-live="polite" class="slv-tx-success" id="slvTxSuccess" role="status"><div class="slv-tx-success-card"><div class="slv-tx-success-check">✓</div><h3>Transaction Successful</h3><p>SLV Communications • Payment Recorded</p><div class="slv-tx-success-amount" id="slvTxSuccessAmount">₹0.00</div><p id="slvTxSuccessCount">Wallet balances updated</p><div class="slv-tx-success-line"></div></div></div>
@@ -5578,3 +5641,38 @@ window.slvUWRefresh=init;
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
 <!-- SLV Quick Links: popup accessed from employee side menu; cloud read uses authenticated RLS. -->
+<style id="slv-services-premium-layout">
+/* Premium, consistent service-management presentation; no billing logic changes */
+#adminServices{border:1px solid #dce6f2!important;border-left:0!important;border-radius:20px!important;padding:clamp(16px,2.2vw,26px)!important;background:linear-gradient(180deg,#fbfdff 0%,#f4f8fe 100%)!important;box-shadow:0 12px 32px rgba(15,45,85,.07)!important}
+#adminServices>h4{display:flex;align-items:center;gap:10px;font-size:20px!important;color:#102f58!important;margin:0 0 8px!important;padding-bottom:14px;border-bottom:1px solid #e1eaf5}
+#adminServices>p.muted{font-size:13px;line-height:1.65;background:#edf4fd;border:1px solid #d9e7f7;border-radius:12px;padding:11px 14px;color:#49627f!important}
+#adminServices>input,#adminServices>.row,#adminServices>label,#adminServices>select{margin-top:10px}
+#adminServices input:not([type=checkbox]),#adminServices select,#adminServices textarea{min-height:44px;border:1px solid #d4dfec!important;border-radius:11px!important;background:#fff!important;padding:10px 12px!important;color:#17324f!important;box-shadow:0 2px 5px rgba(20,50,90,.03)}
+#adminServices input:focus,#adminServices select:focus,#adminServices textarea:focus{outline:3px solid rgba(42,112,190,.13);border-color:#4c8bd0!important}
+#adminServices label{display:block;font-size:12px!important;font-weight:750!important;letter-spacing:.02em;color:#435a76!important;margin:13px 0 5px}
+#adminServices .row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:end}
+#adminServices .row>*{min-width:0}
+#adminServices button{border-radius:10px!important;min-height:40px;font-weight:750;box-shadow:0 3px 8px rgba(15,45,85,.07)}
+#adminServices .btn-orange{background:linear-gradient(135deg,#174a82,#2876bf)!important;color:#fff!important;border:0!important;padding:12px 18px!important}
+#servicesAdminList{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-top:16px}
+#servicesAdminList .emp-row{display:grid!important;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:8px!important;padding:13px!important;border:1px solid #dce6f2!important;border-radius:13px!important;background:#fff!important;box-shadow:0 3px 10px rgba(15,45,85,.045)}
+#servicesAdminList .emp-row>div{font-size:12px;line-height:1.55;color:#304b6a;font-weight:650;overflow-wrap:anywhere}
+#servicesAdminList .emp-row button{min-width:54px;padding:8px 10px!important}
+#slvCatalogPanel,#slvUniversalPricing,#xeroxAdminPricing,#slvBillSlabAdmin,#slvUniversalWalletPanel{border:1px solid #dce6f2!important;border-radius:16px!important;background:#fff!important;padding:17px!important;margin-top:16px!important;box-shadow:0 5px 16px rgba(15,45,85,.045)}
+#adminServices .section-box h4{color:#143d6b!important;font-size:15px!important;margin:0 0 8px}
+#adminServices .section-box p.muted{line-height:1.6;font-size:12px}
+#servicesView{border:1px solid #dce6f2!important;border-radius:20px!important;background:#f7faff!important;box-shadow:0 12px 35px rgba(12,42,78,.08)!important;padding:clamp(14px,2.2vw,26px)!important}
+#servicesView>.topbar{border-radius:14px!important;background:#102f58!important;color:#fff!important;padding:14px 16px!important;margin-bottom:14px!important;box-shadow:0 7px 18px rgba(16,47,88,.14)}
+#slvCloudCheckout{background:#fff!important;border:1px solid #dce6f2!important;border-radius:16px!important;padding:clamp(14px,2vw,22px)!important;box-shadow:0 5px 18px rgba(15,45,85,.045)}
+#slvCloudCheckout h3,#slvFinancialBilling h3,#slvManualBilling h3{color:#153e6b!important;font-size:17px!important}
+#slvServiceSearch{border:1px solid #cbd9e9!important;border-radius:12px!important;min-height:46px;padding:12px 14px!important}
+#slvServiceSuggestions{border:1px solid #d7e3f1!important;border-radius:12px!important;box-shadow:0 12px 28px rgba(15,45,85,.12)!important;overflow:hidden;background:#fff}
+#slvServiceSuggestions>*{padding:12px 14px!important;border-bottom:1px solid #edf1f6}
+#slvEmployeeServiceSection{border:1px solid #dce6f2!important;border-radius:18px!important;padding:16px!important;background:#fff!important}
+#slvEmployeeServiceSection .slv-link-card{border:1px solid #dbe6f3!important;border-radius:16px!important;background:linear-gradient(180deg,#fff,#f7faff)!important;box-shadow:0 5px 14px rgba(15,45,85,.055)!important;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+#slvEmployeeServiceSection .slv-link-card:hover{transform:translateY(-3px);border-color:#8db5e2!important;box-shadow:0 10px 22px rgba(15,65,120,.11)!important}
+#slvEmployeeServiceSection .slv-link-card b{color:#153e6b!important;line-height:1.35}
+#slvEmployeeServiceSection .slv-link-logo,#slvEmployeeServiceSection .slv-link-fallback{border-radius:14px!important;background:#edf4fd!important}
+@media(max-width:640px){#adminServices .row{grid-template-columns:1fr}#servicesAdminList{grid-template-columns:1fr}#servicesAdminList .emp-row{grid-template-columns:minmax(0,1fr) auto auto}#servicesView{padding:10px!important}#slvCloudCheckout{padding:12px!important}#adminServices{padding:14px!important}}
+@media(prefers-reduced-motion:reduce){#slvEmployeeServiceSection .slv-link-card{transition:none}}
+</style>
