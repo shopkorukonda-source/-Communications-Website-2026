@@ -5370,13 +5370,18 @@ hub.querySelectorAll('[data-cat]').forEach(b=>{
  const a=b.querySelector('.slv-category-arrow');if(a)a.textContent=selected?'▴':'▾';
 });
 out.replaceChildren();out.dataset.openCategory=cat;
-const categoryButton=hub.querySelector('[data-cat="'+cat+'"]');
-const categoryRow=hub.querySelector('.slv-five-buttons');
-if(categoryButton&&categoryRow){
- out.style.left=(categoryRow.offsetLeft+categoryButton.offsetLeft-categoryRow.scrollLeft)+'px';
+const categoryButton=Array.from(hub.querySelectorAll('[data-cat]')).find(b=>b.dataset.cat===cat);
+if(categoryButton){
+ const hubRect=hub.getBoundingClientRect();
+ const buttonRect=categoryButton.getBoundingClientRect();
+ const maxWidth=Math.min(270,Math.max(160,hub.clientWidth-16));
+ let left=buttonRect.left-hubRect.left+hub.scrollLeft;
+ if(left+maxWidth>hub.clientWidth-8)left=buttonRect.right-hubRect.left+hub.scrollLeft-maxWidth;
+ left=Math.max(8,Math.min(left,hub.clientWidth-maxWidth-8));
+ out.style.left=left+'px';
  out.style.right='auto';
- out.style.top=(categoryRow.offsetTop+categoryRow.offsetHeight+6)+'px';
- out.style.width='min(270px, calc(100% - 24px))';
+ out.style.top=(buttonRect.bottom-hubRect.top+hub.scrollTop+6)+'px';
+ out.style.width=maxWidth+'px';
 }
 
 let select=document.getElementById('slvTxService');
