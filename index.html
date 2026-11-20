@@ -5935,6 +5935,22 @@ window.slvUWRefresh=init;
  }
 }
 </style>
+
+<!-- SLV dropdown: remove the white container board behind service buttons -->
+<style id="slv-dropdown-transparent-panel">
+#adminView .slv-five-hub>.slv-category-results,
+#employeeView .slv-five-hub>.slv-category-results{
+ background:transparent!important;background-color:transparent!important;
+ border:0!important;border-color:transparent!important;border-radius:0!important;
+ box-shadow:none!important;padding:0!important;
+}
+#adminView .slv-five-hub>.slv-category-results:has(.slv-compact-service-menu),
+#employeeView .slv-five-hub>.slv-category-results:has(.slv-compact-service-menu),
+#adminView .slv-five-hub>.slv-category-results:has(.slv-service-items),
+#employeeView .slv-five-hub>.slv-category-results:has(.slv-service-items){
+ background:transparent!important;border:0!important;box-shadow:none!important;
+}
+</style>
 </body>
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
