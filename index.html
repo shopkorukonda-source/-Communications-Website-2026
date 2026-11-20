@@ -5378,12 +5378,13 @@ if(categoryButton){
  let left=buttonRect.left;
  if(left+maxWidth>viewportWidth-8)left=buttonRect.right-maxWidth;
  left=Math.max(8,Math.min(left,viewportWidth-maxWidth-8));
- out.style.position='fixed';
- out.style.left=left+'px';
- out.style.right='auto';
- out.style.top=(buttonRect.bottom+6)+'px';
- out.style.width=maxWidth+'px';
- out.style.maxWidth='calc(100vw - 16px)';
+ out.style.setProperty('position','fixed','important');
+ out.style.setProperty('left',left+'px','important');
+ out.style.setProperty('right','auto','important');
+ out.style.setProperty('top',(buttonRect.bottom+6)+'px','important');
+ out.style.setProperty('width',maxWidth+'px','important');
+ out.style.setProperty('max-width','calc(100vw - 16px)','important');
+ out.style.setProperty('inset','auto','important');
 }
 
 let select=document.getElementById('slvTxService');
