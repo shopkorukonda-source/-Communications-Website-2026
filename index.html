@@ -1370,6 +1370,105 @@ body:has(#loginView:not(.hidden)) .sub-title{color:#a9c9d8}
  #loginView .slv-login-bottom{grid-column:1}
 }
 </style>
+<style id="slv-dashboard-theme-refresh-2026">
+/* SLV Admin + Employee dashboards — cohesive teal executive theme; visual-only */
+#adminView,#employeeView{
+ background:linear-gradient(145deg,#f7fbfb 0%,#f3f8fa 55%,#f5f8fc 100%);
+ border:1px solid #dce9e9;border-radius:0 0 22px 22px;
+ box-shadow:0 20px 55px rgba(8,52,67,.10);
+ padding:25px;
+ color:#193b49;
+}
+#adminView .topbar,#employeeView .topbar{
+ background:radial-gradient(circle at 92% 0%,rgba(79,224,202,.2),transparent 35%),linear-gradient(110deg,#073b48,#075b65 58%,#12677b);
+ color:#efffff;border:1px solid rgba(174,238,232,.2);
+ border-radius:17px;padding:18px 20px;margin-bottom:20px;
+ box-shadow:0 12px 28px rgba(5,76,83,.17);
+}
+#adminView .topbar strong,#employeeView .topbar strong{color:#f2ffff;font-size:17px;letter-spacing:.3px}
+#adminView .topbar button,#employeeView .topbar button{
+ border:1px solid rgba(220,255,250,.24);border-radius:10px;
+ box-shadow:none;
+}
+#adminView .section-box,#employeeView .section-box{
+ background:rgba(255,255,255,.94);border:1px solid #dce9e9;
+ border-left:4px solid #159d91;border-radius:16px;
+ box-shadow:0 7px 22px rgba(19,67,78,.055);
+ padding:21px;margin-top:17px;
+}
+#adminView .section-box h4,#employeeView .section-box h4{
+ color:#0b5860;border-bottom-color:#e4eeee;
+}
+#adminView .section-box:hover,#employeeView .section-box:hover{
+ box-shadow:0 10px 27px rgba(19,67,78,.075);
+}
+#adminView input,#adminView select,#adminView textarea,
+#employeeView input,#employeeView select,#employeeView textarea{
+ border:1px solid #d4e4e5;border-radius:10px;background:#f8fbfb;color:#183d49;
+}
+#adminView input:focus,#adminView select:focus,#adminView textarea:focus,
+#employeeView input:focus,#employeeView select:focus,#employeeView textarea:focus{
+ outline:0;border-color:#159d91;background:#fff;box-shadow:0 0 0 3px rgba(21,157,145,.11);
+}
+#adminView button,#employeeView button{
+ border-radius:10px;transition:transform .16s ease,box-shadow .16s ease,filter .16s ease;
+}
+#adminView button:hover,#employeeView button:hover{filter:brightness(1.035);transform:translateY(-1px)}
+#adminView .admin-wallet-top-strip{
+ border:1px solid #d4e9e6;border-radius:15px;
+ background:linear-gradient(120deg,#eaf8f5,#fff 75%);box-shadow:0 5px 16px rgba(13,116,105,.06);
+}
+#adminView .section-box .slab-box,#employeeView .section-box .slab-box,
+#employeeView .slab-box{
+ border:1px solid #e0ebeb;border-radius:13px;background:#f8fbfb;
+}
+#employeeView .tile{
+ background:linear-gradient(145deg,#e8f8f5,#edf5fb);
+ border:1px solid #d2e9e5;color:#11666a;border-radius:15px;
+ box-shadow:0 5px 16px rgba(12,126,117,.06);
+}
+#employeeView .tile:hover{box-shadow:0 10px 22px rgba(12,126,117,.12)}
+#employeeView .slv-five-hub{
+ border:1px solid #d8e9e7;border-radius:18px;
+ background:linear-gradient(145deg,#fff,#f5fbfa);
+ box-shadow:0 8px 24px rgba(13,76,82,.06);
+}
+#employeeView .slv-hub-head h2{color:#0b5860}
+#employeeView .slv-hub-tag{background:#e5f5f2;color:#08776f}
+#employeeView .slv-five-buttons button{
+ background:#f5faf9!important;border:1px solid #d7e8e6!important;
+ color:#155c62!important;border-radius:14px!important;
+}
+#employeeView .slv-five-buttons button.active{
+ background:#e2f6f1!important;border:2px solid #159d91!important;color:#075c5b!important;
+ box-shadow:0 5px 16px rgba(21,157,145,.10)!important;
+}
+#employeeView .slv-category-results{border-top-color:#e2eeec}
+#employeeView .slv-service-items button{
+ border:1px solid #d9e9e7!important;border-radius:11px!important;color:#145d64!important;
+}
+#employeeView .slv-service-items button:hover{background:#eaf8f5!important}
+#adminView table,#employeeView table{border:1px solid #e0ebeb;border-radius:12px;overflow:hidden}
+#adminView th,#employeeView th{background:#eaf5f3;color:#14545a}
+#adminView td,#employeeView td{border-bottom:1px solid #eaf0f0}
+#adminView .total,#employeeView .total{
+ background:linear-gradient(110deg,#e4f6f2,#eff7fb);border:1px solid #d2e9e5;color:#08736d;border-radius:13px;
+}
+#adminView .admin-side-menu,#employeeView .employee-side-menu{
+ background:linear-gradient(180deg,#073b48,#092c43);color:#efffff;
+ box-shadow:14px 0 40px rgba(2,35,48,.24);
+}
+#adminView .side-menu-link,#employeeView .side-menu-link{
+ border-radius:10px;color:#e6f7f7;
+}
+#adminView .side-menu-link:hover,#employeeView .side-menu-link:hover{background:rgba(94,224,204,.15)}
+@media(max-width:760px){
+ #adminView,#employeeView{padding:13px;border-radius:0 0 16px 16px}
+ #adminView .topbar,#employeeView .topbar{padding:14px;border-radius:13px}
+ #adminView .section-box,#employeeView .section-box{padding:15px;border-radius:13px}
+ #employeeView .slv-five-buttons{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+</style>
 </head>
 <body>
 <div aria-label="Transaction successful" aria-live="polite" class="slv-tx-success" id="slvTxSuccess" role="status"><div class="slv-tx-success-card"><div class="slv-tx-success-check">✓</div><h3>Transaction Successful</h3><p>SLV Communications • Payment Recorded</p><div class="slv-tx-success-amount" id="slvTxSuccessAmount">₹0.00</div><p id="slvTxSuccessCount">Wallet balances updated</p><div class="slv-tx-success-line"></div></div></div>
