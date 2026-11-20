@@ -5358,11 +5358,8 @@ function groupFor(name){if(cardType.test(name)&&cardAction.test(name))return 'ca
 function escapeText(x){return String(x||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 window.slvChooseCategory=async function(role,cat){
 const hub=document.querySelector('#'+role+'View .slv-five-hub');if(!hub)return;
-const active=hub.querySelector('[data-cat="'+cat+'"]');
-const wasActive=active?.classList.contains('active');
 hub.querySelectorAll('[data-cat]').forEach(b=>b.classList.toggle('active',b.dataset.cat===cat));
 const out=document.getElementById('slv-'+role+'-results');if(!out)return;
-if(role==='employee'&&wasActive&&out.dataset.openCategory===cat){out.replaceChildren();out.dataset.openCategory='';return;}
 out.replaceChildren();out.dataset.openCategory=cat;
 const h=document.createElement('h3');h.textContent=names[cat]||'Services';out.append(h);
 let select=document.getElementById('slvTxService');
