@@ -1256,9 +1256,7 @@ input:focus,select:focus,textarea:focus{border-color:#b9954e!important;box-shado
 <!-- LOGIN: premium visual shell; original authentication IDs and handlers preserved -->
 <main class="card slv-premium-login" id="loginView">
 <div class="slv-login-brand">
-<div class="slv-brand-overline">WELCOME TO</div>
-<h2 class="slv-wordmark-hero"><span class="slv-wordmark-initials">SLV</span><span class="slv-wordmark-name">COMMUNICATIONS</span></h2>
-<p>Secure Business Management Portal</p>
+<a aria-label="Open SLV Job Alerts website" class="slv-job-alerts-link" href="/job-alerts/" rel="noopener noreferrer" target="_blank">💼 SLV Job Alerts <span>Open Job Alerts ↗</span></a>
 </div>
 <div class="slv-login-panel">
 <div class="slv-login-intro"><h3>Welcome back</h3><p>Access your secure SLV workspace</p></div>
@@ -1275,7 +1273,7 @@ input:focus,select:focus,textarea:focus{border-color:#b9954e!important;box-shado
 <div class="slv-password-field"><input autocomplete="current-password" id="loginPass" placeholder="Enter your password" type="password"/><button aria-label="Show or hide password" class="slv-password-toggle" onclick="slvTogglePassword()" title="Show / hide password" type="button">Show</button></div>
 <button class="slv-signin-btn" onclick="handleLogin()">Secure Sign In <span aria-hidden="true">→</span></button>
 <div class="slv-login-trust"><span>◈ Secure access</span><span>● Authorized staff only</span></div>
-<a aria-label="Open SLV Job Alerts website" class="slv-job-alerts-link" href="/job-alerts/" rel="noopener noreferrer" target="_blank">💼 SLV Job Alerts <span>Open Job Alerts ↗</span></a>
+
 </div>
 <div class="slv-login-bottom">SLV COMMUNICATIONS <span>•</span> KORUKONDA</div>
 </main>
@@ -6075,6 +6073,29 @@ body:has(#loginView:not(.hidden)) .main-header .sub-title{
  #loginView .slv-login-panel{
   min-height:unset!important;padding:26px 24px!important;
  }
+}
+</style>
+
+<!-- SLV left login card: clean white panel with Job Alerts at the top; no branding -->
+<style id="slv-login-left-job-alerts-panel">
+#loginView .slv-login-brand{
+ display:flex!important;align-items:stretch!important;justify-content:flex-start!important;
+ min-height:440px!important;padding:24px!important;
+ background:#fff!important;color:#243b53!important;
+ border:1px solid rgba(12,20,30,.22)!important;outline:0!important;
+ border-radius:17px!important;
+ box-shadow:0 5px 18px rgba(24,42,64,.045),inset 0 0 0 1px rgba(255,255,255,.9)!important;
+}
+#loginView .slv-login-brand:before,#loginView .slv-login-brand:after{display:none!important}
+#loginView .slv-login-brand .slv-job-alerts-link{
+ box-sizing:border-box!important;width:100%!important;min-height:66px!important;
+ margin:0!important;padding:15px 16px!important;
+ font-size:16px!important;border-width:1px!important;border-radius:12px!important;
+}
+#loginView .slv-login-brand .slv-job-alerts-link span{font-size:11px!important}
+@media(max-width:720px){
+ #loginView .slv-login-brand{min-height:125px!important;padding:16px!important}
+ #loginView .slv-login-brand .slv-job-alerts-link{min-height:58px!important}
 }
 </style>
 </body>
