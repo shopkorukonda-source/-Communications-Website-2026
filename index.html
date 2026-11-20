@@ -5356,20 +5356,36 @@ const cardAction=/download|print|printout|printing|duplicate.?copy|pdf|pvc/i;
 const names={bank:'Banking & Payments',gov:'Government Services',print:'Printing & Documents',booking:'Bookings & Applications',other:'Other Services',cards:'Card Downloads & Prints'};
 function groupFor(name){if(cardType.test(name)&&cardAction.test(name))return 'cards';for(const [key,re] of Object.entries(groups))if(re.test(name))return key;return 'other'}
 function escapeText(x){return String(x||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-window.slvChooseCategory=function(role,cat){
+window.slvChooseCategory=async function(role,cat){
 const hub=document.querySelector('#'+role+'View .slv-five-hub');if(!hub)return;
 hub.querySelectorAll('[data-cat]').forEach(b=>b.classList.toggle('active',b.dataset.cat===cat));
-const out=document.getElementById('slv-'+role+'-results');out.replaceChildren();
-const h=document.createElement('h3');h.textContent=names[cat];out.append(h);
-const select=document.getElementById('slvTxService');const options=select?Array.from(select.options).filter(o=>o.value&& !o.disabled):[];
-if(!options.length){const p=document.createElement('p');p.textContent='Services loading… Login and refresh services if needed.';out.append(p);return}
+const out=document.getElementById('slv-'+role+'-results');if(!out)return;out.replaceChildren();
+const h=document.createElement('h3');h.textContent=names[cat]||'Services';out.append(h);
+let select=document.getElementById('slvTxService');
+let options=select?Array.from(select.options).filter(o=>o.value&&!o.disabled):[];
+if(role==='employee'&&!options.length&&typeof window.slvTxLoadServices==='function'){
+ const p=document.createElement('p');p.textContent='Loading services…';out.append(p);
+ try{await window.slvTxLoadServices(true)}catch(e){p.textContent='Services load కాలేదు. Internet / login చెక్ చేయండి.';return}
+ select=document.getElementById('slvTxService');options=select?Array.from(select.options).filter(o=>o.value&&!o.disabled):[];
+}
+if(!options.length){const p=document.createElement('p');p.textContent='Services are not available right now. Please refresh services.';out.append(p);return}
 const matches=options.filter(o=>groupFor(o.textContent||'')===cat);
-if(!matches.length){const p=document.createElement('p');p.textContent='No card download or print services are configured yet. Add them from Admin Services if required.';out.append(p);return}
+if(!matches.length){const p=document.createElement('p');p.textContent='ఈ Categoryలో ప్రస్తుతం Active Services లేవు.';out.append(p);return}
+if(role==='employee'){
+ const panel=document.createElement('div');panel.className='slv-compact-service-menu';
+ const trigger=document.createElement('button');trigger.type='button';trigger.className='slv-compact-service-trigger';trigger.textContent='Select Service  ▾';trigger.setAttribute('aria-expanded','false');
+ const list=document.createElement('div');list.className='slv-compact-service-list';list.hidden=true;
+ trigger.addEventListener('click',()=>{list.hidden=!list.hidden;trigger.setAttribute('aria-expanded',String(!list.hidden));trigger.textContent=list.hidden?'Select Service  ▾':'Select Service  ▴';});
+ matches.forEach(o=>{const item=document.createElement('button');item.type='button';item.className='slv-compact-service-option';item.textContent=o.textContent.trim();item.addEventListener('click',()=>{
+  trigger.textContent=o.textContent.trim()+'  ▾';list.hidden=true;trigger.setAttribute('aria-expanded','false');
+  if(typeof showView==='function')showView('servicesView');
+  const native=document.getElementById('slvTxService');if(native){native.value=o.value;native.dispatchEvent(new Event('change',{bubbles:true}));}
+  document.getElementById('slvCloudCheckout')?.scrollIntoView({behavior:'smooth',block:'start'});
+ });list.append(item)});
+ panel.append(trigger,list);out.append(panel);return;
+}
 const grid=document.createElement('div');grid.className='slv-service-items';
-for(const o of matches){const btn=document.createElement('button');btn.type='button';btn.textContent=o.textContent.trim();btn.onclick=()=>{
-if(role==='employee'){if(typeof showView==='function')showView('servicesView');const sel=document.getElementById('slvTxService');if(sel){sel.value=o.value;sel.dispatchEvent(new Event('change',{bubbles:true}));}document.getElementById('slvCloudCheckout')?.scrollIntoView({behavior:'smooth',block:'start'});}
-else{const menu=document.querySelector('#adminView [onclick*="adminServices"]');if(typeof window.showAdminSection==='function'){try{window.showAdminSection('adminServices')}catch(e){}}const target=document.getElementById('servicesAdminList');target?.scrollIntoView({behavior:'smooth'});}
-};grid.append(btn)}out.append(grid)
+for(const o of matches){const btn=document.createElement('button');btn.type='button';btn.textContent=o.textContent.trim();btn.onclick=()=>{if(typeof window.showAdminSection==='function'){try{window.showAdminSection('adminServices')}catch(e){}}document.getElementById('servicesAdminList')?.scrollIntoView({behavior:'smooth'});};grid.append(btn)}out.append(grid)
 };
 const observe=()=>{const sel=document.getElementById('slvTxService');if(!sel)return;let pending=false;new MutationObserver(()=>{if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;for(const role of ['employee','admin']){const active=document.querySelector('#'+role+'View .slv-five-buttons button.active');if(active)window.slvChooseCategory(role,active.dataset.cat)}})}).observe(sel,{childList:true});};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',observe);else observe();
@@ -5569,6 +5585,20 @@ window.slvUWRefresh=init;
  };
 })();
 </script>
+
+<style id="slv-category-dropdown-mobile-fix-20261120">
+/* Six categories stay in one horizontal strip; swipe horizontally on phones. */
+#adminView .slv-five-buttons,#employeeView .slv-five-buttons{display:flex!important;flex-wrap:nowrap!important;gap:8px!important;overflow-x:auto!important;overflow-y:hidden!important;padding:3px 2px 10px!important;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+#adminView .slv-five-buttons>button,#employeeView .slv-five-buttons>button{flex:0 0 145px!important;min-width:145px!important;min-height:92px!important;scroll-snap-align:start}
+#employeeView .slv-compact-service-menu{position:relative;margin:8px 0 4px;max-width:100%}
+#employeeView .slv-compact-service-trigger{width:100%!important;min-height:42px!important;padding:10px 12px!important;text-align:left!important;background:#f5f8fb!important;color:#244761!important;border:1px solid #cbdbe8!important;border-radius:8px!important;font-size:13px!important;font-weight:650!important;box-shadow:none!important}
+#employeeView .slv-compact-service-list{margin-top:5px;max-height:220px;overflow-y:auto;overscroll-behavior:contain;border:1px solid #d8e3ec;border-radius:8px;background:#fff;box-shadow:0 4px 12px rgba(20,50,75,.10)}
+#employeeView .slv-compact-service-list[hidden]{display:none!important}
+#employeeView .slv-compact-service-option{display:block!important;width:100%!important;min-height:38px!important;padding:9px 11px!important;margin:0!important;text-align:left!important;white-space:normal!important;background:#fff!important;color:#244761!important;border:0!important;border-bottom:1px solid #edf1f5!important;border-radius:0!important;font-size:12px!important;font-weight:550!important;box-shadow:none!important}
+#employeeView .slv-compact-service-option:last-child{border-bottom:0!important}
+#employeeView .slv-compact-service-option:active{background:#eaf3fa!important}
+@media(max-width:640px){#adminView .slv-five-buttons>button,#employeeView .slv-five-buttons>button{flex-basis:126px!important;min-width:126px!important;min-height:84px!important;padding:9px 7px!important}#adminView .slv-five-buttons button:last-child,#employeeView .slv-five-buttons button:last-child{grid-column:auto!important}}
+</style>
 </body>
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
