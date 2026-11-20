@@ -1300,6 +1300,195 @@ hr{border:0;border-top:1px solid var(--slv-line)}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}
 
 </style>
+<style id="slv-category-billing-flow-2026">
+.slv-category-service-select{display:block;width:100%;max-width:620px;margin:14px 0 4px;padding:14px 15px;border:1px solid #cbd8e8;border-radius:12px;background:#fff;color:#17375e;font-size:15px;font-weight:700;box-shadow:0 4px 14px rgba(17,55,94,.07)}
+.slv-selected-service-banner{display:flex;flex-direction:column;gap:4px;margin:8px 0 14px;padding:12px 14px;border:1px solid #cbdcf0;border-radius:12px;background:#f2f7fd;color:#244362}
+.slv-selected-service-banner span{font-size:11px;color:#657b94;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.slv-selected-service-banner strong{font-size:16px;color:#123f70}
+#servicesView #slvServiceSearch,#servicesView .slv-service-picker,#servicesView .slv-native-service-label,#servicesView #slvTxService,#servicesView #slvCloudCheckout>button[onclick*="slvTxLoadServices"]{display:none!important}
+</style>
+<style id="slv-login-theme-refresh-2026">
+/* Login-only visual refresh: deep teal, aqua highlights, and a softer glass-like workspace */
+body:has(#loginView:not(.hidden)){
+ background:
+  radial-gradient(ellipse at 12% 18%,rgba(38,214,190,.22),transparent 34%),
+  radial-gradient(ellipse at 88% 82%,rgba(48,126,222,.25),transparent 38%),
+  linear-gradient(135deg,#071a2c 0%,#0b2c43 52%,#102e50 100%);
+ min-height:100vh;
+}
+body:has(#loginView:not(.hidden)) .app{max-width:1120px}
+body:has(#loginView:not(.hidden)) .main-header{
+ background:transparent;border:0;box-shadow:none;color:#e9fbff;
+ padding:24px 12px 8px;
+}
+body:has(#loginView:not(.hidden)) .main-header:before,
+body:has(#loginView:not(.hidden)) .main-header:after{display:none}
+body:has(#loginView:not(.hidden)) .header-title{color:#e9fbff;letter-spacing:2.6px}
+body:has(#loginView:not(.hidden)) .sub-title{color:#a9c9d8}
+#loginView.slv-premium-login{
+ max-width:940px;grid-template-columns: .95fr 1.05fr;
+ margin:30px auto 56px;border:1px solid rgba(176,231,239,.2);
+ border-radius:28px;background:#f9fcfd;
+ box-shadow:0 32px 100px rgba(0,8,20,.42),0 0 0 1px rgba(255,255,255,.04);
+}
+#loginView .slv-login-brand{
+ min-height:490px;justify-content:center;padding:54px 46px;
+ background:
+  radial-gradient(circle at 85% 15%,rgba(75,238,211,.28),transparent 34%),
+  radial-gradient(circle at 10% 90%,rgba(48,125,211,.3),transparent 38%),
+  linear-gradient(150deg,#073b48 0%,#075a66 48%,#103d66 100%);
+}
+#loginView .slv-login-brand:before,#loginView .slv-login-brand:after{border-color:rgba(194,255,246,.17)}
+#loginView .slv-brand-overline{color:#9ef3df;letter-spacing:3.5px}
+#loginView .slv-login-brand h2{color:#fff;font-size:32px;letter-spacing:1.8px}
+#loginView .slv-login-brand p{color:#c9f4ec;line-height:1.8}
+#loginView .slv-login-panel{padding:54px 48px 42px}
+#loginView .slv-login-intro h3{color:#123a4b}
+#loginView .slv-login-intro p{color:#718b96}
+#loginView label{color:#315564}
+#loginView input,#loginView select{
+ background:#f3f8f8;border:1px solid #d5e5e5;border-radius:12px;color:#163c4b;
+ transition:border-color .18s ease,box-shadow .18s ease,background .18s ease;
+}
+#loginView input:focus,#loginView select:focus{
+ border-color:#159d91;background:#fff;box-shadow:0 0 0 4px rgba(21,157,145,.12);outline:0;
+}
+#loginView .slv-password-toggle{color:#087e78}
+#loginView .slv-signin-btn{
+ background:linear-gradient(105deg,#087e78,#12a994 58%,#167eaa);
+ border-radius:13px;box-shadow:0 12px 25px rgba(8,137,127,.23);
+}
+#loginView .slv-signin-btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+#loginView .slv-login-trust{color:#718b96}
+#loginView .slv-login-bottom{background:#f1f7f7;border-color:#e0eceb;color:#66818a}
+#loginView .slv-login-bottom span{color:#159d91}
+@media(max-width:720px){
+ #loginView.slv-premium-login{grid-template-columns:1fr;margin:18px 10px 34px}
+ #loginView .slv-login-brand{min-height:230px;padding:34px 26px;align-items:center;text-align:center}
+ #loginView .slv-login-brand h2{font-size:25px}
+ #loginView .slv-login-panel{padding:32px 25px}
+ #loginView .slv-login-bottom{grid-column:1}
+}
+</style>
+<style id="slv-dashboard-theme-refresh-2026">
+/* SLV Admin + Employee dashboards — cohesive teal executive theme; visual-only */
+#adminView,#employeeView{
+ background:linear-gradient(145deg,#f7fbfb 0%,#f3f8fa 55%,#f5f8fc 100%);
+ border:1px solid #dce9e9;border-radius:0 0 22px 22px;
+ box-shadow:0 20px 55px rgba(8,52,67,.10);
+ padding:25px;
+ color:#193b49;
+}
+#adminView .topbar,#employeeView .topbar{
+ background:radial-gradient(circle at 92% 0%,rgba(79,224,202,.2),transparent 35%),linear-gradient(110deg,#073b48,#075b65 58%,#12677b);
+ color:#efffff;border:1px solid rgba(174,238,232,.2);
+ border-radius:17px;padding:18px 20px;margin-bottom:20px;
+ box-shadow:0 12px 28px rgba(5,76,83,.17);
+}
+#adminView .topbar strong,#employeeView .topbar strong{color:#f2ffff;font-size:17px;letter-spacing:.3px}
+#adminView .topbar button,#employeeView .topbar button{
+ border:1px solid rgba(220,255,250,.24);border-radius:10px;
+ box-shadow:none;
+}
+#adminView .section-box,#employeeView .section-box{
+ background:rgba(255,255,255,.94);border:1px solid #dce9e9;
+ border-left:4px solid #159d91;border-radius:16px;
+ box-shadow:0 7px 22px rgba(19,67,78,.055);
+ padding:21px;margin-top:17px;
+}
+#adminView .section-box h4,#employeeView .section-box h4{
+ color:#0b5860;border-bottom-color:#e4eeee;
+}
+#adminView .section-box:hover,#employeeView .section-box:hover{
+ box-shadow:0 10px 27px rgba(19,67,78,.075);
+}
+#adminView input,#adminView select,#adminView textarea,
+#employeeView input,#employeeView select,#employeeView textarea{
+ border:1px solid #d4e4e5;border-radius:10px;background:#f8fbfb;color:#183d49;
+}
+#adminView input:focus,#adminView select:focus,#adminView textarea:focus,
+#employeeView input:focus,#employeeView select:focus,#employeeView textarea:focus{
+ outline:0;border-color:#159d91;background:#fff;box-shadow:0 0 0 3px rgba(21,157,145,.11);
+}
+#adminView button,#employeeView button{
+ border-radius:10px;transition:transform .16s ease,box-shadow .16s ease,filter .16s ease;
+}
+#adminView button:hover,#employeeView button:hover{filter:brightness(1.035);transform:translateY(-1px)}
+#adminView .admin-wallet-top-strip{
+ border:1px solid #d4e9e6;border-radius:15px;
+ background:linear-gradient(120deg,#eaf8f5,#fff 75%);box-shadow:0 5px 16px rgba(13,116,105,.06);
+}
+#adminView .section-box .slab-box,#employeeView .section-box .slab-box,
+#employeeView .slab-box{
+ border:1px solid #e0ebeb;border-radius:13px;background:#f8fbfb;
+}
+#employeeView .tile{
+ background:linear-gradient(145deg,#e8f8f5,#edf5fb);
+ border:1px solid #d2e9e5;color:#11666a;border-radius:15px;
+ box-shadow:0 5px 16px rgba(12,126,117,.06);
+}
+#employeeView .tile:hover{box-shadow:0 10px 22px rgba(12,126,117,.12)}
+#employeeView .slv-five-hub{
+ border:1px solid #d8e9e7;border-radius:18px;
+ background:linear-gradient(145deg,#fff,#f5fbfa);
+ box-shadow:0 8px 24px rgba(13,76,82,.06);
+}
+#employeeView .slv-hub-head h2{color:#0b5860}
+#employeeView .slv-hub-tag{background:#e5f5f2;color:#08776f}
+#employeeView .slv-five-buttons button{
+ background:#f5faf9!important;border:1px solid #d7e8e6!important;
+ color:#155c62!important;border-radius:14px!important;
+}
+#employeeView .slv-five-buttons button.active{
+ background:#e2f6f1!important;border:2px solid #159d91!important;color:#075c5b!important;
+ box-shadow:0 5px 16px rgba(21,157,145,.10)!important;
+}
+#employeeView .slv-category-results{border-top-color:#e2eeec}
+#employeeView .slv-service-items button{
+ border:1px solid #d9e9e7!important;border-radius:11px!important;color:#145d64!important;
+}
+#employeeView .slv-service-items button:hover{background:#eaf8f5!important}
+#adminView table,#employeeView table{border:1px solid #e0ebeb;border-radius:12px;overflow:hidden}
+#adminView th,#employeeView th{background:#eaf5f3;color:#14545a}
+#adminView td,#employeeView td{border-bottom:1px solid #eaf0f0}
+#adminView .total,#employeeView .total{
+ background:linear-gradient(110deg,#e4f6f2,#eff7fb);border:1px solid #d2e9e5;color:#08736d;border-radius:13px;
+}
+#adminView .admin-side-menu,#employeeView .employee-side-menu{
+ background:linear-gradient(180deg,#073b48,#092c43);color:#efffff;
+ box-shadow:14px 0 40px rgba(2,35,48,.24);
+}
+#adminView .side-menu-link,#employeeView .side-menu-link{
+ border-radius:10px;color:#e6f7f7;
+}
+#adminView .side-menu-link:hover,#employeeView .side-menu-link:hover{background:rgba(94,224,204,.15)}
+@media(max-width:760px){
+ #adminView,#employeeView{padding:13px;border-radius:0 0 16px 16px}
+ #adminView .topbar,#employeeView .topbar{padding:14px;border-radius:13px}
+ #adminView .section-box,#employeeView .section-box{padding:15px;border-radius:13px}
+ #employeeView .slv-five-buttons{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+</style>
+<style id="slv-dashboard-menu-label-contrast-fix">
+/* High-contrast labels for key Admin menu actions */
+#adminView .admin-side-menu .side-menu-link[onclick*="adminWallets"],
+#adminView .admin-side-menu .side-menu-link[onclick*="adminEmployees"]{
+ background:#e8f7f3!important;
+ color:#102f35!important;
+ border:1px solid #b9e4dc!important;
+ font-weight:800!important;
+ text-shadow:none!important;
+}
+#adminView .admin-side-menu .side-menu-link[onclick*="adminWallets"]:hover,
+#adminView .admin-side-menu .side-menu-link[onclick*="adminEmployees"]:hover{
+ background:#d3f0e9!important;color:#092c32!important;
+}
+#adminView .admin-wallet-top-strip .wallet-strip-heading,
+#adminView .admin-wallet-top-strip .admin-wallet-chip,
+#adminView .admin-wallet-top-strip .admin-wallet-chip *{
+ color:#172b35!important;text-shadow:none!important;
+}
+</style>
 </head>
 <body>
 <div aria-label="Transaction successful" aria-live="polite" class="slv-tx-success" id="slvTxSuccess" role="status"><div class="slv-tx-success-card"><div class="slv-tx-success-check">✓</div><h3>Transaction Successful</h3><p>SLV Communications • Payment Recorded</p><div class="slv-tx-success-amount" id="slvTxSuccessAmount">₹0.00</div><p id="slvTxSuccessCount">Wallet balances updated</p><div class="slv-tx-success-line"></div></div></div>
@@ -1759,6 +1948,7 @@ hr{border:0;border-top:1px solid var(--slv-line)}
 </section>
 <section class="section-box" id="slvCloudCheckout" style="margin:12px 0">
 <h3>💳 Payment &amp; Save</h3>
+<div class="slv-selected-service-banner" aria-live="polite"><span>Selected Service</span><strong id="slvSelectedServiceName">Choose a service from the dashboard</strong></div>
 <label for="slvServiceSearch">🔎 Search Service</label><div class="slv-service-picker"><input aria-controls="slvServiceSuggestions" aria-expanded="false" autocomplete="off" id="slvServiceSearch" placeholder="Type service name (PAN, Xerox, Aadhaar...)" type="search"/><div class="slv-service-suggestions" hidden="" id="slvServiceSuggestions" role="listbox"></div></div><label class="slv-native-service-label" for="slvTxService">Selected Service</label><select aria-label="Selected Cloud Service" id="slvTxService"><option value="">Load services first</option></select>
 <button class="btn-secondary btn-small" onclick="slvTxLoadServices()" type="button">↻ Load Cloud Services</button>
 <section class="section-box hidden" id="slvFinancialBilling" style="border:1px solid #b8d5f5"><h3>🏦 AEPS / PhonePe Billing</h3><div class="grid"><div><label>Service</label><select id="finBillType" onchange="slvFinQuote();slvFinWallets()"><option value="aeps">AEPS Withdrawal</option><option value="cash_upi">Cash → UPI</option><option value="upi_cash">UPI → Cash</option></select></div><div><label>Amount ₹</label><input id="finBillAmount" min="1" oninput="slvFinQuote()" step="0.01" type="number"/></div><div><label>Wallet</label><select id="finBillWallet"><option value="">Choose wallet</option></select></div><div><label>Charge ₹ (Auto Slab)</label><input id="finBillCharge" readonly="" type="text"/></div><div><label>Charge Type</label><select id="finBillMode" onchange="slvFinQuote()"><option value="extra">Extra</option><option value="deduct">Deduct</option></select></div></div><p class="total" id="finBillResult">Enter amount</p><button class="btn-green" id="finBillSave" onclick="slvFinPost()" type="button">☁️ Save Billing</button><p class="muted" id="finBillStatus" role="status"></p><small>Provider transaction must already be completed. Wallet names only; balances hidden.</small></section>
@@ -5433,11 +5623,26 @@ const select=document.getElementById('slvTxService');const options=select?Array.
 if(!options.length){const p=document.createElement('p');p.textContent='Services loading… Login and refresh services if needed.';out.append(p);return}
 const matches=options.filter(o=>groupFor(o.textContent||'')===cat);
 if(!matches.length){const p=document.createElement('p');p.textContent='No card download or print services are configured yet. Add them from Admin Services if required.';out.append(p);return}
-const grid=document.createElement('div');grid.className='slv-service-items';
-for(const o of matches){const btn=document.createElement('button');btn.type='button';btn.textContent=o.textContent.trim();btn.onclick=()=>{
-if(role==='employee'){if(typeof showView==='function')showView('servicesView');const sel=document.getElementById('slvTxService');if(sel){sel.value=o.value;sel.dispatchEvent(new Event('change',{bubbles:true}));}document.getElementById('slvCloudCheckout')?.scrollIntoView({behavior:'smooth',block:'start'});}
-else{const menu=document.querySelector('#adminView [onclick*="adminServices"]');if(typeof window.showAdminSection==='function'){try{window.showAdminSection('adminServices')}catch(e){}}const target=document.getElementById('servicesAdminList');target?.scrollIntoView({behavior:'smooth'});}
-};grid.append(btn)}out.append(grid)
+if(role==='employee'){
+ const picker=document.createElement('select');picker.className='slv-category-service-select';picker.setAttribute('aria-label','Select service for billing');
+ const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent='— Select a service —';picker.append(placeholder);
+ matches.forEach(o=>{const opt=document.createElement('option');opt.value=o.value;opt.textContent=o.textContent.trim();picker.append(opt)});
+ picker.onchange=()=>{
+  if(!picker.value)return;
+  const chosen=matches.find(x=>x.value===picker.value);if(!chosen)return;
+  if(typeof showView==='function')showView('servicesView');
+  const billingSelect=document.getElementById('slvTxService');
+  if(billingSelect){billingSelect.value=chosen.value;billingSelect.dispatchEvent(new Event('change',{bubbles:true}));}
+  const display=document.getElementById('slvSelectedServiceName');if(display)display.textContent=chosen.textContent.trim();
+ };
+ out.append(picker);
+}else{
+ const grid=document.createElement('div');grid.className='slv-service-items';
+ for(const o of matches){const btn=document.createElement('button');btn.type='button';btn.textContent=o.textContent.trim();btn.onclick=()=>{
+  if(typeof window.showAdminSection==='function'){try{window.showAdminSection('adminServices')}catch(e){}}
+  const target=document.getElementById('servicesAdminList');target?.scrollIntoView({behavior:'smooth'});
+ };grid.append(btn)}out.append(grid)
+}
 };
 const observe=()=>{const sel=document.getElementById('slvTxService');if(!sel)return;let pending=false;new MutationObserver(()=>{if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;for(const role of ['employee','admin']){const active=document.querySelector('#'+role+'View .slv-five-buttons button.active');if(active)window.slvChooseCategory(role,active.dataset.cat)}})}).observe(sel,{childList:true});};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',observe);else observe();
@@ -5637,6 +5842,53 @@ window.slvUWRefresh=init;
  };
 })();
 </script>
+
+<style id="slv-pan-forms-theme-refresh-2026">
+/* PAN Form 93, PAN receipts and tracking — aligned with SLV teal dashboard */
+#slvForm93{background:rgba(7,25,43,.84);backdrop-filter:blur(5px)}
+#slvForm93 .pan-shell{background:#f8fbfc;border:1px solid #d8e8e8;border-radius:20px;box-shadow:0 22px 70px rgba(0,0,0,.28);color:#172b35}
+#slvForm93 .pan-head{border-bottom:1px solid #d8e7e7;padding-bottom:15px}
+#slvForm93 .pan-head h2{color:#123b46}
+#slvForm93 .pan-field{background:#fff;border:1px solid #e0ebeb;border-radius:12px;padding:10px 12px}
+#slvForm93 .pan-field label{color:#29434b;font-weight:750}
+#slvForm93 .pan-field input,#slvForm93 .pan-field select,#slvForm93 input,#slvForm93 select,#slvForm93 textarea{border:1px solid #cbdcdd;border-radius:9px;background:#fff;color:#172b35;min-height:40px}
+#slvForm93 input:focus,#slvForm93 select:focus,#slvForm93 textarea:focus{outline:0;border-color:#159b91;box-shadow:0 0 0 3px rgba(21,155,145,.13)}
+#slvForm93 button{border-radius:10px;font-weight:750}
+#slvForm93 .pan-nav button,#slvForm93 button:not(.btn-secondary){background:#087f78;color:#fff}
+#slvForm93 .pan-nav button:hover,#slvForm93 button:not(.btn-secondary):hover{background:#066b66}
+#slvForm93 .btn-secondary{background:#e5eeee;color:#193b40;border:1px solid #cbdcdd}
+#slvForm93 .pan-progress{background:#dceaea}
+#slvForm93 .pan-progress>div{background:linear-gradient(90deg,#087f78,#22b8a7)}
+#slvForm93 .pan-info{background:#e8f6f4;border:1px solid #c8e9e4;color:#23474a;border-radius:12px}
+#slvForm93 .pan-invalid{border:2px solid #dc3545!important;background:#fff5f5!important}
+#slvPanModal{background:rgba(7,25,43,.82);backdrop-filter:blur(5px)}
+#slvPanDialog{background:#f8fbfc;border:1px solid #d8e8e8;border-radius:20px;color:#172b35}
+#slvPanDialog .topbar{background:#123b46;color:#fff;border-radius:12px;padding:12px 14px}
+#slvPanDialog label{color:#29434b;font-weight:750}
+#slvPanDialog input,#slvPanDialog select{border:1px solid #cbdcdd;border-radius:9px;background:#fff;color:#172b35;min-height:40px;padding:10px}
+#slvPanDialog input:focus,#slvPanDialog select:focus{outline:0;border-color:#159b91;box-shadow:0 0 0 3px rgba(21,155,145,.13)}
+#slvPanDialog button{border-radius:10px}
+#slvPanDialog .btn-green{background:#087f78;color:#fff}
+#slvPanDialog .btn-secondary{background:#e5eeee;color:#193b40}
+#slvPanStatus{color:#087f78}
+#slvTrackingModal{background:rgba(7,25,43,.82);backdrop-filter:blur(5px)}
+#slvTrackingModal .track-shell{background:#f8fbfc;border:1px solid #d8e8e8;border-radius:20px;color:#172b35;box-shadow:0 22px 70px rgba(0,0,0,.28)}
+#slvTrackingModal .topbar{background:#123b46;color:#fff;border-radius:12px;padding:12px 14px}
+#slvTrackingModal label{color:#29434b;font-weight:750}
+#slvTrackingModal input{border:1px solid #cbdcdd;border-radius:9px;min-height:42px}
+#slvTrackingModal input:focus{outline:0;border-color:#159b91;box-shadow:0 0 0 3px rgba(21,155,145,.13)}
+#slvTrackingModal button{border-radius:10px;background:#087f78;color:#fff}
+#slvTrackingModal .track-result{background:#fff;border:1px solid #dce9e9;border-radius:12px}
+@media(max-width:600px){
+ #slvForm93{padding:7px}
+ #slvForm93 .pan-shell{margin:4px auto;padding:14px;border-radius:14px}
+ #slvForm93 .pan-grid{grid-template-columns:1fr}
+ #slvForm93 .pan-head{align-items:flex-start;flex-wrap:wrap}
+ #slvPanDialog .pan-grid{grid-template-columns:1fr}
+ #slvPanDialog{padding:12px}
+ #slvTrackingModal .track-shell{padding:14px}
+}
+</style>
 </body>
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
