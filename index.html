@@ -3432,6 +3432,16 @@ try {
   if(last&&!last.endAt)throw Error('Resume from lunch break first');
   return db;
  }
+ // Service catalog must remain visible even during lunch or after shift close.
+ // Transaction and wallet operations continue to use employeeDb() and its strict shift checks.
+ async function serviceCatalogDb(){
+  const db=window.slvSupabase;if(!db)throw Error('Supabase connection unavailable');
+  const a=await db.auth.getUser();if(a.error||!a.data?.user)throw Error('Cloud employee login required');
+  const p=await db.from('profiles').select('role,is_active').eq('id',a.data.user.id).single();
+  if(p.error||p.data?.role!=='employee'||p.data?.is_active!==true)throw Error('Active cloud employee login required');
+  if(!currentUser||currentUser.role!=='Employee')throw Error('Employee dashboard login required');
+  return db;
+ }
  // Prefetch after employee dashboard opens; reuse recent data when Services is clicked.
  // Authentication/shift checks remain mandatory for every transaction save.
  window.slvTxLoadServices=async(force=false)=>{
@@ -3444,7 +3454,7 @@ try {
   servicesInFlight=(async()=>{
    try{
     if(!services.length)status('Loading services…');
-    const db=await employeeDb();
+    const db=await serviceCatalogDb();
     const r=await db.from('services').select('id,service_name,customer_rate,internal_cost,is_active').eq('is_active',true).order('service_name');
     if(r.error)throw r.error;
     services=r.data||[];servicesFetchedAt=Date.now();
