@@ -5827,7 +5827,83 @@ window.slvUWRefresh=init;
 #employeeView .slv-five-hub>.slv-category-results:empty{display:none!important}
 #employeeView .slv-five-hub .slv-compact-service-menu,
 #employeeView .slv-five-hub .slv-compact-service-list{position:static!important;display:flex!important;flex-direction:column!important;align-items:flex-start!important;flex-wrap:nowrap!important;height:auto!important;min-height:0!important;max-height:300px!important;overflow-y:auto!important}
-</style></body>
+</style>
+<!-- SLV category dropdown: align beneath selected category and keep full vertical flow -->
+<style id="slv-category-dropdown-final-position">
+/* Dropdown is part of the page flow, aligned under the selected category. */
+#adminView .slv-five-hub>.slv-category-results,
+#employeeView .slv-five-hub>.slv-category-results{
+ position:relative!important;inset:auto!important;float:none!important;clear:both!important;
+ display:block!important;box-sizing:border-box!important;
+ margin-top:10px!important;margin-right:0!important;margin-bottom:0!important;
+ padding:12px!important;min-height:0!important;height:auto!important;
+ background:#fff!important;border:1px solid #dce5f0!important;border-radius:12px!important;
+ box-shadow:0 8px 22px rgba(31,48,85,.10)!important;
+ transform:none!important;overflow:visible!important;z-index:1!important;
+}
+#adminView .slv-five-hub .slv-compact-service-list,
+#employeeView .slv-five-hub .slv-compact-service-list{
+ display:flex!important;flex-direction:column!important;flex-wrap:nowrap!important;
+ align-items:stretch!important;gap:7px!important;
+ width:100%!important;max-width:100%!important;max-height:none!important;height:auto!important;
+ overflow:visible!important;padding:0!important;margin:0!important;
+ background:transparent!important;border:0!important;box-shadow:none!important;
+}
+#adminView .slv-five-hub .slv-compact-service-option,
+#employeeView .slv-five-hub .slv-compact-service-option{
+ display:flex!important;flex:0 0 auto!important;align-self:stretch!important;
+ width:100%!important;max-width:100%!important;min-height:38px!important;height:auto!important;
+ justify-content:flex-start!important;text-align:left!important;white-space:normal!important;
+ padding:9px 12px!important;margin:0!important;border-radius:8px!important;
+ background:#f1f6fb!important;border:1px solid #d9e5ef!important;color:#244761!important;
+ box-shadow:none!important;
+}
+#adminView .slv-five-hub .slv-compact-service-option.selected,
+#employeeView .slv-five-hub .slv-compact-service-option.selected{
+ background:#dcecf7!important;border-color:#8db6d2!important;
+}
+</style>
+<script id="slv-category-dropdown-final-position-script">
+(function(){
+ const original=window.slvChooseCategory;
+ if(typeof original!=='function'||original.__slvAligned)return;
+ const aligned=async function(role,cat,forceOpen){
+   const result=await original.apply(this,arguments);
+   const hub=document.querySelector('#'+role+'View .slv-five-hub');
+   const out=document.getElementById('slv-'+role+'-results');
+   if(!hub||!out)return result;
+   if(out.dataset.openCategory!==cat||!out.childElementCount){
+     out.style.removeProperty('margin-left');
+     out.style.removeProperty('width');
+     out.style.removeProperty('max-width');
+     return result;
+   }
+   const btn=Array.from(hub.querySelectorAll('[data-cat]')).find(x=>x.dataset.cat===cat);
+   if(!btn)return result;
+   const hubRect=hub.getBoundingClientRect();
+   const btnRect=btn.getBoundingClientRect();
+   const width=Math.min(320,Math.max(190,hub.clientWidth));
+   let left=btnRect.left-hubRect.left;
+   left=Math.max(0,Math.min(left,hub.clientWidth-width));
+   out.style.setProperty('position','relative','important');
+   out.style.setProperty('float','none','important');
+   out.style.setProperty('clear','both','important');
+   out.style.setProperty('left','auto','important');
+   out.style.setProperty('right','auto','important');
+   out.style.setProperty('top','auto','important');
+   out.style.setProperty('margin-left',left+'px','important');
+   out.style.setProperty('width',width+'px','important');
+   out.style.setProperty('max-width','calc(100% - '+left+'px)','important');
+   out.style.setProperty('height','auto','important');
+   out.style.setProperty('overflow','visible','important');
+   return result;
+ };
+ aligned.__slvAligned=true;
+ window.slvChooseCategory=aligned;
+})();
+</script>
+
+</body>
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
 <!-- SLV Quick Links: popup accessed from employee side menu; cloud read uses authenticated RLS. -->
