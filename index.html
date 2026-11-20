@@ -1469,6 +1469,26 @@ body:has(#loginView:not(.hidden)) .sub-title{color:#a9c9d8}
  #employeeView .slv-five-buttons{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 </style>
+<style id="slv-dashboard-menu-label-contrast-fix">
+/* High-contrast labels for key Admin menu actions */
+#adminView .admin-side-menu .side-menu-link[onclick*="adminWallets"],
+#adminView .admin-side-menu .side-menu-link[onclick*="adminEmployees"]{
+ background:#e8f7f3!important;
+ color:#102f35!important;
+ border:1px solid #b9e4dc!important;
+ font-weight:800!important;
+ text-shadow:none!important;
+}
+#adminView .admin-side-menu .side-menu-link[onclick*="adminWallets"]:hover,
+#adminView .admin-side-menu .side-menu-link[onclick*="adminEmployees"]:hover{
+ background:#d3f0e9!important;color:#092c32!important;
+}
+#adminView .admin-wallet-top-strip .wallet-strip-heading,
+#adminView .admin-wallet-top-strip .admin-wallet-chip,
+#adminView .admin-wallet-top-strip .admin-wallet-chip *{
+ color:#172b35!important;text-shadow:none!important;
+}
+</style>
 </head>
 <body>
 <div aria-label="Transaction successful" aria-live="polite" class="slv-tx-success" id="slvTxSuccess" role="status"><div class="slv-tx-success-card"><div class="slv-tx-success-check">✓</div><h3>Transaction Successful</h3><p>SLV Communications • Payment Recorded</p><div class="slv-tx-success-amount" id="slvTxSuccessAmount">₹0.00</div><p id="slvTxSuccessCount">Wallet balances updated</p><div class="slv-tx-success-line"></div></div></div>
