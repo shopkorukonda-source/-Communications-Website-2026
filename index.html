@@ -5503,20 +5503,25 @@ if(!options.length){const p=document.createElement('p');p.textContent='Services 
 const matches=options.filter(o=>groupFor(o.textContent||'')===cat);
 if(!matches.length){const p=document.createElement('p');p.textContent='ఈ Categoryలో ప్రస్తుతం Active Services లేవు.';out.append(p);return}
 if(role==='employee'){
- const label=document.createElement('label');label.textContent='Select Service';label.style.marginTop='8px';
- const dropdown=document.createElement('select');dropdown.className='slv-category-service-select';dropdown.setAttribute('aria-label',names[cat]+' services');
- dropdown.add(new Option('— Select a service —',''));
- matches.forEach(o=>dropdown.add(new Option(o.textContent.trim(),o.value)));
- dropdown.addEventListener('change',()=>{
-  if(!dropdown.value)return;
-  const chosen=matches.find(o=>o.value===dropdown.value);
-  if(typeof showView==='function')showView('servicesView');
-  const native=document.getElementById('slvTxService');
-  if(native&&chosen){native.value=chosen.value;native.dispatchEvent(new Event('change',{bubbles:true}));}
-  document.getElementById('slvCloudCheckout')?.scrollIntoView({behavior:'smooth',block:'start'});
+ const panel=document.createElement('div');panel.className='slv-compact-service-menu';
+ const trigger=document.createElement('button');trigger.type='button';trigger.className='slv-compact-service-trigger';trigger.textContent='Select Service  ▾';
+ const list=document.createElement('div');list.className='slv-compact-service-list';list.hidden=true;
+ trigger.setAttribute('aria-expanded','false');
+ trigger.addEventListener('click',()=>{list.hidden=!list.hidden;trigger.setAttribute('aria-expanded',String(!list.hidden));trigger.textContent=list.hidden?'Select Service  ▾':'Select Service  ▴';});
+ matches.forEach(o=>{
+  const item=document.createElement('button');item.type='button';item.className='slv-compact-service-option';
+  item.textContent=o.textContent.trim();
+  item.addEventListener('click',()=>{
+   const chosen=matches.find(x=>x.value===o.value);
+   trigger.textContent=o.textContent.trim()+'  ▾';list.hidden=true;trigger.setAttribute('aria-expanded','false');
+   if(typeof showView==='function')showView('servicesView');
+   const native=document.getElementById('slvTxService');
+   if(native&&chosen){native.value=chosen.value;native.dispatchEvent(new Event('change',{bubbles:true}));}
+   document.getElementById('slvCloudCheckout')?.scrollIntoView({behavior:'smooth',block:'start'});
+  });
+  list.append(item);
  });
- out.append(label,dropdown);
- return;
+ panel.append(trigger,list);out.append(panel);return;
 }
 const grid=document.createElement('div');grid.className='slv-service-items';
 for(const o of matches){const btn=document.createElement('button');btn.type='button';btn.textContent=o.textContent.trim();btn.onclick=()=>{
@@ -5913,4 +5918,13 @@ window.slvUWRefresh=init;
  #employeeView .slv-five-buttons button{padding:7px 9px 6px!important;font-size:10px!important}
  #employeeView .slv-five-buttons button b{font-size:10px!important}
 }
+</style>
+<style id="slv-compact-service-dropdown-20261120">
+#employeeView .slv-compact-service-menu{position:relative;margin:8px 0 4px;max-width:100%}
+#employeeView .slv-compact-service-trigger{width:100%!important;min-height:40px!important;padding:9px 12px!important;text-align:left!important;background:#f5f8fb!important;color:#244761!important;border:1px solid #cbdbe8!important;border-radius:8px!important;font-size:13px!important;font-weight:650!important;box-shadow:none!important}
+#employeeView .slv-compact-service-list{margin-top:5px;max-height:220px;overflow-y:auto;border:1px solid #d8e3ec;border-radius:8px;background:#fff;box-shadow:0 4px 12px rgba(20,50,75,.10)}
+#employeeView .slv-compact-service-list[hidden]{display:none!important}
+#employeeView .slv-compact-service-option{display:block!important;width:100%!important;min-height:36px!important;padding:8px 11px!important;margin:0!important;text-align:left!important;white-space:normal!important;background:#fff!important;color:#244761!important;border:0!important;border-bottom:1px solid #edf1f5!important;border-radius:0!important;font-size:12px!important;font-weight:550!important;box-shadow:none!important}
+#employeeView .slv-compact-service-option:last-child{border-bottom:0!important}
+#employeeView .slv-compact-service-option:active{background:#eaf3fa!important}
 </style>
