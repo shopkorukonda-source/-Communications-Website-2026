@@ -997,8 +997,7 @@ button.btn-orange,.btn-orange{background:#e9f0f4!important;color:#365c72!importa
 #adminView .slv-five-buttons button,#employeeView .slv-five-buttons button{display:flex!important;visibility:visible!important;opacity:1!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;min-width:0!important;min-height:112px!important;gap:11px!important;padding:15px 10px!important;background:#f3f8fa!important;color:#24485c!important;border:1px solid #d6e5eb!important;border-radius:14px!important;text-shadow:none!important;box-shadow:none!important;filter:none!important;transform:none!important;letter-spacing:normal!important;font-family:Arial,'Segoe UI',sans-serif!important;cursor:pointer!important}
 #adminView .slv-five-buttons button b,#employeeView .slv-five-buttons button b{display:block!important;visibility:visible!important;opacity:1!important;color:#24485c!important;font-size:14px!important;font-weight:700!important;line-height:1.4!important;text-align:center!important;white-space:normal!important;overflow-wrap:anywhere!important;text-shadow:none!important;-webkit-text-fill-color:#24485c!important}
 #adminView .slv-five-buttons button .slv-category-icon,#employeeView .slv-five-buttons button .slv-category-icon{display:block!important;visibility:visible!important;opacity:1!important;flex-shrink:0!important;color:#3a8192!important;stroke:#3a8192!important;filter:none!important}
-#adminView .slv-five-buttons button.active,#employeeView .slv-five-buttons button.active{background:#e4f2f5!important;border:2px solid #6ea8b5!important}
-#adminView .slv-five-buttons button:focus-visible,#employeeView .slv-five-buttons button:focus-visible{outline:3px solid #75b4c4!important;outline-offset:2px!important}
+#adminView .slv-five-buttons button.active,#employeeView .slv-five-buttons button.active{background:#e4f2f5!important;border:2px solid #6ea8b5!important}#adminView .slv-five-buttons button:focus-visible,#employeeView .slv-five-buttons button:focus-visible{outline:3px solid #75b4c4!important;outline-offset:2px!important}
 .main-header .slv-wordmark-header{display:flex!important;align-items:center!important;justify-content:center!important;gap:10px!important;color:#284b60!important;visibility:visible!important;opacity:1!important}
 .main-header .slv-wordmark-header span{visibility:visible!important;opacity:1!important;color:#284b60!important;-webkit-text-fill-color:#284b60!important;text-shadow:none!important}
 .main-header .slv-brand-mark{display:inline-block!important;visibility:visible!important;opacity:1!important;flex-shrink:0!important}
@@ -1997,8 +1996,7 @@ function applyLeave(){
   const leaves=getLeaves();
   leaves.push({id:currentUser.id,name:currentUser.name,reason,status:'Pending',date,appliedOn:new Date().toLocaleDateString('en-IN')});
   write(KEYS.leaves,leaves);
-  $('leaveDate').value='';$('leaveReason').value='';
-  alert('లీవ్ రిక్వెస్ట్ పంపబడింది');
+  $('leaveDate').value='';$('leaveReason').value='';  alert('లీవ్ రిక్వెస్ట్ పంపబడింది');
 }
 function getTransactions(){return read(KEYS.transactions,[])}
 function renderTransactions(){
@@ -2997,8 +2995,7 @@ try {
     };
 
     window.createEmployeeInSupabase = async function(id, name, password) {
-  const { data, error } = await db.functions.invoke('create-employee', {
-    body: {
+  const { data, error } = await db.functions.invoke('create-employee', {    body: {
       employee_code: id,
       full_name: name,
       password: password
@@ -3997,8 +3994,7 @@ window.slvPaymentQuick = function(mode){
 #servicesView.slv-centered-popup{position:fixed!important;display:block!important;top:50%;left:50%;transform:translate(-50%,-50%);width:min(560px,calc(100vw - 24px));max-height:min(88dvh,850px);overflow-y:auto;overscroll-behavior:contain;z-index:11001;margin:0!important;padding:17px!important;border-radius:18px!important;box-shadow:0 26px 90px rgba(0,0,0,.4)!important;background:#fff}
 #servicesView.slv-centered-popup .topbar{position:sticky;top:-17px;z-index:5;background:#fff;padding:10px 2px 13px;margin:0;border-bottom:1px solid #e4eaf3}
 #servicesView.slv-centered-popup #slvCloudCheckout{margin:8px 0!important;padding:14px!important}
-#servicesView.slv-centered-popup #slvCloudCheckout h3{font-size:17px;margin-bottom:5px}
-#servicesView.slv-centered-popup #slvCloudCheckout .muted{font-size:11px}
+#servicesView.slv-centered-popup #slvCloudCheckout h3{font-size:17px;margin-bottom:5px}#servicesView.slv-centered-popup #slvCloudCheckout .muted{font-size:11px}
 #servicesView.slv-centered-popup #slvCloudCheckout label{margin-top:8px}
 #servicesView.slv-centered-popup #slvCloudCheckout input,#servicesView.slv-centered-popup #slvCloudCheckout select{padding:10px;margin-bottom:5px}
 body.slv-service-modal-open{overflow:hidden}
@@ -4997,8 +4993,7 @@ function slvLinkSaveFeedback(mode,message){
   panel.hidden=false;
   panel.classList.remove('success','error');
   if(mode==='success'||mode==='error')panel.classList.add(mode);
-  label.textContent=message;
-}
+  label.textContent=message;}
 async function slvOptimizeLogo(file){
   if(file.size<=160*1024)return file;
   try{
@@ -5149,7 +5144,32 @@ let pdfFont;
 function boxText(page,x,top,value,space=11.1,size=8){const str=upper(value).replace(/[^A-Z0-9 .@/\-]/g,'');for(let i=0;i<str.length;i++)pdfTop(page,x+i*space,top,str[i],size,space)}
 function tick(page,x,top,yes){if(!yes)return;const c=PDFLib.rgb(.02,.16,.35);const white=PDFLib.rgb(1,1,1);/* Replace the printed "Tick" placeholder inside its own box, never outside. */page.drawRectangle({x:x-1,y:page.getHeight()-top-10,width:15,height:11,color:white});const y=page.getHeight()-top;page.drawLine({start:{x:x+1,y:y-5},end:{x:x+4,y:y-8},thickness:1.25,color:c});page.drawLine({start:{x:x+4,y:y-8},end:{x:x+11,y:y+1},thickness:1.25,color:c})}
 function centeredText(page,x,top,value,size=8,max=90){const str=upper(value).replace(/[^\x20-\x7e]/g,' ').slice(0,50);if(!str)return;const width=Math.min(pdfFont.widthOfTextAtSize(str,size),max);pdfTop(page,x+(max-width)/2,top,str,size,max)}
-function pan93Dob(page,date){const parts=String(date||'').split('-');if(parts.length!==3)return;const [yy,mm,dd]=parts;/* DD / MM / YYYY: draw only digits in the actual cells. */const digit=dd+mm+yy;const starts=[185,198,226,239,268,281,294,307];for(let i=0;i<Math.min(8,digit.length);i++)centeredText(page,starts[i],309,digit[i],8,11)}
+function slv93CleanDigits(page,x,top,value,spacing=15.35,size=8,count=10){
+ const digits=String(value||'').replace(/\D/g,'').slice(0,count);
+ const white=PDFLib.rgb(1,1,1);
+ for(let i=0;i<count;i++){
+  const cellX=x+i*spacing;
+  /* Clear only the inside of each printed cell so its border remains visible. */
+  page.drawRectangle({x:cellX+0.7,y:page.getHeight()-top-9.6,width:spacing-1.4,height:8.9,color:white});
+  if(i<digits.length){
+   const w=pdfFont.widthOfTextAtSize(digits[i],size);
+   page.drawText(digits[i],{x:cellX+(spacing-w)/2,y:page.getHeight()-top-size,size,font:pdfFont,color:PDFLib.rgb(.03,.05,.12)});
+  }
+ }
+}
+function pan93Dob(page,date){
+ const parts=String(date||'').split('-');if(parts.length!==3)return;
+ const [yy,mm,dd]=parts;const digit=dd+mm+yy;
+ /* Actual DD / MM / YYYY cell positions; mask old printed guide characters first. */
+ const starts=[185.5,200.8,231,246.3,279,294.3,309.6,324.9];
+ const white=PDFLib.rgb(1,1,1);
+ for(let i=0;i<8;i++){
+  const x=starts[i];
+  page.drawRectangle({x:x+0.7,y:page.getHeight()-309-9.6,width:13.9,height:8.9,color:white});
+  const w=pdfFont.widthOfTextAtSize(digit[i],8);
+  page.drawText(digit[i],{x:x+(15.3-w)/2,y:page.getHeight()-309-8,size:8,font:pdfFont,color:PDFLib.rgb(.03,.05,.12)});
+ }
+}
 function slv93Fit(page,x,top,value,maxWidth,size=8,minSize=4.2){
  const str=upper(value).replace(/[^\x20-\x7e]/g,' ').trim();if(!str)return;
  let fontSize=size;while(fontSize>minSize&&pdfFont.widthOfTextAtSize(str,fontSize)>maxWidth)fontSize-=.2;
@@ -5160,27 +5180,34 @@ function slv93Digits(page,x,top,value,spacing=15.35,size=8,count=12){
  const digits=String(value||'').replace(/\D/g,'').slice(0,count);
  for(let i=0;i<digits.length;i++){const w=pdfFont.widthOfTextAtSize(digits[i],size);page.drawText(digits[i],{x:x+i*spacing+(spacing-w)/2,y:page.getHeight()-top-size,size,font:pdfFont,color:PDFLib.rgb(.03,.05,.12)})}
 }
+function slv93AddressCells(page,x,top,value){const str=upper(value).replace(/[^A-Z0-9 .@/\-]/g,' ').slice(0,25);const width=15.35,size=7;for(let i=0;i<str.length;i++){if(str[i]===' ')continue;const cw=pdfFont.widthOfTextAtSize(str[i],size);page.drawText(str[i],{x:x+i*width+(width-cw)/2,y:page.getHeight()-top-size,size,font:pdfFont,color:PDFLib.rgb(.03,.05,.12)})}}
 function addr(page,prefix,top){
- const xs=205;
- for(const [s,offset] of [['flat',0],['street',14],['post',27],['locality',41],['district',54]])slv93Fit(page,xs,top+offset,values[prefix+s],365,8,5);
- // Actual template: state x~160-219, country x~277-383, PIN cells x~470 onwards.
+ const xs=180.5;
+ for(const [s,offset] of [['flat',0],['street',14],['post',27],['locality',41],['district',54]])slv93AddressCells(page,xs,top+offset,values[prefix+s]);
+ /* State and country are free-text boxes; PIN is six individual cells. */
  slv93Fit(page,162,top+68,values[prefix+'state'],56,7,4.2);
- slv93Fit(page,280,top+68,values[prefix+'country']||'INDIA',75,8,5);
- slv93Digits(page,470,top+68,values[prefix+'pin'],14,8,6);
+ slv93Fit(page,296,top+68,values[prefix+'country']||'INDIA',75,8,5);
+ slv93Digits(page,457,top+68,values[prefix+'pin'],15.35,8,6);
 }
 function slv93NameCells(page,x,top,value){const str=upper(value).replace(/[^A-Z0-9 ]/g,'').slice(0,25);const width=15.35,size=8;for(let i=0;i<str.length;i++){if(str[i]===' ')continue;const cw=pdfFont.widthOfTextAtSize(str[i],size);page.drawText(str[i],{x:x+i*width+(width-cw)/2,y:page.getHeight()-top-size,size,font:pdfFont,color:PDFLib.rgb(.03,.05,.12)})}}
 function name3(page,prefix,top,x=180.5){slv93NameCells(page,x,top,values[prefix+'First']??values[prefix+'first']);slv93NameCells(page,x,top+14,values[prefix+'Middle']??values[prefix+'middle']);slv93NameCells(page,x,top+27,values[prefix+'Last']??values[prefix+'last'])}
 async function drawImage(page,data,rect){if(!data)return;try{const img=data.type==='image/png'?await currentPdf.embedPng(data.bytes):await currentPdf.embedJpg(data.bytes);const dims=img.scaleToFit(rect.w,rect.h);page.drawImage(img,{x:rect.x+(rect.w-dims.width)/2,y:page.getHeight()-rect.top-rect.h+(rect.h-dims.height)/2,width:dims.width,height:dims.height})}catch(e){throw Error('Unable to embed photo/signature: '+e.message)}}
 let currentPdf;
+/* PAN Form 93 coordinate calibration: all positions below are measured against the embedded two-page A4 source PDF. */
 async function buildPdf(){if(!window.PDFLib)throw Error('PDF library could not load. Check internet connection.');const bytes=Uint8Array.from(atob(TEMPLATE),c=>c.charCodeAt(0));currentPdf=await PDFLib.PDFDocument.load(bytes);pdfFont=await currentPdf.embedFont(PDFLib.StandardFonts.Helvetica);const [p1,p2]=currentPdf.getPages();
 name3(p1,'',197);slv93NameCells(p1,180.5,255,values.aadhaarName||values.fullName);tick(p1,183,295,values.gender==='Male');tick(p1,229,295,values.gender==='Female');tick(p1,290,295,values.gender==='Transgender');pan93Dob(p1,values.dob);slv93Digits(p1,180.5,323,values.aadhaar,15.35,8,12);
-addr(p1,'res',350);if(values.officeNeeded==='Yes')addr(p1,'office',449);tick(p1,213,534,values.residency==='Resident');tick(p1,275,534,values.residency==='Non Resident');tick(p1,352,534,values.residency==='Resident but Not Ordinarily Resident');pdfTop(p1,209,553,values.passport,8);pdfTop(p1,209,574,values.tin,8);pdfTop(p1,230,604,'91',8);slv93Digits(p1,390,604,values.mobile,15.3,8,10);pdfTop(p1,240,617,values.email,8,300);pdfTop(p1,210,630,values.landline,8);
-const inc=values.income||[];[['Salary',181,671],['Business / Profession',258,671],['House Property',397,671],['Capital Gains',181,687],['Other Sources',258,687],['No Income',397,687]].forEach(([v,x,y])=>tick(p1,x,y,inc.includes(v)));tick(p1,243,726,values.singleParent==='Yes');tick(p1,304,726,values.singleParent==='No');name3(p1,'father',741,210);
-name3(p2,'mother',24,180.5);tick(p2,336,68,values.printedParent==='Father');tick(p2,397,68,values.printedParent==='Mother');boxText(p2,244,108,values.aoArea,12,8);centeredText(p2,411,108,values.aoType,8,18);boxText(p2,244,123,values.aoRange,12,8);centeredText(p2,411,123,values.aoNo,8,18);
-if(raRequired()){name3(p2,'ra',166,180.5);pdfTop(p2,210,208,values.raPan,8);slv93Digits(p2,244,225,values.raAadhaar,15.35,8,12);addr(p2,'ra',255);pdfTop(p2,210,353,'91',8);slv93Digits(p2,390,353,values.raMobile,15.3,8,10);slv93Fit(p2,240,368,values.raEmail,300,8,5)}
+addr(p1,'res',350);if(values.officeNeeded==='Yes')addr(p1,'office',449);tick(p1,213,534,values.residency==='Resident');tick(p1,275,534,values.residency==='Non Resident');tick(p1,352,534,values.residency==='Resident but Not Ordinarily Resident');pdfTop(p1,209,553,values.passport,8);pdfTop(p1,209,574,values.tin,8);pdfTop(p1,240,604,'91',8);slv93CleanDigits(p1,377.5,604,values.mobile,15.35,8,10);pdfTop(p1,240,617,values.email,8,300);pdfTop(p1,210,630,values.landline,8);
+const inc=values.income||[];[['Salary',181,671],['Business / Profession',258,671],['House Property',397,671],['Capital Gains',181,687],['Other Sources',258,687],['No Income',397,687]].forEach(([v,x,y])=>tick(p1,x,y,inc.includes(v)));tick(p1,243,726,values.singleParent==='Yes');tick(p1,304,726,values.singleParent==='No');name3(p1,'father',741,180.5);
+name3(p2,'mother',24,180.5);tick(p2,336,68,values.printedParent==='Father');tick(p2,397,68,values.printedParent==='Mother');boxText(p2,237,108,values.aoArea,15.35,8);centeredText(p2,397,108,values.aoType,8,18);boxText(p2,237,123,values.aoRange,15.35,8);centeredText(p2,397,123,values.aoNo,8,18);
+if(raRequired()){name3(p2,'ra',166,180.5);slv93Digits(p2,180.5,208,values.raPan,15.35,8,10);slv93Digits(p2,281.5,225,values.raAadhaar,15.35,8,12);addr(p2,'ra',255);pdfTop(p2,237,353,'91',8);slv93Digits(p2,358,353,values.raMobile,15.35,8,10);slv93Fit(p2,240,368,values.raEmail,300,8,5)}
 tick(p2,216,418,values.communication==='Residence Address');tick(p2,302,418,values.communication==='Representative Assessee Address');tick(p2,448,418,values.communication==='Office Address');tick(p2,71,475,values.proofIdentity);tick(p2,169,475,values.proofAddress);tick(p2,270,475,values.proofDob);tick(p2,71,512,values.raProofIdentity);tick(p2,169,512,values.raProofAddress);
-pdfTop(p2,87,562,values.aadhaarName||[values.first,values.middle,values.last].filter(Boolean).join(' '),7,170);slv93Fit(p2,380,562,raRequired()?'REPRESENTATIVE ASSESSEE':'SELF',115,6,4.2);pdfTop(p2,91,622,values.place,8,180);pdfTop(p2,91,637,values.declarationDate?.split('-').reverse().join('/'),8,160);slv93Fit(p2,402,768,raRequired()?[values.raFirst,values.raMiddle,values.raLast].filter(Boolean).join(' '):[values.first,values.middle,values.last].filter(Boolean).join(' '),145,7,4.2);slv93Fit(p2,405,794,raRequired()?'REPRESENTATIVE ASSESSEE':'SELF',125,6,4.2);
-await drawImage(p1,photoData,{x:48,top:37,w:92,h:111});await drawImage(p1,photoData,{x:455,top:37,w:92,h:111});await drawImage(p2,signatureData,{x:337,top:664,w:193,h:52});return currentPdf.save()}
+pdfTop(p2,87,562,values.aadhaarName||[values.first,values.middle,values.last].filter(Boolean).join(' '),7,170);/* Capacity wording is already printed on the official form; do not overlay another label here. */pdfTop(p2,91,622,values.place,8,180);pdfTop(p2,91,637,values.declarationDate?.split('-').reverse().join('/'),8,160);slv93Fit(p2,415,768,raRequired()?[values.raFirst,values.raMiddle,values.raLast].filter(Boolean).join(' '):[values.first,values.middle,values.last].filter(Boolean).join(' '),125,6.5,4.2);slv93Fit(p2,415,794,raRequired()?'REP. ASSESSEE':'SELF',105,5.5,4.2);
+/* Replace the source template's static '1 of 5'/'2 of 5' footer with the actual two-page output count. */
+for(const [pg,label] of [[p1,'1 of 2'],[p2,'2 of 2']]){
+  pg.drawRectangle({x:pg.getWidth()-54,y:3,width:50,height:13,color:PDFLib.rgb(1,1,1)});
+  pg.drawText(label,{x:pg.getWidth()-49,y:6,size:7,font:pdfFont,color:PDFLib.rgb(.05,.05,.05)});
+}
+await drawImage(p1,photoData,{x:46,top:23,w:99,h:128});await drawImage(p1,photoData,{x:443,top:23,w:99,h:128});await drawImage(p2,signatureData,{x:328,top:653,w:202,h:63});/* Original source template contains five pages; PAN Form 93 output must contain only pages 1 and 2. Remove unused pages from the end. */while(currentPdf.getPageCount()>2)currentPdf.removePage(currentPdf.getPageCount()-1);return currentPdf.save()}
 window.slv93Generate=async()=>{if(!validateStep(step))return;for(let n=0;n<7;n++){const invalid=FIELDS.filter(f=>f.step===n&&active(f)).some(f=>check(f));if(invalid){step=n;render();validateStep(n);return}}const btn=el('pan93Generate');btn.disabled=true;btn.textContent='Generating…';try{const bytes=await buildPdf();if(pdfUrl)URL.revokeObjectURL(pdfUrl);pdfUrl=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'}));await window.slv93RegisterTracking(values);el('pan93Result').style.display='block';window.open(pdfUrl,'_blank','noopener')}catch(e){el('pan93Error').textContent='Application generation failed: '+e.message}finally{btn.disabled=false;btn.textContent='✓ Preview / Generate PDF'}};
 window.slv93Download=()=>{if(!pdfUrl)return;const a=document.createElement('a');a.href=pdfUrl;a.download='SLV_Form_93_First_2_Pages.pdf';a.click()};window.slv93Print=()=>{if(pdfUrl)window.open(pdfUrl,'_blank','noopener')};
 const oldLogout=window.logout;if(typeof oldLogout==='function')window.logout=function(...args){window.slv93Close();return oldLogout.apply(this,args)};
