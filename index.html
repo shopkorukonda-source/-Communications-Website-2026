@@ -1318,6 +1318,36 @@ hr{border:0;border-top:1px solid var(--slv-line)}
 </header>
 <!-- LOGIN: premium visual shell; original authentication IDs and handlers preserved -->
 <main class="card slv-premium-login" id="loginView">
+<section class="slv-public-portal" aria-label="SLV Communications public service portal">
+ <div class="slv-portal-strip"><span>SLV COMMUNICATIONS • KORUKONDA</span><span>Customer Service & Digital Assistance</span></div>
+ <nav class="slv-portal-nav" aria-label="Main navigation">
+  <a href="#slvPortalHome">Home</a><a href="#slvPortalCategories">All Services</a><a href="#slvPortalUpdates">Latest Updates</a><a href="/job-alerts/" target="_blank" rel="noopener">Job Alerts ↗</a><a class="slv-portal-login-link" href="#slvLoginAccess">Staff Login</a>
+ </nav>
+ <div class="slv-portal-layout" id="slvPortalHome">
+  <aside class="slv-portal-sidebar">
+   <h3>Service Menu</h3>
+   <a href="#slvPortalCategories">Government Services</a><a href="#slvPortalCategories">Banking Services</a><a href="#slvPortalCategories">Bill Payments</a><a href="#slvPortalCategories">Printing & Digital</a><a href="#slvPortalCategories">Ticket Bookings</a><a href="#slvPortalCategories">Other Services</a>
+   <h3 id="slvPortalUpdates">Quick Links</h3>
+   <a href="#slvLoginAccess">Employee Login</a><a href="#slvLoginAccess">Admin Login</a><a href="/job-alerts/" target="_blank" rel="noopener">SLV Job Alerts ↗</a>
+  </aside>
+  <div class="slv-portal-main">
+   <div class="slv-portal-welcome"><div><span class="slv-portal-kicker">WELCOME TO SLV COMMUNICATIONS</span><h2>Digital Services Made Simple</h2><p>Government applications, bill payments, printing and ticket booking — all at one place.</p></div><a href="#slvLoginAccess">Access Portal →</a></div>
+   <div class="slv-portal-search"><span>Explore services at SLV Communications</span><a href="#slvPortalCategories">Browse Services ↓</a></div>
+   <div class="slv-portal-section-head" id="slvPortalCategories"><div><h2>Popular Service Categories</h2><p>Select a category to explore available services</p></div><span>6 Categories</span></div>
+   <div class="slv-portal-service-grid">
+    <a href="#slvLoginAccess"><b>🏛️</b><strong>Government Services</strong><small>Aadhaar, PAN, Voter ID & applications</small></a>
+    <a href="#slvLoginAccess"><b>🏦</b><strong>Banking Services</strong><small>AEPS, money transfer & banking support</small></a>
+    <a href="#slvLoginAccess"><b>💡</b><strong>Bill Payments</strong><small>Electricity and utility bill payments</small></a>
+    <a href="#slvLoginAccess"><b>🖨️</b><strong>Printing & Digital Services</strong><small>Xerox, printouts, scanning & lamination</small></a>
+    <a href="#slvLoginAccess"><b>🎟️</b><strong>Ticket Bookings</strong><small>Bus, train and travel bookings</small></a>
+    <a href="#slvLoginAccess"><b>▦</b><strong>Other Services</strong><small>Digital assistance and customer support</small></a>
+   </div>
+   <div class="slv-portal-section-head"><div><h2>Service Highlights</h2><p>Convenient support for everyday digital needs</p></div></div>
+   <div class="slv-portal-highlights"><div><b>01</b><strong>Government Assistance</strong><span>Application and document support</span></div><div><b>02</b><strong>Digital Payments</strong><span>Bill payment and banking services</span></div><div><b>03</b><strong>Print & Book</strong><span>Printing, Xerox and ticket booking</span></div></div>
+  </div>
+ </div>
+ <div class="slv-portal-login-heading" id="slvLoginAccess"><span>AUTHORIZED STAFF</span><h2>Staff Login</h2><p>Sign in to access the secure Admin or Employee dashboard</p></div>
+</section>
 <div class="slv-login-brand">
 <div class="slv-brand-overline">WELCOME TO</div>
 <h2 class="slv-wordmark-hero"><span class="slv-wordmark-initials">SLV</span><span class="slv-wordmark-name">COMMUNICATIONS</span></h2>
@@ -5927,4 +5957,65 @@ window.slvUWRefresh=init;
 #employeeView .slv-compact-service-option{display:block!important;width:100%!important;min-height:36px!important;padding:8px 11px!important;margin:0!important;text-align:left!important;white-space:normal!important;background:#fff!important;color:#244761!important;border:0!important;border-bottom:1px solid #edf1f5!important;border-radius:0!important;font-size:12px!important;font-weight:550!important;box-shadow:none!important}
 #employeeView .slv-compact-service-option:last-child{border-bottom:0!important}
 #employeeView .slv-compact-service-option:active{background:#eaf3fa!important}
+ 
+/* SLV public service portal — FreeJobAlert-inspired information layout */
+.slv-public-portal{margin:-4px -2px 24px;color:#18334b}
+.slv-portal-strip{display:flex;justify-content:space-between;gap:12px;padding:9px 13px;background:#082d49;color:#e7f2fa;font-size:11px;font-weight:700;letter-spacing:.25px}
+.slv-portal-nav{display:flex;flex-wrap:wrap;gap:0;background:#0875bd;border-bottom:3px solid #064d80}
+.slv-portal-nav a{display:block;padding:10px 13px;color:#fff;text-decoration:none;font-size:12px;font-weight:700;border-right:1px solid #ffffff25}
+.slv-portal-nav a:hover,.slv-portal-nav .slv-portal-login-link{background:#064d80}
+.slv-portal-layout{display:grid;grid-template-columns:190px minmax(0,1fr);gap:15px;margin-top:16px}
+.slv-portal-sidebar{border:1px solid #d8e4ed;background:#f7fafc;align-self:start}
+.slv-portal-sidebar h3{font-size:13px;color:#fff;background:#087c91;padding:9px 11px;margin:0}
+.slv-portal-sidebar a{display:block;padding:9px 11px;color:#17547a;text-decoration:none;border-bottom:1px solid #e5edf3;font-size:12px;font-weight:600}
+.slv-portal-sidebar a:before{content:"›";color:#07849a;font-weight:900;margin-right:7px}
+.slv-portal-main{min-width:0}
+.slv-portal-welcome{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:20px;background:linear-gradient(110deg,#e8f4fb,#f7fbfd);border-left:4px solid #087db1;border-radius:5px}
+.slv-portal-kicker{font-size:10px;letter-spacing:1px;font-weight:800;color:#087c91}
+.slv-portal-welcome h2{font-size:22px;margin:7px 0;color:#123d5c}
+.slv-portal-welcome p{font-size:12px;line-height:1.6;color:#536a7b;margin:0}
+.slv-portal-welcome>a,.slv-portal-search>a{flex:0 0 auto;padding:10px 13px;background:#0876b5;color:#fff;border-radius:4px;text-decoration:none;font-size:12px;font-weight:700}
+.slv-portal-search{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:13px 0;padding:10px 12px;border:1px solid #dce6ed;background:#fff;color:#65798a;font-size:12px}
+.slv-portal-section-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:18px 0 10px}
+.slv-portal-section-head h2{font-size:17px;color:#173d5c;margin:0 0 4px}
+.slv-portal-section-head p{font-size:11px;color:#6c7f8e;margin:0}
+.slv-portal-section-head>span{font-size:10px;background:#e7f2f7;color:#2c6d86;border-radius:20px;padding:6px 9px}
+.slv-portal-service-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.slv-portal-service-grid>a{min-height:110px;padding:12px 10px;display:flex;flex-direction:column;gap:6px;text-decoration:none;color:#fff;background:#087c91;border:1px solid #d5e3eb;border-radius:4px}
+.slv-portal-service-grid>a:nth-child(3n+2){background:#126da2}
+.slv-portal-service-grid>a:nth-child(3n){background:#0a879f}
+.slv-portal-service-grid b{font-size:19px}
+.slv-portal-service-grid strong{font-size:12px}
+.slv-portal-service-grid small{font-size:10px;line-height:1.4;color:#e4f3f8}
+.slv-portal-highlights{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.slv-portal-highlights>div{display:flex;flex-direction:column;gap:5px;padding:12px;border:1px solid #dce6ed;background:#fff;border-top:3px solid #087c91}
+.slv-portal-highlights b{font-size:18px;color:#087c91}
+.slv-portal-highlights strong{font-size:11px;color:#183d58}
+.slv-portal-highlights span{font-size:10px;color:#71818d;line-height:1.4}
+.slv-portal-login-heading{padding:14px 0 2px;border-top:1px solid #e0e8ef;text-align:center}
+.slv-portal-login-heading span{font-size:10px;font-weight:800;letter-spacing:1px;color:#087c91}
+.slv-portal-login-heading h2{margin:5px 0;color:#173d5c;font-size:20px}
+.slv-portal-login-heading p{margin:0;color:#6d7e8a;font-size:11px}
+#loginView{scroll-margin-top:12px}
+#adminView,#employeeView{border-top:5px solid #087c91!important}
+#adminView .topbar,#employeeView .topbar{background:linear-gradient(100deg,#082e4d,#075b88)!important}
+#adminView .section-box,#employeeView .section-box,#adminView .slv-five-hub,#employeeView .slv-five-hub{border-color:#dce6ed!important;box-shadow:0 2px 8px rgba(13,54,83,.05)}
+#adminView h3,#employeeView h3{color:#174564}
+@media(max-width:680px){
+ .slv-public-portal{margin:0 -2px 20px}
+ .slv-portal-strip{font-size:9px;padding:8px;flex-wrap:wrap}
+ .slv-portal-nav{overflow-x:auto;flex-wrap:nowrap;white-space:nowrap}
+ .slv-portal-nav a{padding:9px 10px;font-size:11px}
+ .slv-portal-layout{grid-template-columns:1fr;gap:10px;margin-top:10px}
+ .slv-portal-sidebar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ .slv-portal-sidebar h3{grid-column:1/-1}
+ .slv-portal-sidebar a{font-size:11px;padding:8px}
+ .slv-portal-welcome{align-items:flex-start;flex-direction:column;padding:15px}
+ .slv-portal-welcome h2{font-size:19px}
+ .slv-portal-search{font-size:10px}
+ .slv-portal-service-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .slv-portal-service-grid>a{min-height:105px;padding:10px 8px}
+ .slv-portal-highlights{grid-template-columns:1fr}
+ .slv-portal-section-head h2{font-size:15px}
+}
 </style>
