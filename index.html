@@ -1236,69 +1236,6 @@ button:not(.btn-red):not(.btn-green):not(.btn-orange):not(.btn-secondary):not(.s
 input:focus,select:focus,textarea:focus{border-color:#b9954e!important;box-shadow:0 0 0 3px #d8ad4529!important}
 @media(max-width:720px){.main-header{border-radius:14px 14px 0 0!important}}
 </style>
-
-<!-- SLV PREMIUM THEME REFRESH 2026-11-18 -->
-<style id="slv-premium-theme-2026">
-/* SLV Communications — Premium Navy / Ivory / Gold visual refresh.
-   Presentation-only layer: all existing IDs, controls, data hooks and scripts stay intact. */
-:root{
-  --slv-navy:#0b1f3a;--slv-navy-2:#12365f;--slv-blue:#1d568d;--slv-gold:#c6a15b;
-  --slv-gold-soft:#f5ecd9;--slv-bg:#f3f6fb;--slv-paper:#fff;--slv-ink:#18283d;
-  --slv-muted:#68788d;--slv-line:#e2e8f0;--slv-shadow:0 14px 36px rgba(11,31,58,.08)
-}
-html{background:var(--slv-bg);scroll-behavior:smooth}
-body{background:radial-gradient(ellipse at 10% 0%,#eaf1fb 0,transparent 38%),var(--slv-bg)!important;color:var(--slv-ink)!important;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Arial,sans-serif!important;padding:clamp(8px,2vw,22px)!important;line-height:1.45}
-.app{max-width:1360px!important;margin:0 auto!important}
-.main-header{position:relative;overflow:hidden;background:linear-gradient(112deg,var(--slv-navy),#10345d 62%,#1a4d78)!important;border:1px solid rgba(198,161,91,.75)!important;border-radius:18px 18px 0 0!important;box-shadow:0 14px 34px rgba(11,31,58,.16)!important;padding:clamp(17px,2.5vw,27px)!important;color:#fff!important}
-.main-header:after{content:"";position:absolute;right:-75px;top:-120px;width:280px;height:280px;border:1px solid rgba(226,194,132,.25);border-radius:50%;box-shadow:0 0 0 25px rgba(255,255,255,.025),0 0 0 55px rgba(255,255,255,.02);pointer-events:none}
-.header-title{font-size:clamp(20px,2.3vw,27px)!important;letter-spacing:1.1px!important;font-weight:850!important}
-.sub-title{color:#e8edf5!important;letter-spacing:.3px}
-.card,#adminView,#employeeView{background:var(--slv-paper)!important;border:1px solid var(--slv-line)!important;border-radius:0 0 18px 18px!important;box-shadow:var(--slv-shadow)!important;padding:clamp(13px,2vw,24px)!important}
-#loginView{border-radius:0 0 18px 18px!important}
-#adminView,#employeeView{border-radius:16px!important;margin-top:14px!important}
-h1,h2,h3,h4{color:var(--slv-navy)!important;letter-spacing:-.2px}
-h2{font-size:clamp(18px,2vw,22px)!important;font-weight:800!important}
-h3{font-weight:780!important}
-.topbar{border-radius:13px!important;background:linear-gradient(105deg,var(--slv-navy),var(--slv-navy-2))!important;color:#fff!important;border:1px solid rgba(198,161,91,.6)!important;box-shadow:0 8px 20px rgba(11,31,58,.12)!important;padding:12px 15px!important;margin-bottom:14px!important}
-.topbar strong,.topbar h2,.topbar h3,.topbar span{color:#fff!important}
-.section-box,.slab-box{background:#fff!important;border:1px solid var(--slv-line)!important;border-radius:14px!important;box-shadow:0 5px 18px rgba(11,31,58,.045)!important;padding:clamp(12px,1.7vw,19px)!important;margin-top:13px!important}
-.section-box:before{display:none!important}
-label{color:#40536b!important;font-weight:720!important;font-size:12px!important;letter-spacing:.1px}
-input,select,textarea{background:#fff!important;color:var(--slv-ink)!important;border:1px solid #d4deea!important;border-radius:10px!important;min-height:42px;box-shadow:0 1px 2px rgba(11,31,58,.025)!important;transition:border-color .18s,box-shadow .18s}
-input:focus,select:focus,textarea:focus{outline:none!important;border-color:#5682b2!important;box-shadow:0 0 0 3px rgba(29,86,141,.12)!important}
-button,.link-button{border-radius:10px!important;font-weight:750!important;letter-spacing:.1px;transition:transform .16s ease,filter .16s ease,box-shadow .16s ease!important}
-button:hover,.link-button:hover{filter:brightness(1.06);transform:translateY(-1px)}
-button:focus-visible,.link-button:focus-visible{outline:3px solid rgba(198,161,91,.55)!important;outline-offset:2px}
-button:not(.btn-secondary):not(.side-menu-link):not(.hamburger-btn){box-shadow:0 4px 10px rgba(11,31,58,.09)}
-.btn-secondary,.side-menu-link,.hamburger-btn{border:1px solid #dce4ef!important}
-.tile,.slv-link-card,.slv-fin-quick-card{border:1px solid #dce5f0!important;border-radius:14px!important;background:linear-gradient(145deg,#fff,#f5f8fc)!important;color:var(--slv-navy-2)!important;box-shadow:0 5px 15px rgba(11,31,58,.045)!important}
-.tile:hover,.slv-link-card:hover,.slv-fin-quick-card:hover{border-color:#c6a15b!important;box-shadow:0 9px 22px rgba(11,31,58,.09)!important}
-.slv-simple-actions button{border-radius:11px!important;min-height:48px!important;font-weight:750!important}
-.slv-simple-actions button:first-child{background:var(--slv-navy-2)!important;color:#fff!important}
-.slv-simple-actions button:not(:first-child){background:#f4f7fb!important;color:var(--slv-navy-2)!important;border:1px solid #dce5f0!important}
-.slv-simple-actions .slv-more-btn{background:#fff!important;border:1px dashed #c6a15b!important;color:#70572b!important}
-.admin-wallet-top-strip,.wallet-strip-heading{border-radius:13px!important}
-.employee-side-menu{background:#fff!important;color:var(--slv-ink)!important;border:1px solid #dce5f0!important;box-shadow:0 18px 48px rgba(5,20,40,.2)!important}
-.side-menu-head{background:linear-gradient(110deg,var(--slv-navy),var(--slv-navy-2))!important;color:#fff!important}
-.side-menu-head b{color:#f3dfb7!important}
-.side-menu-link{background:#f7f9fc!important;color:#263e59!important;border-radius:9px!important;margin:3px 8px!important;text-align:left!important}
-.side-menu-link:hover,.side-menu-link.active{background:var(--slv-gold-soft)!important;color:#60491f!important;border-color:#e5d3ad!important}
-.menu-shade{backdrop-filter:blur(3px)}
-.slv-links-dialog,.pan-shell,.track-shell{border:1px solid #dce5f0!important;box-shadow:0 24px 70px rgba(5,20,40,.24)!important}
-.slv-links-header{background:linear-gradient(110deg,var(--slv-navy),var(--slv-navy-2))!important}
-.slv-links-header h3{color:#fff!important}
-.slv-link-card{min-height:116px!important}
-.fin-slab-row{background:#f7f9fc!important;border:1px solid #dce5f0!important;border-radius:12px!important}
-#slvXeroxPanel,.xerox-item{border-color:#dce5f0!important;border-radius:13px!important}
-#slvXeroxPanel .xerox-result{background:#f3f7fc!important;color:#1a3555!important;border:1px solid #e0e8f2}
-.slv-tx-success-card,.slv-loader-card{border-radius:20px!important}
-hr{border:0;border-top:1px solid var(--slv-line)}
-@media(max-width:760px){
- body{padding:7px!important}.app{width:100%!important}.main-header{border-radius:14px 14px 0 0!important;padding:16px 12px!important}.card,#adminView,#employeeView{padding:12px!important;border-radius:0 0 14px 14px!important}.topbar{padding:10px!important;gap:7px!important}.slv-simple-actions{gap:7px!important}.slv-simple-actions button{min-height:44px!important;padding:9px 6px!important;font-size:11px!important}.section-box{padding:11px!important}.tile{min-height:68px!important}
-}
-@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}
-
-</style>
 </head>
 <body>
 <div aria-label="Transaction successful" aria-live="polite" class="slv-tx-success" id="slvTxSuccess" role="status"><div class="slv-tx-success-card"><div class="slv-tx-success-check">✓</div><h3>Transaction Successful</h3><p>SLV Communications • Payment Recorded</p><div class="slv-tx-success-amount" id="slvTxSuccessAmount">₹0.00</div><p id="slvTxSuccessCount">Wallet balances updated</p><div class="slv-tx-success-line"></div></div></div>
@@ -1318,36 +1255,6 @@ hr{border:0;border-top:1px solid var(--slv-line)}
 </header>
 <!-- LOGIN: premium visual shell; original authentication IDs and handlers preserved -->
 <main class="card slv-premium-login" id="loginView">
-<section class="slv-public-portal" aria-label="SLV Communications public service portal">
- <div class="slv-portal-strip"><span>SLV COMMUNICATIONS • KORUKONDA</span><span>Customer Service & Digital Assistance</span></div>
- <nav class="slv-portal-nav" aria-label="Main navigation">
-  <a href="#slvPortalHome">Home</a><a href="#slvPortalCategories">All Services</a><a href="#slvPortalUpdates">Latest Updates</a><a href="/job-alerts/" target="_blank" rel="noopener">Job Alerts ↗</a><a class="slv-portal-login-link" href="#slvLoginAccess">Staff Login</a>
- </nav>
- <div class="slv-portal-layout" id="slvPortalHome">
-  <aside class="slv-portal-sidebar">
-   <h3>Service Menu</h3>
-   <a href="#slvPortalCategories">Government Services</a><a href="#slvPortalCategories">Banking Services</a><a href="#slvPortalCategories">Bill Payments</a><a href="#slvPortalCategories">Printing & Digital</a><a href="#slvPortalCategories">Ticket Bookings</a><a href="#slvPortalCategories">Other Services</a>
-   <h3 id="slvPortalUpdates">Quick Links</h3>
-   <a href="#slvLoginAccess">Employee Login</a><a href="#slvLoginAccess">Admin Login</a><a href="/job-alerts/" target="_blank" rel="noopener">SLV Job Alerts ↗</a>
-  </aside>
-  <div class="slv-portal-main">
-   <div class="slv-portal-welcome"><div><span class="slv-portal-kicker">WELCOME TO SLV COMMUNICATIONS</span><h2>Digital Services Made Simple</h2><p>Government applications, bill payments, printing and ticket booking — all at one place.</p></div><a href="#slvLoginAccess">Access Portal →</a></div>
-   <div class="slv-portal-search"><span>Explore services at SLV Communications</span><a href="#slvPortalCategories">Browse Services ↓</a></div>
-   <div class="slv-portal-section-head" id="slvPortalCategories"><div><h2>Popular Service Categories</h2><p>Select a category to explore available services</p></div><span>6 Categories</span></div>
-   <div class="slv-portal-service-grid">
-    <a href="#slvLoginAccess"><b>🏛️</b><strong>Government Services</strong><small>Aadhaar, PAN, Voter ID & applications</small></a>
-    <a href="#slvLoginAccess"><b>🏦</b><strong>Banking Services</strong><small>AEPS, money transfer & banking support</small></a>
-    <a href="#slvLoginAccess"><b>💡</b><strong>Bill Payments</strong><small>Electricity and utility bill payments</small></a>
-    <a href="#slvLoginAccess"><b>🖨️</b><strong>Printing & Digital Services</strong><small>Xerox, printouts, scanning & lamination</small></a>
-    <a href="#slvLoginAccess"><b>🎟️</b><strong>Ticket Bookings</strong><small>Bus, train and travel bookings</small></a>
-    <a href="#slvLoginAccess"><b>▦</b><strong>Other Services</strong><small>Digital assistance and customer support</small></a>
-   </div>
-   <div class="slv-portal-section-head"><div><h2>Service Highlights</h2><p>Convenient support for everyday digital needs</p></div></div>
-   <div class="slv-portal-highlights"><div><b>01</b><strong>Government Assistance</strong><span>Application and document support</span></div><div><b>02</b><strong>Digital Payments</strong><span>Bill payment and banking services</span></div><div><b>03</b><strong>Print & Book</strong><span>Printing, Xerox and ticket booking</span></div></div>
-  </div>
- </div>
- <div class="slv-portal-login-heading" id="slvLoginAccess"><span>AUTHORIZED STAFF</span><h2>Staff Login</h2><p>Sign in to access the secure Admin or Employee dashboard</p></div>
-</section>
 <div class="slv-login-brand">
 <div class="slv-brand-overline">WELCOME TO</div>
 <h2 class="slv-wordmark-hero"><span class="slv-wordmark-initials">SLV</span><span class="slv-wordmark-name">COMMUNICATIONS</span></h2>
@@ -2026,7 +1933,8 @@ function applyLeave(){
   const leaves=getLeaves();
   leaves.push({id:currentUser.id,name:currentUser.name,reason,status:'Pending',date,appliedOn:new Date().toLocaleDateString('en-IN')});
   write(KEYS.leaves,leaves);
-  $('leaveDate').value='';$('leaveReason').value='';  alert('లీవ్ రిక్వెస్ట్ పంపబడింది');
+  $('leaveDate').value='';$('leaveReason').value='';
+  alert('లీవ్ రిక్వెస్ట్ పంపబడింది');
 }
 function getTransactions(){return read(KEYS.transactions,[])}
 function renderTransactions(){
@@ -2088,8 +1996,7 @@ function renderCashWallet(){
     const desc=document.createElement('span');desc.textContent=(t.type==='IN'?'Cash IN':'Cash OUT')+' • '+(t.note||'No description')+' • '+t.date;
     const amount=document.createElement('b');amount.style.color=t.type==='IN'?'#168364':'#c34d61';amount.textContent=(t.type==='IN'?'+':'−')+'₹'+Number(t.amount).toFixed(2);
     row.append(desc,amount);c.append(row);
-  });
-}
+  });}
 function postCashWalletTxn(){
   const type=$('cashTxnType').value,amount=Number($('cashTxnAmount').value),note=$('cashTxnNote').value.trim();
   if(!Number.isFinite(amount)||amount<=0){alert('సరైన Cash Amount నమోదు చేయండి');return}
@@ -3025,7 +2932,8 @@ try {
     };
 
     window.createEmployeeInSupabase = async function(id, name, password) {
-  const { data, error } = await db.functions.invoke('create-employee', {    body: {
+  const { data, error } = await db.functions.invoke('create-employee', {
+    body: {
       employee_code: id,
       full_name: name,
       password: password
@@ -3087,8 +2995,7 @@ try {
           const sessions = rec.sessions || [], last = sessions[sessions.length - 1];
           if (last && !last.logoutAt) last.logoutAt = Date.now();
           rec.sessions = sessions;
-          const all = getAttendance(), idx = all.findIndex(x => x.employeeId === rec.employeeId && x.day === rec.day);
-          if (idx >= 0) all[idx] = rec;
+          const all = getAttendance(), idx = all.findIndex(x => x.employeeId === rec.employeeId && x.day === rec.day);          if (idx >= 0) all[idx] = rec;
           saveAttendance(all);
           try { await window.syncAttendanceRecord(rec); }
           catch (err) { alert('Attendance cloud sync failed. Please inform Admin: ' + err.message); }
@@ -3462,16 +3369,6 @@ try {
   if(last&&!last.endAt)throw Error('Resume from lunch break first');
   return db;
  }
- // Service catalog must remain visible even during lunch or after shift close.
- // Transaction and wallet operations continue to use employeeDb() and its strict shift checks.
- async function serviceCatalogDb(){
-  const db=window.slvSupabase;if(!db)throw Error('Supabase connection unavailable');
-  const a=await db.auth.getUser();if(a.error||!a.data?.user)throw Error('Cloud employee login required');
-  const p=await db.from('profiles').select('role,is_active').eq('id',a.data.user.id).single();
-  if(p.error||p.data?.role!=='employee'||p.data?.is_active!==true)throw Error('Active cloud employee login required');
-  if(!currentUser||currentUser.role!=='Employee')throw Error('Employee dashboard login required');
-  return db;
- }
  // Prefetch after employee dashboard opens; reuse recent data when Services is clicked.
  // Authentication/shift checks remain mandatory for every transaction save.
  window.slvTxLoadServices=async(force=false)=>{
@@ -3484,7 +3381,7 @@ try {
   servicesInFlight=(async()=>{
    try{
     if(!services.length)status('Loading services…');
-    const db=await serviceCatalogDb();
+    const db=await employeeDb();
     const r=await db.from('services').select('id,service_name,customer_rate,internal_cost,is_active').eq('is_active',true).order('service_name');
     if(r.error)throw r.error;
     services=r.data||[];servicesFetchedAt=Date.now();
@@ -4034,7 +3931,8 @@ window.slvPaymentQuick = function(mode){
 #servicesView.slv-centered-popup{position:fixed!important;display:block!important;top:50%;left:50%;transform:translate(-50%,-50%);width:min(560px,calc(100vw - 24px));max-height:min(88dvh,850px);overflow-y:auto;overscroll-behavior:contain;z-index:11001;margin:0!important;padding:17px!important;border-radius:18px!important;box-shadow:0 26px 90px rgba(0,0,0,.4)!important;background:#fff}
 #servicesView.slv-centered-popup .topbar{position:sticky;top:-17px;z-index:5;background:#fff;padding:10px 2px 13px;margin:0;border-bottom:1px solid #e4eaf3}
 #servicesView.slv-centered-popup #slvCloudCheckout{margin:8px 0!important;padding:14px!important}
-#servicesView.slv-centered-popup #slvCloudCheckout h3{font-size:17px;margin-bottom:5px}#servicesView.slv-centered-popup #slvCloudCheckout .muted{font-size:11px}
+#servicesView.slv-centered-popup #slvCloudCheckout h3{font-size:17px;margin-bottom:5px}
+#servicesView.slv-centered-popup #slvCloudCheckout .muted{font-size:11px}
 #servicesView.slv-centered-popup #slvCloudCheckout label{margin-top:8px}
 #servicesView.slv-centered-popup #slvCloudCheckout input,#servicesView.slv-centered-popup #slvCloudCheckout select{padding:10px;margin-bottom:5px}
 body.slv-service-modal-open{overflow:hidden}
@@ -4096,8 +3994,7 @@ window.slvResetServiceDraft=function(){
  if(typeof xeroxItems!=='undefined'){
    xeroxItems=[{id:1,size:'A4',side:'Single',papers:'',sets:'',countMode:'pages',jobType:'Xerox'}];
    xeroxExtra=false;xeroxNextId=2;
-   if(typeof xeroxRender==='function')xeroxRender();
- }
+   if(typeof xeroxRender==='function')xeroxRender(); }
  document.body.classList.remove('slv-xerox-selected');
  byId('slvXeroxPanel')?.classList.add('hidden');
  for(const id of ['slvTxStatus','slvSaveFeedback']){const e=byId(id);if(e)e.textContent='';}
@@ -4893,7 +4790,7 @@ document.addEventListener('DOMContentLoaded',()=>{xaFields();xaRender();const tr
 </script>
 <style>
 #slvPanModal{position:fixed;inset:0;z-index:110000;background:rgba(5,20,42,.77);display:none;align-items:center;justify-content:center;padding:12px}#slvPanModal.open{display:flex}#slvPanDialog{width:min(850px,98vw);max-height:94vh;overflow:auto;background:#fff;border-radius:18px;padding:20px;box-shadow:0 20px 65px #0006}#slvPanDialog .pan-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px}#slvPanDialog .pan-grid label{margin:3px 0}#slvPanDialog input,#slvPanDialog select{margin:2px 0 6px}#slvPanPrint{display:none}#slvPanDialog .pan-actions{display:flex;gap:7px;flex-wrap:wrap}#slvPanDialog .pan-actions button{flex:1;min-width:120px}#slvPanStatus{font-size:12px;font-weight:700;color:#19416b;min-height:18px}#slvPanReceipt{width:148mm;min-height:205mm;background:white;border:1px solid #d5deeb;margin:12px auto;padding:10mm;font-family:Arial,sans-serif;color:#17304e}#slvPanReceipt .receipt-head{background:#0a2b54;color:#f8d47e;padding:13px;text-align:center;border-radius:5px}#slvPanReceipt .receipt-head h2{color:#f8d47e;margin:0;font-size:20px;letter-spacing:1px}#slvPanReceipt .receipt-head p{color:white;font-size:10px;margin:5px}#slvPanReceipt .receipt-number{text-align:center;font-size:22px;font-weight:900;margin:15px 0;color:#143c74}#slvPanReceipt .receipt-row{display:flex;justify-content:space-between;border-bottom:1px solid #dfe7f0;padding:10px 0;font-size:12px;gap:15px}#slvPanReceipt .receipt-row span{color:#64748b}#slvPanReceipt .receipt-foot{background:#edf4fc;text-align:center;padding:12px;margin-top:24px;font-size:11px;border-radius:6px}@media(max-width:560px){#slvPanDialog .pan-grid{grid-template-columns:1fr}#slvPanDialog{padding:12px}#slvPanReceipt{width:100%;min-height:unset;padding:15px}}@media print{@page{size:A5 portrait;margin:0}body *{visibility:hidden!important}#slvPanPrint,#slvPanPrint *{visibility:visible!important}#slvPanPrint{display:block!important;position:absolute;top:0;left:0;width:148mm;height:210mm;margin:0}#slvPanPrint #slvPanReceipt{width:148mm;min-height:210mm;margin:0;border:0;box-shadow:none;padding:10mm;break-inside:avoid}}
-</style><div aria-label="PAN receipt generator" aria-modal="true" id="slvPanModal" role="dialog"><div id="slvPanDialog"><div class="topbar"><strong>🧾 SLV PAN Receipt Generator</strong><button class="btn-secondary" onclick="slvPanClose()" type="button">✕ Close</button></div><div class="row"><input autocomplete="off" id="slvPanSearch" placeholder="Search customer name, mobile or SLV-PAN receipt ID"/><button onclick="slvPanFind()" type="button">Search PAN Receipts</button><button class="btn-secondary" onclick="slvPanNew()" type="button">+ New</button></div><div id="slvPanSearchResults" class="slv-pan-search-results" aria-live="polite"></div><div class="pan-grid"><div><label>Customer Name *</label><input id="slvPanName" maxlength="150"/></div><div><label>Mobile Number *</label><input id="slvPanMobile" inputmode="numeric" maxlength="10"/></div><div><label>Application Type</label><select id="slvPanType"><option>New PAN Card</option><option>PAN Correction</option><option>PAN Reprint / Lost PAN</option><option>Minor PAN Card</option><option>Firm PAN Card</option><option>Trust PAN Card</option></select></div><div><label>Application Status</label><select id="slvPanState"><option>Pending</option><option>Applied</option><option>Completed</option></select></div><div><label>Official PAN ACK Number (update later)</label><input id="slvPanAck" maxlength="40"/></div><div><label>Date of Birth (update later)</label><input id="slvPanDob" type="date"/></div></div><p id="slvPanStatus" role="status"></p><div class="pan-actions"><button class="btn-green" id="slvPanSaveBtn" onclick="slvPanSave()" type="button">Save New Receipt</button><button onclick="slvPanPrintReceipt()" type="button">🖨 Print A5 Receipt</button></div><p class="muted">Only logged-in, authorized staff can search or update. Receipt ID is generated by Supabase; never enter official ACK until received.</p><div id="slvPanReceipt"></div></div></div><div id="slvPanPrint"><div id="slvPanPrintTarget"></div></div><script>
+</style><div aria-label="PAN receipt generator" aria-modal="true" id="slvPanModal" role="dialog"><div id="slvPanDialog"><div class="topbar"><strong>🧾 SLV PAN Receipt Generator</strong><button class="btn-secondary" onclick="slvPanClose()" type="button">✕ Close</button></div><div class="row"><input autocomplete="off" id="slvPanSearch" placeholder="Search SLV-PAN-000001"/><button onclick="slvPanFind()" type="button">Search Receipt</button><button class="btn-secondary" onclick="slvPanNew()" type="button">+ New</button></div><div class="pan-grid"><div><label>Customer Name *</label><input id="slvPanName" maxlength="150"/></div><div><label>Mobile Number *</label><input id="slvPanMobile" inputmode="numeric" maxlength="10"/></div><div><label>Application Type</label><select id="slvPanType"><option>New PAN Card</option><option>PAN Correction</option><option>PAN Reprint / Lost PAN</option><option>Minor PAN Card</option><option>Firm PAN Card</option><option>Trust PAN Card</option></select></div><div><label>Application Status</label><select id="slvPanState"><option>Pending</option><option>Applied</option><option>Completed</option></select></div><div><label>Official PAN ACK Number (update later)</label><input id="slvPanAck" maxlength="40"/></div><div><label>Date of Birth (update later)</label><input id="slvPanDob" type="date"/></div></div><p id="slvPanStatus" role="status"></p><div class="pan-actions"><button class="btn-green" id="slvPanSaveBtn" onclick="slvPanSave()" type="button">Save New Receipt</button><button onclick="slvPanPrintReceipt()" type="button">🖨 Print A5 Receipt</button></div><p class="muted">Only logged-in, authorized staff can search or update. Receipt ID is generated by Supabase; never enter official ACK until received.</p><div id="slvPanReceipt"></div></div></div><div id="slvPanPrint"><div id="slvPanPrintTarget"></div></div><script>
 (function(){
 'use strict';
 const catalog={"PAN Card": ["New PAN Card", "PAN Correction", "PAN Reprint / Lost PAN", "Minor PAN Card", "Instant e-PAN", "Firm PAN Card", "Trust PAN Card", "PAN Status / Download"], "Aadhaar": ["Aadhaar UCL Update", "Aadhaar Mobile Number Update", "Aadhaar Address Update", "Aadhaar Download", "Aadhaar PVC Card", "Aadhaar Printout"], "Banking": ["Axis Bank BC", "AEPS Cash Withdrawal", "Money Transfer", "UPI to Cash", "Cash to UPI", "Credit Card Cash Transfer", "PhonePe / UPI Services", "Cash Denomination Exchange"], "Government": ["CSC Services", "AP Government Services", "Voter ID Application", "Voter ID Correction", "Ration Card Services", "Driving Licence Services", "LLR Application", "Vehicle RC Services", "Passport Application", "Udyam Registration", "Labour Certificate", "FSSAI Food Licence", "Other Government Services"], "Bills & Recharge": ["Electricity Bill Payment", "Mobile Recharge", "DTH Recharge", "Other Utility Bill Payments"], "Bookings": ["TTD Darshan Tickets", "APSRTC Bus Tickets", "Private Bus Tickets", "Train Ticket Booking", "Tatkal Train Tickets"], "Printing": ["B&W Xerox", "Colour Xerox", "B&W Printout", "Colour Printout", "Lamination", "Aadhaar PVC Printing", "Voter ID PVC Printing", "Ration Card PVC Printing", "Driving Licence PVC Printing", "Vehicle RC / C-Book PVC Printing", "Other PVC Card Printing", "Document Scanning", "Passport Size Photo Printing"], "Other": ["Vehicle Pollution Testing", "Housing Loan Assistance", "Credit Card Related Services", "Document Upload / Online Applications", "Shop Expenses"]};
@@ -4908,31 +4805,7 @@ window.slvPanOpen=()=>{$('slvPanModal').classList.add('open');if(!current)window
 window.slvPanClose=()=>{$('slvPanModal').classList.remove('open');};
 window.slvPanNew=()=>{current=null;for(const id of ['slvPanName','slvPanMobile','slvPanAck','slvPanDob','slvPanSearch'])$(id).value='';$('slvPanType').value='New PAN Card';$('slvPanState').value='Pending';$('slvPanSaveBtn').textContent='Save New Receipt';msg('New receipt — save to get unique ID.');renderReceipt(fields());};
 window.slvPanSave=async()=>{if(busy)return;const data=fields();if(!data.customer_name||!/^[0-9]{10}$/.test(data.mobile))return msg('Enter Customer Name and 10-digit Mobile.');busy=true;$('slvPanSaveBtn').disabled=true;try{const db=await staffDb();const q=current?db.from('slv_pan_receipts').update(data).eq('id',current.id):db.from('slv_pan_receipts').insert(data);const r=await q.select('*').single();if(r.error)throw r.error;populate(r.data);$('slvPanSearch').value=r.data.receipt_no;msg('✓ Saved in Cloud: '+r.data.receipt_no);}catch(e){msg('Save failed: '+e.message);}finally{busy=false;$('slvPanSaveBtn').disabled=false;}};
-window.slvPanFind=async()=>{
- const term=$('slvPanSearch').value.trim();
- if(term.length<2)return msg('Enter at least 2 letters/numbers to search.');
- try{
-  const db=await staffDb();
-  const pattern='%'+term+'%';
-  const queries=await Promise.all([
-   db.from('slv_pan_receipts').select('*').ilike('customer_name',pattern).order('created_at',{ascending:false}).limit(30),
-   db.from('slv_pan_receipts').select('*').ilike('mobile',pattern).order('created_at',{ascending:false}).limit(30),
-   db.from('slv_pan_receipts').select('*').ilike('receipt_no',pattern).order('created_at',{ascending:false}).limit(30)
-  ]);
-  const error=queries.find(x=>x.error)?.error;if(error)throw error;
-  const rows=[...new Map(queries.flatMap(x=>x.data||[]).map(x=>[x.id,x])).values()].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
-  const box=$('slvPanSearchResults');box.replaceChildren();
-  if(!rows.length){msg('No PAN receipts found for: '+term);return;}
-  rows.forEach(row=>{
-   const b=document.createElement('button');b.type='button';b.className='slv-pan-search-result';
-   const title=document.createElement('strong');title.textContent=row.customer_name+' • '+row.receipt_no;
-   const sub=document.createElement('small');sub.textContent=(row.mobile||'')+' | '+(row.service_type||'')+' | '+(row.status||'');
-   b.append(title,sub);b.addEventListener('click',()=>{populate(row);$('slvPanSearch').value=row.receipt_no;box.replaceChildren();msg('✓ Receipt loaded: '+row.receipt_no);});
-   box.append(b);
-  });
-  msg(rows.length+' matching receipt(s). Select one to open.');
- }catch(e){msg('Search failed: '+e.message);}
-};
+window.slvPanFind=async()=>{const id=$('slvPanSearch').value.trim().toUpperCase();if(!/^SLV-PAN-[0-9]{6,}$/.test(id))return msg('Enter valid SLV receipt number.');try{const db=await staffDb();const r=await db.from('slv_pan_receipts').select('*').eq('receipt_no',id).maybeSingle();if(r.error)throw r.error;if(!r.data)return msg('Receipt not found.');populate(r.data);msg('✓ Receipt loaded.');}catch(e){msg('Search failed: '+e.message);}};
 window.slvPanPrintReceipt=()=>{if(!current)return msg('Save or find a receipt before printing.');$('slvPanPrintTarget').innerHTML=$('slvPanReceipt').outerHTML;window.print();};
 const all=Object.entries(catalog).flatMap(([category,names])=>names.map(service_name=>({category,service_name})));
 let missing=[];
@@ -5057,7 +4930,8 @@ function slvLinkSaveFeedback(mode,message){
   panel.hidden=false;
   panel.classList.remove('success','error');
   if(mode==='success'||mode==='error')panel.classList.add(mode);
-  label.textContent=message;}
+  label.textContent=message;
+}
 async function slvOptimizeLogo(file){
   if(file.size<=160*1024)return file;
   try{
@@ -5119,8 +4993,7 @@ window.slvLinksSave=async function(){
 window.slvLinksDelete=async function(id,name){if(!confirm('Delete service link "'+name+'"?'))return;const status=el('slvLinksAdminStatus');try{const db=await client(true);const r=await db.from('slv_service_links').delete().eq('id',id).select('id');if(r.error)throw r.error;if(r.data?.length!==1)throw Error('Delete not confirmed.');lastLoadedAt=0;await window.slvLinksAdminLoad();status.textContent='✓ Deleted.';}catch(e){status.textContent='Delete failed: '+e.message;}};
 let employeeWasVisible=false;function shortcut(){const v=el('employeeView');const visible=!!(v&&!v.classList.contains('hidden'));el('slvLinksShortcut').classList.toggle('slv-visible',visible);if(visible&&!employeeWasVisible)load();employeeWasVisible=visible;if(!visible)window.slvLinksClose();}
 new MutationObserver(shortcut).observe(el('employeeView'),{attributes:true,attributeFilter:['class']});shortcut();
-})();
-</script>
+})();</script>
 <script>
 /* Universal Pricing admin editor. Supabase RLS must authorize only admins to write pricing rules. */
 (function(){'use strict';const $=id=>document.getElementById(id);const status=(s)=>{$('upStatus').textContent=s};let busy=false;
@@ -5208,32 +5081,7 @@ let pdfFont;
 function boxText(page,x,top,value,space=11.1,size=8){const str=upper(value).replace(/[^A-Z0-9 .@/\-]/g,'');for(let i=0;i<str.length;i++)pdfTop(page,x+i*space,top,str[i],size,space)}
 function tick(page,x,top,yes){if(!yes)return;const c=PDFLib.rgb(.02,.16,.35);const white=PDFLib.rgb(1,1,1);/* Replace the printed "Tick" placeholder inside its own box, never outside. */page.drawRectangle({x:x-1,y:page.getHeight()-top-10,width:15,height:11,color:white});const y=page.getHeight()-top;page.drawLine({start:{x:x+1,y:y-5},end:{x:x+4,y:y-8},thickness:1.25,color:c});page.drawLine({start:{x:x+4,y:y-8},end:{x:x+11,y:y+1},thickness:1.25,color:c})}
 function centeredText(page,x,top,value,size=8,max=90){const str=upper(value).replace(/[^\x20-\x7e]/g,' ').slice(0,50);if(!str)return;const width=Math.min(pdfFont.widthOfTextAtSize(str,size),max);pdfTop(page,x+(max-width)/2,top,str,size,max)}
-function slv93CleanDigits(page,x,top,value,spacing=15.35,size=8,count=10){
- const digits=String(value||'').replace(/\D/g,'').slice(0,count);
- const white=PDFLib.rgb(1,1,1);
- for(let i=0;i<count;i++){
-  const cellX=x+i*spacing;
-  /* Clear only the inside of each printed cell so its border remains visible. */
-  page.drawRectangle({x:cellX+0.7,y:page.getHeight()-top-9.6,width:spacing-1.4,height:8.9,color:white});
-  if(i<digits.length){
-   const w=pdfFont.widthOfTextAtSize(digits[i],size);
-   page.drawText(digits[i],{x:cellX+(spacing-w)/2,y:page.getHeight()-top-size,size,font:pdfFont,color:PDFLib.rgb(.03,.05,.12)});
-  }
- }
-}
-function pan93Dob(page,date){
- const parts=String(date||'').split('-');if(parts.length!==3)return;
- const [yy,mm,dd]=parts;const digit=dd+mm+yy;
- /* Actual DD / MM / YYYY cell positions; mask old printed guide characters first. */
- const starts=[185.5,200.8,231,246.3,279,294.3,309.6,324.9];
- const white=PDFLib.rgb(1,1,1);
- for(let i=0;i<8;i++){
-  const x=starts[i];
-  page.drawRectangle({x:x+0.7,y:page.getHeight()-309-9.6,width:13.9,height:8.9,color:white});
-  const w=pdfFont.widthOfTextAtSize(digit[i],8);
-  page.drawText(digit[i],{x:x+(15.3-w)/2,y:page.getHeight()-309-8,size:8,font:pdfFont,color:PDFLib.rgb(.03,.05,.12)});
- }
-}
+function pan93Dob(page,date){const parts=String(date||'').split('-');if(parts.length!==3)return;const [yy,mm,dd]=parts;/* DD / MM / YYYY: draw only digits in the actual cells. */const digit=dd+mm+yy;const starts=[185,198,226,239,268,281,294,307];for(let i=0;i<Math.min(8,digit.length);i++)centeredText(page,starts[i],309,digit[i],8,11)}
 function slv93Fit(page,x,top,value,maxWidth,size=8,minSize=4.2){
  const str=upper(value).replace(/[^\x20-\x7e]/g,' ').trim();if(!str)return;
  let fontSize=size;while(fontSize>minSize&&pdfFont.widthOfTextAtSize(str,fontSize)>maxWidth)fontSize-=.2;
@@ -5244,34 +5092,27 @@ function slv93Digits(page,x,top,value,spacing=15.35,size=8,count=12){
  const digits=String(value||'').replace(/\D/g,'').slice(0,count);
  for(let i=0;i<digits.length;i++){const w=pdfFont.widthOfTextAtSize(digits[i],size);page.drawText(digits[i],{x:x+i*spacing+(spacing-w)/2,y:page.getHeight()-top-size,size,font:pdfFont,color:PDFLib.rgb(.03,.05,.12)})}
 }
-function slv93AddressCells(page,x,top,value){const str=upper(value).replace(/[^A-Z0-9 .@/\-]/g,' ').slice(0,25);const width=15.35,size=7;for(let i=0;i<str.length;i++){if(str[i]===' ')continue;const cw=pdfFont.widthOfTextAtSize(str[i],size);page.drawText(str[i],{x:x+i*width+(width-cw)/2,y:page.getHeight()-top-size,size,font:pdfFont,color:PDFLib.rgb(.03,.05,.12)})}}
 function addr(page,prefix,top){
- const xs=180.5;
- for(const [s,offset] of [['flat',0],['street',14],['post',27],['locality',41],['district',54]])slv93AddressCells(page,xs,top+offset,values[prefix+s]);
- /* State and country are free-text boxes; PIN is six individual cells. */
+ const xs=205;
+ for(const [s,offset] of [['flat',0],['street',14],['post',27],['locality',41],['district',54]])slv93Fit(page,xs,top+offset,values[prefix+s],365,8,5);
+ // Actual template: state x~160-219, country x~277-383, PIN cells x~470 onwards.
  slv93Fit(page,162,top+68,values[prefix+'state'],56,7,4.2);
- slv93Fit(page,296,top+68,values[prefix+'country']||'INDIA',75,8,5);
- slv93Digits(page,457,top+68,values[prefix+'pin'],15.35,8,6);
+ slv93Fit(page,280,top+68,values[prefix+'country']||'INDIA',75,8,5);
+ slv93Digits(page,470,top+68,values[prefix+'pin'],14,8,6);
 }
 function slv93NameCells(page,x,top,value){const str=upper(value).replace(/[^A-Z0-9 ]/g,'').slice(0,25);const width=15.35,size=8;for(let i=0;i<str.length;i++){if(str[i]===' ')continue;const cw=pdfFont.widthOfTextAtSize(str[i],size);page.drawText(str[i],{x:x+i*width+(width-cw)/2,y:page.getHeight()-top-size,size,font:pdfFont,color:PDFLib.rgb(.03,.05,.12)})}}
 function name3(page,prefix,top,x=180.5){slv93NameCells(page,x,top,values[prefix+'First']??values[prefix+'first']);slv93NameCells(page,x,top+14,values[prefix+'Middle']??values[prefix+'middle']);slv93NameCells(page,x,top+27,values[prefix+'Last']??values[prefix+'last'])}
 async function drawImage(page,data,rect){if(!data)return;try{const img=data.type==='image/png'?await currentPdf.embedPng(data.bytes):await currentPdf.embedJpg(data.bytes);const dims=img.scaleToFit(rect.w,rect.h);page.drawImage(img,{x:rect.x+(rect.w-dims.width)/2,y:page.getHeight()-rect.top-rect.h+(rect.h-dims.height)/2,width:dims.width,height:dims.height})}catch(e){throw Error('Unable to embed photo/signature: '+e.message)}}
 let currentPdf;
-/* PAN Form 93 coordinate calibration: all positions below are measured against the embedded two-page A4 source PDF. */
 async function buildPdf(){if(!window.PDFLib)throw Error('PDF library could not load. Check internet connection.');const bytes=Uint8Array.from(atob(TEMPLATE),c=>c.charCodeAt(0));currentPdf=await PDFLib.PDFDocument.load(bytes);pdfFont=await currentPdf.embedFont(PDFLib.StandardFonts.Helvetica);const [p1,p2]=currentPdf.getPages();
 name3(p1,'',197);slv93NameCells(p1,180.5,255,values.aadhaarName||values.fullName);tick(p1,183,295,values.gender==='Male');tick(p1,229,295,values.gender==='Female');tick(p1,290,295,values.gender==='Transgender');pan93Dob(p1,values.dob);slv93Digits(p1,180.5,323,values.aadhaar,15.35,8,12);
-addr(p1,'res',350);if(values.officeNeeded==='Yes')addr(p1,'office',449);tick(p1,213,534,values.residency==='Resident');tick(p1,275,534,values.residency==='Non Resident');tick(p1,352,534,values.residency==='Resident but Not Ordinarily Resident');pdfTop(p1,209,553,values.passport,8);pdfTop(p1,209,574,values.tin,8);pdfTop(p1,240,604,'91',8);slv93CleanDigits(p1,377.5,604,values.mobile,15.35,8,10);pdfTop(p1,240,617,values.email,8,300);pdfTop(p1,210,630,values.landline,8);
-const inc=values.income||[];[['Salary',181,671],['Business / Profession',258,671],['House Property',397,671],['Capital Gains',181,687],['Other Sources',258,687],['No Income',397,687]].forEach(([v,x,y])=>tick(p1,x,y,inc.includes(v)));tick(p1,243,726,values.singleParent==='Yes');tick(p1,304,726,values.singleParent==='No');name3(p1,'father',741,180.5);
-name3(p2,'mother',24,180.5);tick(p2,336,68,values.printedParent==='Father');tick(p2,397,68,values.printedParent==='Mother');boxText(p2,237,108,values.aoArea,15.35,8);centeredText(p2,397,108,values.aoType,8,18);boxText(p2,237,123,values.aoRange,15.35,8);centeredText(p2,397,123,values.aoNo,8,18);
-if(raRequired()){name3(p2,'ra',166,180.5);slv93Digits(p2,180.5,208,values.raPan,15.35,8,10);slv93Digits(p2,281.5,225,values.raAadhaar,15.35,8,12);addr(p2,'ra',255);pdfTop(p2,237,353,'91',8);slv93Digits(p2,358,353,values.raMobile,15.35,8,10);slv93Fit(p2,240,368,values.raEmail,300,8,5)}
+addr(p1,'res',350);if(values.officeNeeded==='Yes')addr(p1,'office',449);tick(p1,213,534,values.residency==='Resident');tick(p1,275,534,values.residency==='Non Resident');tick(p1,352,534,values.residency==='Resident but Not Ordinarily Resident');pdfTop(p1,209,553,values.passport,8);pdfTop(p1,209,574,values.tin,8);pdfTop(p1,230,604,'91',8);slv93Digits(p1,390,604,values.mobile,15.3,8,10);pdfTop(p1,240,617,values.email,8,300);pdfTop(p1,210,630,values.landline,8);
+const inc=values.income||[];[['Salary',181,671],['Business / Profession',258,671],['House Property',397,671],['Capital Gains',181,687],['Other Sources',258,687],['No Income',397,687]].forEach(([v,x,y])=>tick(p1,x,y,inc.includes(v)));tick(p1,243,726,values.singleParent==='Yes');tick(p1,304,726,values.singleParent==='No');name3(p1,'father',741,210);
+name3(p2,'mother',24,180.5);tick(p2,336,68,values.printedParent==='Father');tick(p2,397,68,values.printedParent==='Mother');boxText(p2,244,108,values.aoArea,12,8);centeredText(p2,411,108,values.aoType,8,18);boxText(p2,244,123,values.aoRange,12,8);centeredText(p2,411,123,values.aoNo,8,18);
+if(raRequired()){name3(p2,'ra',166,180.5);pdfTop(p2,210,208,values.raPan,8);slv93Digits(p2,244,225,values.raAadhaar,15.35,8,12);addr(p2,'ra',255);pdfTop(p2,210,353,'91',8);slv93Digits(p2,390,353,values.raMobile,15.3,8,10);slv93Fit(p2,240,368,values.raEmail,300,8,5)}
 tick(p2,216,418,values.communication==='Residence Address');tick(p2,302,418,values.communication==='Representative Assessee Address');tick(p2,448,418,values.communication==='Office Address');tick(p2,71,475,values.proofIdentity);tick(p2,169,475,values.proofAddress);tick(p2,270,475,values.proofDob);tick(p2,71,512,values.raProofIdentity);tick(p2,169,512,values.raProofAddress);
-pdfTop(p2,87,562,values.aadhaarName||[values.first,values.middle,values.last].filter(Boolean).join(' '),7,170);/* Capacity wording is already printed on the official form; do not overlay another label here. */pdfTop(p2,91,622,values.place,8,180);pdfTop(p2,91,637,values.declarationDate?.split('-').reverse().join('/'),8,160);slv93Fit(p2,415,768,raRequired()?[values.raFirst,values.raMiddle,values.raLast].filter(Boolean).join(' '):[values.first,values.middle,values.last].filter(Boolean).join(' '),125,6.5,4.2);slv93Fit(p2,415,794,raRequired()?'REP. ASSESSEE':'SELF',105,5.5,4.2);
-/* Replace the source template's static '1 of 5'/'2 of 5' footer with the actual two-page output count. */
-for(const [pg,label] of [[p1,'1 of 2'],[p2,'2 of 2']]){
-  pg.drawRectangle({x:pg.getWidth()-54,y:3,width:50,height:13,color:PDFLib.rgb(1,1,1)});
-  pg.drawText(label,{x:pg.getWidth()-49,y:6,size:7,font:pdfFont,color:PDFLib.rgb(.05,.05,.05)});
-}
-await drawImage(p1,photoData,{x:46,top:23,w:99,h:128});await drawImage(p1,photoData,{x:443,top:23,w:99,h:128});await drawImage(p2,signatureData,{x:328,top:653,w:202,h:63});/* Original source template contains five pages; PAN Form 93 output must contain only pages 1 and 2. Remove unused pages from the end. */while(currentPdf.getPageCount()>2)currentPdf.removePage(currentPdf.getPageCount()-1);return currentPdf.save()}
+pdfTop(p2,87,562,values.aadhaarName||[values.first,values.middle,values.last].filter(Boolean).join(' '),7,170);slv93Fit(p2,380,562,raRequired()?'REPRESENTATIVE ASSESSEE':'SELF',115,6,4.2);pdfTop(p2,91,622,values.place,8,180);pdfTop(p2,91,637,values.declarationDate?.split('-').reverse().join('/'),8,160);slv93Fit(p2,402,768,raRequired()?[values.raFirst,values.raMiddle,values.raLast].filter(Boolean).join(' '):[values.first,values.middle,values.last].filter(Boolean).join(' '),145,7,4.2);slv93Fit(p2,405,794,raRequired()?'REPRESENTATIVE ASSESSEE':'SELF',125,6,4.2);
+await drawImage(p1,photoData,{x:48,top:37,w:92,h:111});await drawImage(p1,photoData,{x:455,top:37,w:92,h:111});await drawImage(p2,signatureData,{x:337,top:664,w:193,h:52});return currentPdf.save()}
 window.slv93Generate=async()=>{if(!validateStep(step))return;for(let n=0;n<7;n++){const invalid=FIELDS.filter(f=>f.step===n&&active(f)).some(f=>check(f));if(invalid){step=n;render();validateStep(n);return}}const btn=el('pan93Generate');btn.disabled=true;btn.textContent='Generating…';try{const bytes=await buildPdf();if(pdfUrl)URL.revokeObjectURL(pdfUrl);pdfUrl=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'}));await window.slv93RegisterTracking(values);el('pan93Result').style.display='block';window.open(pdfUrl,'_blank','noopener')}catch(e){el('pan93Error').textContent='Application generation failed: '+e.message}finally{btn.disabled=false;btn.textContent='✓ Preview / Generate PDF'}};
 window.slv93Download=()=>{if(!pdfUrl)return;const a=document.createElement('a');a.href=pdfUrl;a.download='SLV_Form_93_First_2_Pages.pdf';a.click()};window.slv93Print=()=>{if(pdfUrl)window.open(pdfUrl,'_blank','noopener')};
 const oldLogout=window.logout;if(typeof oldLogout==='function')window.logout=function(...args){window.slv93Close();return oldLogout.apply(this,args)};
@@ -5515,48 +5356,19 @@ const cardAction=/download|print|printout|printing|duplicate.?copy|pdf|pvc/i;
 const names={bank:'Banking & Payments',gov:'Government Services',print:'Printing & Documents',booking:'Bookings & Applications',other:'Other Services',cards:'Card Downloads & Prints'};
 function groupFor(name){if(cardType.test(name)&&cardAction.test(name))return 'cards';for(const [key,re] of Object.entries(groups))if(re.test(name))return key;return 'other'}
 function escapeText(x){return String(x||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-window.slvChooseCategory=async function(role,cat){
+window.slvChooseCategory=function(role,cat){
 const hub=document.querySelector('#'+role+'View .slv-five-hub');if(!hub)return;
 hub.querySelectorAll('[data-cat]').forEach(b=>b.classList.toggle('active',b.dataset.cat===cat));
-const out=document.getElementById('slv-'+role+'-results');if(!out)return;
-out.replaceChildren();
+const out=document.getElementById('slv-'+role+'-results');out.replaceChildren();
 const h=document.createElement('h3');h.textContent=names[cat];out.append(h);
-let select=document.getElementById('slvTxService');
-let options=select?Array.from(select.options).filter(o=>o.value&&!o.disabled):[];
-if(role==='employee'&&!options.length&&typeof window.slvTxLoadServices==='function'){
- const p=document.createElement('p');p.textContent='Loading services…';out.append(p);
- try{await window.slvTxLoadServices(true)}catch(e){p.textContent='Services load కాలేదు. Internet / login చెక్ చేయండి.';return}
- select=document.getElementById('slvTxService');
- options=select?Array.from(select.options).filter(o=>o.value&&!o.disabled):[];
-}
-if(!options.length){const p=document.createElement('p');p.textContent='Services are not available right now.';out.append(p);return}
+const select=document.getElementById('slvTxService');const options=select?Array.from(select.options).filter(o=>o.value&& !o.disabled):[];
+if(!options.length){const p=document.createElement('p');p.textContent='Services loading… Login and refresh services if needed.';out.append(p);return}
 const matches=options.filter(o=>groupFor(o.textContent||'')===cat);
-if(!matches.length){const p=document.createElement('p');p.textContent='ఈ Categoryలో ప్రస్తుతం Active Services లేవు.';out.append(p);return}
-if(role==='employee'){
- const panel=document.createElement('div');panel.className='slv-compact-service-menu';
- const trigger=document.createElement('button');trigger.type='button';trigger.className='slv-compact-service-trigger';trigger.textContent='Select Service  ▾';
- const list=document.createElement('div');list.className='slv-compact-service-list';list.hidden=true;
- trigger.setAttribute('aria-expanded','false');
- trigger.addEventListener('click',()=>{list.hidden=!list.hidden;trigger.setAttribute('aria-expanded',String(!list.hidden));trigger.textContent=list.hidden?'Select Service  ▾':'Select Service  ▴';});
- matches.forEach(o=>{
-  const item=document.createElement('button');item.type='button';item.className='slv-compact-service-option';
-  item.textContent=o.textContent.trim();
-  item.addEventListener('click',()=>{
-   const chosen=matches.find(x=>x.value===o.value);
-   trigger.textContent=o.textContent.trim()+'  ▾';list.hidden=true;trigger.setAttribute('aria-expanded','false');
-   if(typeof showView==='function')showView('servicesView');
-   const native=document.getElementById('slvTxService');
-   if(native&&chosen){native.value=chosen.value;native.dispatchEvent(new Event('change',{bubbles:true}));}
-   document.getElementById('slvCloudCheckout')?.scrollIntoView({behavior:'smooth',block:'start'});
-  });
-  list.append(item);
- });
- panel.append(trigger,list);out.append(panel);return;
-}
+if(!matches.length){const p=document.createElement('p');p.textContent='No card download or print services are configured yet. Add them from Admin Services if required.';out.append(p);return}
 const grid=document.createElement('div');grid.className='slv-service-items';
 for(const o of matches){const btn=document.createElement('button');btn.type='button';btn.textContent=o.textContent.trim();btn.onclick=()=>{
-if(typeof window.showAdminSection==='function'){try{window.showAdminSection('adminServices')}catch(e){}}
-document.getElementById('servicesAdminList')?.scrollIntoView({behavior:'smooth'});
+if(role==='employee'){if(typeof showView==='function')showView('servicesView');const sel=document.getElementById('slvTxService');if(sel){sel.value=o.value;sel.dispatchEvent(new Event('change',{bubbles:true}));}document.getElementById('slvCloudCheckout')?.scrollIntoView({behavior:'smooth',block:'start'});}
+else{const menu=document.querySelector('#adminView [onclick*="adminServices"]');if(typeof window.showAdminSection==='function'){try{window.showAdminSection('adminServices')}catch(e){}}const target=document.getElementById('servicesAdminList');target?.scrollIntoView({behavior:'smooth'});}
 };grid.append(btn)}out.append(grid)
 };
 const observe=()=>{const sel=document.getElementById('slvTxService');if(!sel)return;let pending=false;new MutationObserver(()=>{if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;for(const role of ['employee','admin']){const active=document.querySelector('#'+role+'View .slv-five-buttons button.active');if(active)window.slvChooseCategory(role,active.dataset.cat)}})}).observe(sel,{childList:true});};
@@ -5757,265 +5569,7 @@ window.slvUWRefresh=init;
  };
 })();
 </script>
-
-<style id="SLV_CATEGORY_THEME_MERGE_20261120">
-/* SLV service categories + accepted visual themes */
-:root{--slv-merge-navy:#071d35;--slv-merge-teal:#087e83;--slv-merge-ink:#111827}
-#loginView{background:linear-gradient(135deg,#06172d 0%,#0b2c4a 52%,#087e83 100%)!important;border:0!important;border-radius:22px!important;box-shadow:0 24px 70px rgba(2,12,27,.24)!important;color:#111827!important}
-#loginView .slv-login-brand,#loginView .slv-wordmark-hero{background:linear-gradient(135deg,#06172d,#0b3b55 68%,#087e83)!important;color:#fff!important}
-#loginView .slv-signin-btn,#loginView button[type=submit]{background:linear-gradient(110deg,#07334b,#07939a)!important;color:#fff!important;border:0!important}
-#loginView label,#loginView h1,#loginView h2,#loginView p{color:#111827}
-#adminView,#employeeView,#servicesView{color:#111827!important;background:#fff!important}
-#adminView :is(h1,h2,h3,h4,label,p,span,b,strong,td,th,small),#employeeView :is(h1,h2,h3,h4,label,p,span,b,strong,td,th,small),#servicesView :is(h1,h2,h3,h4,label,p,span,b,strong,td,th,small){color:#111827}
-#adminView input,#adminView select,#adminView textarea,#employeeView input,#employeeView select,#employeeView textarea,#servicesView input,#servicesView select,#servicesView textarea{color:#111827!important;background:#fff!important}
-.slv-five-buttons{grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:9px!important}
-.slv-five-buttons button{min-width:0!important;min-height:100px!important;padding:10px 6px!important;font-size:22px!important}
-.slv-five-buttons button b{font-size:11px!important}
-.slv-service-category-wrap{border:0;border-radius:10px;padding:8px 0;background:transparent;margin:8px 0 12px}
-.slv-service-category-row{display:flex;flex-wrap:nowrap;gap:7px;align-items:stretch;overflow-x:auto;overflow-y:hidden;padding:2px 1px 8px;scrollbar-width:thin}
-.slv-service-category-row button{display:flex!important;flex:0 0 auto;align-items:center;justify-content:space-between;gap:7px;min-width:0;min-height:40px;padding:8px 10px!important;margin:0!important;background:#f4f8fb!important;color:#173b5d!important;border:1px solid #d6e2ed!important;border-radius:8px!important;font-size:11px!important;font-weight:700!important;box-shadow:none!important;white-space:nowrap}
-.slv-service-category-row button .slv-category-arrow{font-size:15px;line-height:1;color:#2878a8}
-.slv-service-category-row button.active{background:#174a78!important;color:#fff!important;border-color:#174a78!important}
-.slv-service-category-row button.active .slv-category-arrow{color:#fff!important}
-.slv-category-service-select{width:100%;min-height:44px;padding:10px 12px;border:1px solid #aebfce;border-radius:9px;background:#fff;color:#111827;font-size:14px}
-.slv-category-service-select:disabled{background:#f1f5f9;color:#64748b}
-#slvCloudCheckout>.slv-service-picker,#slvCloudCheckout>label[for="slvServiceSearch"],#slvCloudCheckout>.slv-native-service-label,#slvCloudCheckout>#slvTxService,#slvCloudCheckout>button[onclick*="slvTxLoadServices"]{display:none!important}
-#adminView .slv-five-hub{border-color:#dbe5ed!important;background:#fff!important}
-#adminView .slv-hub-head h2,#adminView .slv-five-buttons button b{color:#111827!important}
-#adminView .slv-five-buttons button{background:#f2f7f8!important;color:#102a43!important;border-color:#d3e2e5!important}
-#adminView .slv-five-buttons button.active{background:#e1f2f1!important;border:2px solid #087e83!important}
-#adminView .slv-service-items button{color:#102a43!important;background:#f8fbfc!important}
-#adminView .slv-clock-style,#employeeView .slv-clock-style{display:inline-block!important;min-width:88px!important;padding:5px 8px!important;border:1px solid #b8cbd2!important;border-radius:8px!important;background:#fff!important;color:#102a43!important}
-@media(max-width:900px){.slv-five-buttons{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
-@media(max-width:560px){.slv-five-buttons{display:grid!important;grid-template-columns:repeat(6,minmax(128px,1fr))!important;overflow-x:auto!important;padding-bottom:7px}.slv-service-category-wrap{padding:5px 0}.slv-service-category-row button{min-height:38px;padding:7px 9px!important;font-size:10px!important}}
-</style>
-<script id="SLV_CATEGORY_THEME_MERGE_SCRIPT_20261120">
-(function(){
- const categories=[
-  {id:'gov',name:'Government Services',match:/pan|aadhaar|aadhar|voter|ration|caste|income certificate|residence certificate|birth certificate|death certificate|passport|driving licence|driving license|e.?shram|udyam|scholarship|sainik school|government|govt/},
-  {id:'bank',name:'Banking Services',match:/aeps|money transfer|cash withdrawal|cash deposit|bank|micro.?atm|dmt|account opening|payout/},
-  {id:'bill',name:'Bill Payments',match:/current bill|electricity|power bill|water bill|gas bill|mobile recharge|dth recharge|recharge|bill payment|utility/},
-  {id:'print',name:'Printing & Digital Services',match:/xerox|photocopy|print|lamination|pvc|photo|scan|typing|document|colour|color|digital/},
-  {id:'ticket',name:'Ticket Bookings',match:/apsrtc|bus ticket|private bus|irctc|train ticket|railway|ttd|darshan|flight|ticket booking|hotel booking/},
-  {id:'other',name:'Other Services',match:/.*/}
- ];
- function categoryFor(name){
-  const n=String(name||'').toLowerCase();
-  for(let i=0;i<categories.length-1;i++)if(categories[i].match.test(n))return categories[i].id;
-  return 'other';
- }
- function addEmployeePicker(){
-  const checkout=document.getElementById('slvCloudCheckout');
-  if(!checkout||document.getElementById('slvEmployeeCategoryPicker'))return;
-  const wrap=document.createElement('section');wrap.id='slvEmployeeCategoryPicker';wrap.className='slv-service-category-wrap';
-  const row=document.createElement('div');row.className='slv-service-category-row';row.setAttribute('aria-label','Service categories');
-  const label=document.createElement('label');label.textContent='Select Service';
-  const select=document.createElement('select');select.id='slvCategoryServiceSelect';select.className='slv-category-service-select';select.disabled=true;
-  select.add(new Option('ముందుగా Category ఎంచుకోండి',''));
-  categories.forEach(c=>{const btn=document.createElement('button');btn.type='button';btn.dataset.category=c.id;btn.innerHTML='<span class="slv-category-name"></span><span class="slv-category-arrow" aria-hidden="true">▾</span>';btn.querySelector('.slv-category-name').textContent=c.name;btn.setAttribute('aria-label',c.name+' dropdown');btn.addEventListener('click',()=>choose(c.id));row.append(btn);});
-  wrap.append(row,label,select);
-  checkout.insertBefore(wrap,checkout.firstChild.nextSibling);
-  function choose(id){
-   row.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.category===id));
-   const native=document.getElementById('slvTxService');
-   const options=native?[...native.options].filter(o=>o.value&&categoryFor(o.textContent)===id):[];
-   select.replaceChildren();select.add(new Option(options.length?'— Select '+categories.find(c=>c.id===id).name+' Service —':'ఈ Categoryలో Services లేవు',''));
-   options.forEach(o=>select.add(new Option(o.textContent,o.value)));
-   select.disabled=!options.length;select.value='';
-   if(native){native.value='';native.dispatchEvent(new Event('change',{bubbles:true}));}
-   if(!options.length&&typeof window.slvTxLoadServices==='function'){
-    window.slvTxLoadServices(true).then(()=>choose(id)).catch(()=>{});
-   }
-  }
-  select.addEventListener('change',()=>{
-   const native=document.getElementById('slvTxService');if(!native)return;
-   native.value=select.value;native.dispatchEvent(new Event('change',{bubbles:true}));
-  });
-  window.slvCategoryChoose=choose;
- }
- function refreshEmployeePicker(){
-  const picker=document.getElementById('slvCategoryServiceSelect');
-  if(!picker)return;
-  const active=document.querySelector('#slvEmployeeCategoryPicker .slv-service-category-row button.active');
-  if(active&&window.slvCategoryChoose)window.slvCategoryChoose(active.dataset.category);
- }
- function patchAdminHub(){
-  const hub=document.querySelector('.slv-five-hub[data-role="admin"]');if(!hub)return;
-  const row=hub.querySelector('.slv-five-buttons');if(!row)return;
-  const buttons=[...row.querySelectorAll('button')];
-  categories.forEach((c,i)=>{
-   const b=buttons[i];if(!b)return;b.dataset.cat=c.id;b.onclick=()=>window.slvChooseAdminCategory(c.id);
-   const title=b.querySelector('b');if(title)title.textContent=c.name;
-  });
-  window.slvChooseAdminCategory=function(id){
-   const target=document.getElementById('slv-admin-results');if(!target)return;
-   row.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.cat===id));
-   let items=[];try{items=typeof getServices==='function'?getServices():[]}catch(e){}
-   const filtered=items.filter(s=>categoryFor(s.name||s.service_name)===id);
-   target.replaceChildren();
-   const heading=document.createElement('p');heading.textContent=categories.find(c=>c.id===id)?.name||'Services';target.append(heading);
-   if(!filtered.length){const p=document.createElement('p');p.textContent='ఈ Categoryకి సంబంధించిన services ప్రస్తుతం Admin service listలో లేవు.';target.append(p);return;}
-   const list=document.createElement('div');list.className='slv-service-items';
-   filtered.forEach(s=>{const item=document.createElement('div');item.className='slv-service-option';item.textContent=s.name||s.service_name;list.append(item);});
-   target.append(list);
-  };
- }
- function init(){
-  addEmployeePicker();patchAdminHub();
-  const oldLoad=window.slvTxLoadServices;
-  if(typeof oldLoad==='function'&&!oldLoad.__slvCategoryWrapped){
-   const wrapped=async function(...args){const result=await oldLoad.apply(this,args);refreshEmployeePicker();return result;};
-   wrapped.__slvCategoryWrapped=true;window.slvTxLoadServices=wrapped;
-  }
-  if(typeof window.slvTxLoadServices==='function')window.slvTxLoadServices().then(refreshEmployeePicker).catch(()=>{});
- }
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
-})();
-</script>
-
-<style id="slv-pan-name-search-style">#slvPanSearchResults{display:grid;gap:6px;margin:8px 0;max-height:260px;overflow:auto}#slvPanSearchResults:empty{display:none}#slvPanSearchResults .slv-pan-search-result{display:flex;flex-direction:column;align-items:flex-start;gap:3px;width:100%;padding:10px 12px;background:#f3f8fb!important;color:#102a43!important;border:1px solid #d5e2ea!important;border-radius:9px;text-align:left}#slvPanSearchResults .slv-pan-search-result strong{color:#102a43!important}#slvPanSearchResults .slv-pan-search-result small{color:#526579!important;font-size:12px}#slvPanSearchResults .slv-pan-search-result:hover{background:#e5f2f4!important;border-color:#087e83!important}</style>
 </body>
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
 <!-- SLV Quick Links: popup accessed from employee side menu; cloud read uses authenticated RLS. -->
-<style id="slv-services-premium-layout">
-/* Premium, consistent service-management presentation; no billing logic changes */
-#adminServices{border:1px solid #dce6f2!important;border-left:0!important;border-radius:20px!important;padding:clamp(16px,2.2vw,26px)!important;background:linear-gradient(180deg,#fbfdff 0%,#f4f8fe 100%)!important;box-shadow:0 12px 32px rgba(15,45,85,.07)!important}
-#adminServices>h4{display:flex;align-items:center;gap:10px;font-size:20px!important;color:#102f58!important;margin:0 0 8px!important;padding-bottom:14px;border-bottom:1px solid #e1eaf5}
-#adminServices>p.muted{font-size:13px;line-height:1.65;background:#edf4fd;border:1px solid #d9e7f7;border-radius:12px;padding:11px 14px;color:#49627f!important}
-#adminServices>input,#adminServices>.row,#adminServices>label,#adminServices>select{margin-top:10px}
-#adminServices input:not([type=checkbox]),#adminServices select,#adminServices textarea{min-height:44px;border:1px solid #d4dfec!important;border-radius:11px!important;background:#fff!important;padding:10px 12px!important;color:#17324f!important;box-shadow:0 2px 5px rgba(20,50,90,.03)}
-#adminServices input:focus,#adminServices select:focus,#adminServices textarea:focus{outline:3px solid rgba(42,112,190,.13);border-color:#4c8bd0!important}
-#adminServices label{display:block;font-size:12px!important;font-weight:750!important;letter-spacing:.02em;color:#435a76!important;margin:13px 0 5px}
-#adminServices .row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:end}
-#adminServices .row>*{min-width:0}
-#adminServices button{border-radius:10px!important;min-height:40px;font-weight:750;box-shadow:0 3px 8px rgba(15,45,85,.07)}
-#adminServices .btn-orange{background:linear-gradient(135deg,#174a82,#2876bf)!important;color:#fff!important;border:0!important;padding:12px 18px!important}
-#servicesAdminList{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-top:16px}
-#servicesAdminList .emp-row{display:grid!important;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:8px!important;padding:13px!important;border:1px solid #dce6f2!important;border-radius:13px!important;background:#fff!important;box-shadow:0 3px 10px rgba(15,45,85,.045)}
-#servicesAdminList .emp-row>div{font-size:12px;line-height:1.55;color:#304b6a;font-weight:650;overflow-wrap:anywhere}
-#servicesAdminList .emp-row button{min-width:54px;padding:8px 10px!important}
-#slvCatalogPanel,#slvUniversalPricing,#xeroxAdminPricing,#slvBillSlabAdmin,#slvUniversalWalletPanel{border:1px solid #dce6f2!important;border-radius:16px!important;background:#fff!important;padding:17px!important;margin-top:16px!important;box-shadow:0 5px 16px rgba(15,45,85,.045)}
-#adminServices .section-box h4{color:#143d6b!important;font-size:15px!important;margin:0 0 8px}
-#adminServices .section-box p.muted{line-height:1.6;font-size:12px}
-#servicesView{border:1px solid #dce6f2!important;border-radius:20px!important;background:#f7faff!important;box-shadow:0 12px 35px rgba(12,42,78,.08)!important;padding:clamp(14px,2.2vw,26px)!important}
-#servicesView>.topbar{border-radius:14px!important;background:#102f58!important;color:#fff!important;padding:14px 16px!important;margin-bottom:14px!important;box-shadow:0 7px 18px rgba(16,47,88,.14)}
-#slvCloudCheckout{background:#fff!important;border:1px solid #dce6f2!important;border-radius:16px!important;padding:clamp(14px,2vw,22px)!important;box-shadow:0 5px 18px rgba(15,45,85,.045)}
-#slvCloudCheckout h3,#slvFinancialBilling h3,#slvManualBilling h3{color:#153e6b!important;font-size:17px!important}
-#slvServiceSearch{border:1px solid #cbd9e9!important;border-radius:12px!important;min-height:46px;padding:12px 14px!important}
-#slvServiceSuggestions{border:1px solid #d7e3f1!important;border-radius:12px!important;box-shadow:0 12px 28px rgba(15,45,85,.12)!important;overflow:hidden;background:#fff}
-#slvServiceSuggestions>*{padding:12px 14px!important;border-bottom:1px solid #edf1f6}
-#slvEmployeeServiceSection{border:1px solid #dce6f2!important;border-radius:18px!important;padding:16px!important;background:#fff!important}
-#slvEmployeeServiceSection .slv-link-card{border:1px solid #dbe6f3!important;border-radius:16px!important;background:linear-gradient(180deg,#fff,#f7faff)!important;box-shadow:0 5px 14px rgba(15,45,85,.055)!important;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
-#slvEmployeeServiceSection .slv-link-card:hover{transform:translateY(-3px);border-color:#8db5e2!important;box-shadow:0 10px 22px rgba(15,65,120,.11)!important}
-#slvEmployeeServiceSection .slv-link-card b{color:#153e6b!important;line-height:1.35}
-#slvEmployeeServiceSection .slv-link-logo,#slvEmployeeServiceSection .slv-link-fallback{border-radius:14px!important;background:#edf4fd!important}
-@media(max-width:640px){#adminServices .row{grid-template-columns:1fr}#servicesAdminList{grid-template-columns:1fr}#servicesAdminList .emp-row{grid-template-columns:minmax(0,1fr) auto auto}#servicesView{padding:10px!important}#slvCloudCheckout{padding:12px!important}#adminServices{padding:14px!important}}
-@media(prefers-reduced-motion:reduce){#slvEmployeeServiceSection .slv-link-card{transition:none}}
-</style>
-<style id="slv-employee-category-compact-dropdown-20261120">
-/* Employee dashboard: one compact horizontal row of category-name dropdown controls. */
-#employeeView .slv-five-hub{padding:12px 10px!important}
-#employeeView .slv-hub-head{margin-bottom:7px!important}
-#employeeView .slv-five-buttons{
- display:flex!important;flex-wrap:nowrap!important;gap:7px!important;
- overflow-x:auto!important;overflow-y:hidden!important;
- padding:2px 1px 8px!important;scrollbar-width:thin!important;
-}
-#employeeView .slv-five-buttons button{
- flex:0 0 auto!important;width:auto!important;min-width:0!important;
- min-height:0!important;height:auto!important;grid-column:auto!important;
- display:flex!important;flex-direction:column!important;
- align-items:center!important;justify-content:center!important;gap:4px!important;
- padding:8px 11px 7px!important;margin:0!important;
- background:#f5f8fb!important;color:#244761!important;
- border:1px solid #d9e4ed!important;border-radius:8px!important;
- box-shadow:none!important;font-size:11px!important;white-space:nowrap!important;
-}
-#employeeView .slv-five-buttons button svg{display:none!important}
-#employeeView .slv-five-buttons button b{font-size:11px!important;line-height:1.2!important;font-weight:700!important}
-#employeeView .slv-five-buttons button:after{
- content:"▾";display:block!important;font-size:15px!important;line-height:11px!important;
- color:#2878a8!important;font-weight:800!important;
-}
-#employeeView .slv-five-buttons button.active{
- background:#174a78!important;color:#fff!important;border-color:#174a78!important;
-}
-#employeeView .slv-five-buttons button.active:after{color:#fff!important}
-#employeeView .slv-category-results{margin-top:8px!important;padding-top:10px!important}
-@media(max-width:560px){
- #employeeView .slv-five-hub{padding:10px 8px!important}
- #employeeView .slv-five-buttons button{padding:7px 9px 6px!important;font-size:10px!important}
- #employeeView .slv-five-buttons button b{font-size:10px!important}
-}
-</style>
-<style id="slv-compact-service-dropdown-20261120">
-#employeeView .slv-compact-service-menu{position:relative;margin:8px 0 4px;max-width:100%}
-#employeeView .slv-compact-service-trigger{width:100%!important;min-height:40px!important;padding:9px 12px!important;text-align:left!important;background:#f5f8fb!important;color:#244761!important;border:1px solid #cbdbe8!important;border-radius:8px!important;font-size:13px!important;font-weight:650!important;box-shadow:none!important}
-#employeeView .slv-compact-service-list{margin-top:5px;max-height:220px;overflow-y:auto;border:1px solid #d8e3ec;border-radius:8px;background:#fff;box-shadow:0 4px 12px rgba(20,50,75,.10)}
-#employeeView .slv-compact-service-list[hidden]{display:none!important}
-#employeeView .slv-compact-service-option{display:block!important;width:100%!important;min-height:36px!important;padding:8px 11px!important;margin:0!important;text-align:left!important;white-space:normal!important;background:#fff!important;color:#244761!important;border:0!important;border-bottom:1px solid #edf1f5!important;border-radius:0!important;font-size:12px!important;font-weight:550!important;box-shadow:none!important}
-#employeeView .slv-compact-service-option:last-child{border-bottom:0!important}
-#employeeView .slv-compact-service-option:active{background:#eaf3fa!important}
- 
-/* SLV public service portal — FreeJobAlert-inspired information layout */
-.slv-public-portal{margin:-4px -2px 24px;color:#18334b}
-.slv-portal-strip{display:flex;justify-content:space-between;gap:12px;padding:9px 13px;background:#082d49;color:#e7f2fa;font-size:11px;font-weight:700;letter-spacing:.25px}
-.slv-portal-nav{display:flex;flex-wrap:wrap;gap:0;background:#0875bd;border-bottom:3px solid #064d80}
-.slv-portal-nav a{display:block;padding:10px 13px;color:#fff;text-decoration:none;font-size:12px;font-weight:700;border-right:1px solid #ffffff25}
-.slv-portal-nav a:hover,.slv-portal-nav .slv-portal-login-link{background:#064d80}
-.slv-portal-layout{display:grid;grid-template-columns:190px minmax(0,1fr);gap:15px;margin-top:16px}
-.slv-portal-sidebar{border:1px solid #d8e4ed;background:#f7fafc;align-self:start}
-.slv-portal-sidebar h3{font-size:13px;color:#fff;background:#087c91;padding:9px 11px;margin:0}
-.slv-portal-sidebar a{display:block;padding:9px 11px;color:#17547a;text-decoration:none;border-bottom:1px solid #e5edf3;font-size:12px;font-weight:600}
-.slv-portal-sidebar a:before{content:"›";color:#07849a;font-weight:900;margin-right:7px}
-.slv-portal-main{min-width:0}
-.slv-portal-welcome{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:20px;background:linear-gradient(110deg,#e8f4fb,#f7fbfd);border-left:4px solid #087db1;border-radius:5px}
-.slv-portal-kicker{font-size:10px;letter-spacing:1px;font-weight:800;color:#087c91}
-.slv-portal-welcome h2{font-size:22px;margin:7px 0;color:#123d5c}
-.slv-portal-welcome p{font-size:12px;line-height:1.6;color:#536a7b;margin:0}
-.slv-portal-welcome>a,.slv-portal-search>a{flex:0 0 auto;padding:10px 13px;background:#0876b5;color:#fff;border-radius:4px;text-decoration:none;font-size:12px;font-weight:700}
-.slv-portal-search{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:13px 0;padding:10px 12px;border:1px solid #dce6ed;background:#fff;color:#65798a;font-size:12px}
-.slv-portal-section-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:18px 0 10px}
-.slv-portal-section-head h2{font-size:17px;color:#173d5c;margin:0 0 4px}
-.slv-portal-section-head p{font-size:11px;color:#6c7f8e;margin:0}
-.slv-portal-section-head>span{font-size:10px;background:#e7f2f7;color:#2c6d86;border-radius:20px;padding:6px 9px}
-.slv-portal-service-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
-.slv-portal-service-grid>a{min-height:110px;padding:12px 10px;display:flex;flex-direction:column;gap:6px;text-decoration:none;color:#fff;background:#087c91;border:1px solid #d5e3eb;border-radius:4px}
-.slv-portal-service-grid>a:nth-child(3n+2){background:#126da2}
-.slv-portal-service-grid>a:nth-child(3n){background:#0a879f}
-.slv-portal-service-grid b{font-size:19px}
-.slv-portal-service-grid strong{font-size:12px}
-.slv-portal-service-grid small{font-size:10px;line-height:1.4;color:#e4f3f8}
-.slv-portal-highlights{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.slv-portal-highlights>div{display:flex;flex-direction:column;gap:5px;padding:12px;border:1px solid #dce6ed;background:#fff;border-top:3px solid #087c91}
-.slv-portal-highlights b{font-size:18px;color:#087c91}
-.slv-portal-highlights strong{font-size:11px;color:#183d58}
-.slv-portal-highlights span{font-size:10px;color:#71818d;line-height:1.4}
-.slv-portal-login-heading{padding:14px 0 2px;border-top:1px solid #e0e8ef;text-align:center}
-.slv-portal-login-heading span{font-size:10px;font-weight:800;letter-spacing:1px;color:#087c91}
-.slv-portal-login-heading h2{margin:5px 0;color:#173d5c;font-size:20px}
-.slv-portal-login-heading p{margin:0;color:#6d7e8a;font-size:11px}
-#loginView{scroll-margin-top:12px}
-#adminView,#employeeView{border-top:5px solid #087c91!important}
-#adminView .topbar,#employeeView .topbar{background:linear-gradient(100deg,#082e4d,#075b88)!important}
-#adminView .section-box,#employeeView .section-box,#adminView .slv-five-hub,#employeeView .slv-five-hub{border-color:#dce6ed!important;box-shadow:0 2px 8px rgba(13,54,83,.05)}
-#adminView h3,#employeeView h3{color:#174564}
-@media(max-width:680px){
- .slv-public-portal{margin:0 -2px 20px}
- .slv-portal-strip{font-size:9px;padding:8px;flex-wrap:wrap}
- .slv-portal-nav{overflow-x:auto;flex-wrap:nowrap;white-space:nowrap}
- .slv-portal-nav a{padding:9px 10px;font-size:11px}
- .slv-portal-layout{grid-template-columns:1fr;gap:10px;margin-top:10px}
- .slv-portal-sidebar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
- .slv-portal-sidebar h3{grid-column:1/-1}
- .slv-portal-sidebar a{font-size:11px;padding:8px}
- .slv-portal-welcome{align-items:flex-start;flex-direction:column;padding:15px}
- .slv-portal-welcome h2{font-size:19px}
- .slv-portal-search{font-size:10px}
- .slv-portal-service-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
- .slv-portal-service-grid>a{min-height:105px;padding:10px 8px}
- .slv-portal-highlights{grid-template-columns:1fr}
- .slv-portal-section-head h2{font-size:15px}
-}
-</style>
