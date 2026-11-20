@@ -1255,12 +1255,11 @@ input:focus,select:focus,textarea:focus{border-color:#b9954e!important;box-shado
 </header>
 <!-- LOGIN: premium visual shell; original authentication IDs and handlers preserved -->
 <main class="card slv-premium-login" id="loginView">
-<div class="slv-login-brand"><div class="slv-login-brand">
-<a aria-label="Open SLV Job Alerts website" class="slv-job-alerts-link" href="/job-alerts/" rel="noopener noreferrer" target="_blank">💼 SLV Job Alerts <span>Open Job Alerts ↗</span></a>
+<div class="slv-login-brand">
+<a aria-label="Open SLV Job Alerts website" class="slv-job-alerts-link" href="/job-alerts/" rel="noopener noreferrer" target="_blank">💼 SLV Job Updates <span>Open Job Alerts ↗</span></a>
 </div>
 <div class="slv-login-panel">
 <div class="slv-login-quick-links" aria-label="Quick links">
-
 <button type="button" class="slv-login-quick-btn" onclick="slvTrackingOpen()">📋 PAN Find</button>
 <button type="button" class="slv-login-quick-btn" onclick="slv93Open()">🧾 PAN Apply</button>
 </div>
@@ -1278,7 +1277,6 @@ input:focus,select:focus,textarea:focus{border-color:#b9954e!important;box-shado
 <div class="slv-password-field"><input autocomplete="current-password" id="loginPass" placeholder="Enter your password" type="password"/><button aria-label="Show or hide password" class="slv-password-toggle" onclick="slvTogglePassword()" title="Show / hide password" type="button">Show</button></div>
 <button class="slv-signin-btn" onclick="handleLogin()">Secure Sign In <span aria-hidden="true">→</span></button>
 <div class="slv-login-trust"><span>◈ Secure access</span><span>● Authorized staff only</span></div>
-
 </div>
 <div class="slv-login-bottom">SLV COMMUNICATIONS <span>•</span> KORUKONDA</div>
 </main>
@@ -6166,6 +6164,77 @@ body:has(#loginView:not(.hidden)) .main-header .sub-title{
   width:132px!important;height:132px!important;min-height:132px!important;
   font-size:14px!important;padding:12px!important;gap:8px!important;
  }
+}
+</style>
+
+<!-- Repair login two-column layout and keep Job Updates square inside left card -->
+<style id="slv-login-layout-repair">
+#loginView.slv-premium-login{
+ box-sizing:border-box!important;display:grid!important;
+ grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+ align-items:stretch!important;gap:14px!important;
+ width:calc(100% - 28px)!important;max-width:930px!important;
+ margin:26px auto 34px!important;padding:0!important;
+ background:transparent!important;border:0!important;border-radius:0!important;
+ box-shadow:none!important;overflow:visible!important;
+}
+#loginView .slv-login-brand,
+#loginView .slv-login-panel{
+ box-sizing:border-box!important;min-width:0!important;width:100%!important;
+ margin:0!important;border:1px solid rgba(12,20,30,.2)!important;
+ border-radius:16px!important;background:#fff!important;
+ box-shadow:0 4px 16px rgba(24,42,64,.045)!important;
+}
+#loginView .slv-login-brand{
+ min-height:440px!important;padding:20px!important;
+ display:flex!important;align-items:center!important;justify-content:center!important;
+}
+#loginView .slv-login-brand:before,#loginView .slv-login-brand:after{display:none!important}
+#loginView .slv-login-brand .slv-job-alerts-link{
+ box-sizing:border-box!important;display:flex!important;flex-direction:column!important;
+ align-items:center!important;justify-content:center!important;text-align:center!important;
+ width:172px!important;height:172px!important;min-height:172px!important;
+ margin:0!important;padding:14px!important;gap:10px!important;
+ border:1px solid rgba(226,177,67,.8)!important;border-radius:16px!important;
+ background:linear-gradient(145deg,#071d3d,#0c3975 62%,#1457a0)!important;
+ color:#fff!important;text-decoration:none!important;font-size:16px!important;font-weight:900!important;
+ box-shadow:0 6px 16px rgba(11,51,106,.14)!important;
+}
+#loginView .slv-login-brand .slv-job-alerts-link span{
+ display:block!important;white-space:normal!important;text-align:center!important;
+ font-size:11px!important;line-height:1.35!important;color:#ffe6a0!important;
+}
+#loginView .slv-login-panel{
+ min-height:440px!important;padding:28px 30px!important;
+ display:flex!important;flex-direction:column!important;justify-content:center!important;
+}
+#loginView .slv-login-panel .slv-login-quick-links{
+ display:flex!important;flex-direction:column!important;gap:8px!important;
+ width:100%!important;margin:0 0 18px!important;
+}
+#loginView .slv-login-panel .slv-login-quick-btn{
+ display:flex!important;align-items:center!important;justify-content:flex-start!important;
+ box-sizing:border-box!important;width:100%!important;min-height:40px!important;
+ margin:0!important;padding:9px 12px!important;border:1px solid rgba(12,20,30,.18)!important;
+ border-radius:9px!important;background:#fff!important;color:#17365b!important;
+ font-size:13px!important;font-weight:800!important;
+}
+#loginView .slv-login-panel .slv-login-quick-links .slv-job-alerts-link{display:none!important}
+#loginView .slv-login-bottom{grid-column:1/-1!important;width:100%!important;box-sizing:border-box!important}
+@media(max-width:720px){
+ #loginView.slv-premium-login{
+  grid-template-columns:minmax(0,1fr)!important;gap:12px!important;
+  width:calc(100% - 24px)!important;max-width:500px!important;margin:20px auto 28px!important;
+ }
+ #loginView .slv-login-brand{
+  min-height:190px!important;height:auto!important;padding:14px!important;
+ }
+ #loginView .slv-login-brand .slv-job-alerts-link{
+  width:132px!important;height:132px!important;min-height:132px!important;
+  font-size:14px!important;padding:10px!important;gap:8px!important;
+ }
+ #loginView .slv-login-panel{min-height:unset!important;padding:24px 22px!important}
+ #loginView .slv-login-bottom{display:block!important}
 }
 </style>
 </body>
