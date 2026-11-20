@@ -1252,6 +1252,28 @@ input:focus,select:focus,textarea:focus{border-color:#b9954e!important;box-shado
  background:#fff!important;
 }
 </style>
+<style id="slv-pan-find-apply-white-final-v2">
+html body #loginView .slv-login-brand button.slv-pan-find-tile,
+html body #loginView .slv-login-brand button.slv-pan-apply-tile,
+html body #loginView .slv-login-brand button.slv-pan-find-tile *,
+html body #loginView .slv-login-brand button.slv-pan-apply-tile *{
+ color:#fff!important;
+ -webkit-text-fill-color:#fff!important;
+}
+html body #loginView .slv-login-brand button.slv-pan-find-tile > b,
+html body #loginView .slv-login-brand button.slv-pan-apply-tile > b{
+ color:#fff!important;
+ -webkit-text-fill-color:#fff!important;
+ font-size:clamp(21px,2.5vw,28px)!important;
+ font-weight:900!important;
+}
+@media(max-width:720px){
+ html body #loginView .slv-login-brand button.slv-pan-find-tile > b,
+ html body #loginView .slv-login-brand button.slv-pan-apply-tile > b{
+  font-size:19px!important;
+ }
+}
+</style>
 </head>
 <body>
 <div aria-label="Transaction successful" aria-live="polite" class="slv-tx-success" id="slvTxSuccess" role="status"><div class="slv-tx-success-card"><div class="slv-tx-success-check">✓</div><h3>Transaction Successful</h3><p>SLV Communications • Payment Recorded</p><div class="slv-tx-success-amount" id="slvTxSuccessAmount">₹0.00</div><p id="slvTxSuccessCount">Wallet balances updated</p><div class="slv-tx-success-line"></div></div></div>
