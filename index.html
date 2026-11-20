@@ -6389,6 +6389,27 @@ html body #loginView .slv-login-brand button.slv-login-square.slv-pan-apply-tile
 }
 </style>
 
+
+<!-- Make all three login quick-service tiles identical in size -->
+<style id="slv-login-three-equal-tiles">
+#loginView .slv-login-brand .slv-pan-apply-tile{
+ grid-column:1/-1!important;
+ justify-self:center!important;
+ width:calc((100% - 18px)/2)!important;
+ max-width:230px!important;
+ min-width:0!important;
+ aspect-ratio:1/1!important;
+}
+@media(max-width:720px){
+ #loginView .slv-login-brand .slv-pan-apply-tile{
+  width:calc((100% - 12px)/2)!important;
+  max-width:160px!important;
+  min-width:0!important;
+  aspect-ratio:1/1!important;
+ }
+}
+</style>
+
 </body>
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
