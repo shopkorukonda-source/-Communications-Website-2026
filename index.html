@@ -1255,10 +1255,12 @@ input:focus,select:focus,textarea:focus{border-color:#b9954e!important;box-shado
 </header>
 <!-- LOGIN: premium visual shell; original authentication IDs and handlers preserved -->
 <main class="card slv-premium-login" id="loginView">
-<div class="slv-login-brand"></div>
+<div class="slv-login-brand"><div class="slv-login-brand">
+<a aria-label="Open SLV Job Alerts website" class="slv-job-alerts-link" href="/job-alerts/" rel="noopener noreferrer" target="_blank">💼 SLV Job Alerts <span>Open Job Alerts ↗</span></a>
+</div>
 <div class="slv-login-panel">
 <div class="slv-login-quick-links" aria-label="Quick links">
-<a aria-label="Open SLV Job Alerts website" class="slv-job-alerts-link" href="/job-alerts/" rel="noopener noreferrer" target="_blank">💼 SLV Job Alerts <span>Open Job Alerts ↗</span></a>
+
 <button type="button" class="slv-login-quick-btn" onclick="slvTrackingOpen()">📋 PAN Find</button>
 <button type="button" class="slv-login-quick-btn" onclick="slv93Open()">🧾 PAN Apply</button>
 </div>
@@ -6135,6 +6137,35 @@ body:has(#loginView:not(.hidden)) .main-header .sub-title{
 @media(max-width:720px){
  #loginView .slv-login-brand{min-height:125px!important}
  #loginView .slv-login-panel .slv-login-quick-links{margin-bottom:18px!important}
+}
+</style>
+
+<!-- SLV Job Updates square tile in left white panel; PAN shortcuts stay in login card -->
+<style id="slv-job-updates-square-left">
+#loginView .slv-login-brand{
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ min-height:440px!important;padding:20px!important;
+}
+#loginView .slv-login-brand .slv-job-alerts-link{
+ box-sizing:border-box!important;display:flex!important;flex-direction:column!important;
+ align-items:center!important;justify-content:center!important;text-align:center!important;
+ gap:12px!important;width:172px!important;height:172px!important;min-height:172px!important;
+ margin:0!important;padding:16px!important;border:1px solid rgba(226,177,67,.8)!important;
+ border-radius:18px!important;background:linear-gradient(145deg,#071d3d 0%,#0c3975 62%,#1457a0 100%)!important;
+ color:#fff!important;text-decoration:none!important;font-size:17px!important;font-weight:900!important;
+ box-shadow:0 7px 18px rgba(11,51,106,.14)!important;
+}
+#loginView .slv-login-brand .slv-job-alerts-link span{
+ display:block!important;white-space:normal!important;text-align:center!important;
+ font-size:11px!important;line-height:1.35!important;color:#ffe6a0!important;
+}
+#loginView .slv-login-panel .slv-login-quick-links .slv-job-alerts-link{display:none!important}
+@media(max-width:720px){
+ #loginView .slv-login-brand{min-height:190px!important;padding:16px!important}
+ #loginView .slv-login-brand .slv-job-alerts-link{
+  width:132px!important;height:132px!important;min-height:132px!important;
+  font-size:14px!important;padding:12px!important;gap:8px!important;
+ }
 }
 </style>
 </body>
