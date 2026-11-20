@@ -5809,10 +5809,10 @@ window.slvUWRefresh=init;
   const row=hub.querySelector('.slv-five-buttons');if(!row)return;
   const buttons=[...row.querySelectorAll('button')];
   categories.forEach((c,i)=>{
-   const b=buttons[i];if(!b)return;b.dataset.cat=c.id;b.onclick=()=>window.slvChooseCategory('admin',c.id);
+   const b=buttons[i];if(!b)return;b.dataset.cat=c.id;b.onclick=()=>window.slvChooseAdminCategory(c.id);
    const title=b.querySelector('b');if(title)title.textContent=c.name;
   });
-  window.slvChooseCategory=function(role,id){
+  window.slvChooseAdminCategory=function(id){
    const target=document.getElementById('slv-admin-results');if(!target)return;
    row.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.cat===id));
    let items=[];try{items=typeof getServices==='function'?getServices():[]}catch(e){}
