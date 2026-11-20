@@ -5379,15 +5379,27 @@ if(categoryButton){
  left=Math.max(0,Math.min(left,hub.clientWidth-maxWidth));
  /* Keep the dropdown in normal document flow below the category row.
     This prevents it covering attendance/shift cards on mobile. */
- out.style.setProperty('position','relative','important');
+ hub.style.setProperty('display','block','important');
+ hub.style.setProperty('height','auto','important');
+ hub.style.setProperty('min-height','0','important');
+ hub.style.setProperty('overflow','visible','important');
+ out.style.setProperty('position','static','important');
+ out.style.setProperty('float','none','important');
+ out.style.setProperty('clear','both','important');
+ out.style.setProperty('display','block','important');
  out.style.setProperty('left','auto','important');
  out.style.setProperty('right','auto','important');
  out.style.setProperty('top','auto','important');
+ out.style.setProperty('bottom','auto','important');
  out.style.setProperty('inset','auto','important');
- out.style.setProperty('margin-left',left+'px','important');
- out.style.setProperty('margin-top','10px','important');
- out.style.setProperty('width',maxWidth+'px','important');
- out.style.setProperty('max-width','calc(100% - 16px)','important');
+ out.style.setProperty('transform','none','important');
+ out.style.setProperty('margin','10px 0 0','important');
+ out.style.setProperty('padding','0','important');
+ out.style.setProperty('width','100%','important');
+ out.style.setProperty('max-width','100%','important');
+ out.style.setProperty('height','auto','important');
+ out.style.setProperty('min-height','0','important');
+ out.style.setProperty('overflow','visible','important');
 }
 
 let select=document.getElementById('slvTxService');
@@ -5777,7 +5789,18 @@ window.slvUWRefresh=init;
 <style id="slv-flow-category-dropdown-position-20261121">
 #employeeView .slv-five-hub>.slv-category-results{position:relative!important;z-index:10!important;transform:none!important}
 </style>
-</body>
+<style id="slv-force-flow-dropdown-20261121">
+#employeeView .slv-five-hub{display:block!important;height:auto!important;min-height:0!important;overflow:visible!important;contain:none!important}
+#employeeView .slv-five-hub>.slv-category-results{
+ position:static!important;display:block!important;float:none!important;clear:both!important;
+ inset:auto!important;transform:none!important;width:100%!important;max-width:100%!important;
+ height:auto!important;min-height:0!important;overflow:visible!important;
+ margin:10px 0 0!important;padding:0!important;z-index:1!important;
+}
+#employeeView .slv-five-hub>.slv-category-results:empty{display:none!important}
+#employeeView .slv-five-hub .slv-compact-service-menu,
+#employeeView .slv-five-hub .slv-compact-service-list{position:static!important;display:flex!important;flex-direction:column!important;align-items:flex-start!important;flex-wrap:nowrap!important;height:auto!important;min-height:0!important;max-height:300px!important;overflow-y:auto!important}
+</style></body>
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
 <!-- SLV Quick Links: popup accessed from employee side menu; cloud read uses authenticated RLS. -->
