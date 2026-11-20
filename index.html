@@ -6372,3 +6372,22 @@ body:has(#loginView:not(.hidden)) .main-header .sub-title{display:none!important
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
 <!-- SLV Quick Links: popup accessed from employee side menu; cloud read uses authenticated RLS. -->
+
+<!-- Final override: keep PAN quick-link labels pure white against global gold button theme -->
+<style id="slv-pan-label-white-final">
+html body #loginView .slv-login-brand button.slv-login-square.slv-pan-find-tile > b,
+html body #loginView .slv-login-brand button.slv-login-square.slv-pan-apply-tile > b{
+ color:#ffffff!important;
+ -webkit-text-fill-color:#ffffff!important;
+ font-size:clamp(21px,2.5vw,28px)!important;
+ font-weight:900!important;
+ letter-spacing:.2px!important;
+ text-shadow:0 1px 3px rgba(0,0,0,.18)!important;
+}
+@media(max-width:720px){
+ html body #loginView .slv-login-brand button.slv-login-square.slv-pan-find-tile > b,
+ html body #loginView .slv-login-brand button.slv-login-square.slv-pan-apply-tile > b{
+  color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;font-size:19px!important;font-weight:900!important;
+ }
+}
+</style>
