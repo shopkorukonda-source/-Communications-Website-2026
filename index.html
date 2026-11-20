@@ -5372,16 +5372,18 @@ hub.querySelectorAll('[data-cat]').forEach(b=>{
 out.replaceChildren();out.dataset.openCategory=cat;
 const categoryButton=Array.from(hub.querySelectorAll('[data-cat]')).find(b=>b.dataset.cat===cat);
 if(categoryButton){
- const hubRect=hub.getBoundingClientRect();
  const buttonRect=categoryButton.getBoundingClientRect();
- const maxWidth=Math.min(270,Math.max(160,hub.clientWidth-16));
- let left=buttonRect.left-hubRect.left+hub.scrollLeft;
- if(left+maxWidth>hub.clientWidth-8)left=buttonRect.right-hubRect.left+hub.scrollLeft-maxWidth;
- left=Math.max(8,Math.min(left,hub.clientWidth-maxWidth-8));
+ const viewportWidth=document.documentElement.clientWidth||window.innerWidth;
+ const maxWidth=Math.min(270,Math.max(160,viewportWidth-24));
+ let left=buttonRect.left;
+ if(left+maxWidth>viewportWidth-8)left=buttonRect.right-maxWidth;
+ left=Math.max(8,Math.min(left,viewportWidth-maxWidth-8));
+ out.style.position='fixed';
  out.style.left=left+'px';
  out.style.right='auto';
- out.style.top=(buttonRect.bottom-hubRect.top+hub.scrollTop+6)+'px';
+ out.style.top=(buttonRect.bottom+6)+'px';
  out.style.width=maxWidth+'px';
+ out.style.maxWidth='calc(100vw - 16px)';
 }
 
 let select=document.getElementById('slvTxService');
@@ -5766,6 +5768,10 @@ window.slvUWRefresh=init;
 #employeeView .slv-five-hub .slv-compact-service-option.selected{background:#d6eaf8!important;border-color:#83b2d2!important}
 @keyframes slvServicesReveal{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){#employeeView .slv-five-hub>.slv-category-results{animation:none!important}}
+</style>
+
+<style id="slv-fixed-category-dropdown-position-20261121">
+#employeeView .slv-five-hub>.slv-category-results{position:fixed!important;z-index:9999!important;transform:none!important}
 </style>
 </body>
 </html>
