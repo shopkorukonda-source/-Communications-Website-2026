@@ -5882,8 +5882,11 @@ window.slvUWRefresh=init;
    if(!btn)return result;
    const hubRect=hub.getBoundingClientRect();
    const btnRect=btn.getBoundingClientRect();
-   const width=Math.min(320,Math.max(190,hub.clientWidth));
-   let left=btnRect.left-hubRect.left;
+   const row=hub.querySelector('.slv-five-buttons');
+   const width=Math.min(270,Math.max(120,hub.clientWidth-16));
+   /* Include the horizontal category-strip scroll so the menu stays below
+      the actual selected card, not at the left edge of the screen. */
+   let left=btnRect.left-hubRect.left+(row?.scrollLeft||0);
    left=Math.max(0,Math.min(left,hub.clientWidth-width));
    out.style.setProperty('position','relative','important');
    out.style.setProperty('float','none','important');
