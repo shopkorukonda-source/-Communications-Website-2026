@@ -1307,6 +1307,69 @@ hr{border:0;border-top:1px solid var(--slv-line)}
 .slv-selected-service-banner strong{font-size:16px;color:#123f70}
 #servicesView #slvServiceSearch,#servicesView .slv-service-picker,#servicesView .slv-native-service-label,#servicesView #slvTxService,#servicesView #slvCloudCheckout>button[onclick*="slvTxLoadServices"]{display:none!important}
 </style>
+<style id="slv-login-theme-refresh-2026">
+/* Login-only visual refresh: deep teal, aqua highlights, and a softer glass-like workspace */
+body:has(#loginView:not(.hidden)){
+ background:
+  radial-gradient(ellipse at 12% 18%,rgba(38,214,190,.22),transparent 34%),
+  radial-gradient(ellipse at 88% 82%,rgba(48,126,222,.25),transparent 38%),
+  linear-gradient(135deg,#071a2c 0%,#0b2c43 52%,#102e50 100%);
+ min-height:100vh;
+}
+body:has(#loginView:not(.hidden)) .app{max-width:1120px}
+body:has(#loginView:not(.hidden)) .main-header{
+ background:transparent;border:0;box-shadow:none;color:#e9fbff;
+ padding:24px 12px 8px;
+}
+body:has(#loginView:not(.hidden)) .main-header:before,
+body:has(#loginView:not(.hidden)) .main-header:after{display:none}
+body:has(#loginView:not(.hidden)) .header-title{color:#e9fbff;letter-spacing:2.6px}
+body:has(#loginView:not(.hidden)) .sub-title{color:#a9c9d8}
+#loginView.slv-premium-login{
+ max-width:940px;grid-template-columns: .95fr 1.05fr;
+ margin:30px auto 56px;border:1px solid rgba(176,231,239,.2);
+ border-radius:28px;background:#f9fcfd;
+ box-shadow:0 32px 100px rgba(0,8,20,.42),0 0 0 1px rgba(255,255,255,.04);
+}
+#loginView .slv-login-brand{
+ min-height:490px;justify-content:center;padding:54px 46px;
+ background:
+  radial-gradient(circle at 85% 15%,rgba(75,238,211,.28),transparent 34%),
+  radial-gradient(circle at 10% 90%,rgba(48,125,211,.3),transparent 38%),
+  linear-gradient(150deg,#073b48 0%,#075a66 48%,#103d66 100%);
+}
+#loginView .slv-login-brand:before,#loginView .slv-login-brand:after{border-color:rgba(194,255,246,.17)}
+#loginView .slv-brand-overline{color:#9ef3df;letter-spacing:3.5px}
+#loginView .slv-login-brand h2{color:#fff;font-size:32px;letter-spacing:1.8px}
+#loginView .slv-login-brand p{color:#c9f4ec;line-height:1.8}
+#loginView .slv-login-panel{padding:54px 48px 42px}
+#loginView .slv-login-intro h3{color:#123a4b}
+#loginView .slv-login-intro p{color:#718b96}
+#loginView label{color:#315564}
+#loginView input,#loginView select{
+ background:#f3f8f8;border:1px solid #d5e5e5;border-radius:12px;color:#163c4b;
+ transition:border-color .18s ease,box-shadow .18s ease,background .18s ease;
+}
+#loginView input:focus,#loginView select:focus{
+ border-color:#159d91;background:#fff;box-shadow:0 0 0 4px rgba(21,157,145,.12);outline:0;
+}
+#loginView .slv-password-toggle{color:#087e78}
+#loginView .slv-signin-btn{
+ background:linear-gradient(105deg,#087e78,#12a994 58%,#167eaa);
+ border-radius:13px;box-shadow:0 12px 25px rgba(8,137,127,.23);
+}
+#loginView .slv-signin-btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+#loginView .slv-login-trust{color:#718b96}
+#loginView .slv-login-bottom{background:#f1f7f7;border-color:#e0eceb;color:#66818a}
+#loginView .slv-login-bottom span{color:#159d91}
+@media(max-width:720px){
+ #loginView.slv-premium-login{grid-template-columns:1fr;margin:18px 10px 34px}
+ #loginView .slv-login-brand{min-height:230px;padding:34px 26px;align-items:center;text-align:center}
+ #loginView .slv-login-brand h2{font-size:25px}
+ #loginView .slv-login-panel{padding:32px 25px}
+ #loginView .slv-login-bottom{grid-column:1}
+}
+</style>
 </head>
 <body>
 <div aria-label="Transaction successful" aria-live="polite" class="slv-tx-success" id="slvTxSuccess" role="status"><div class="slv-tx-success-card"><div class="slv-tx-success-check">✓</div><h3>Transaction Successful</h3><p>SLV Communications • Payment Recorded</p><div class="slv-tx-success-amount" id="slvTxSuccessAmount">₹0.00</div><p id="slvTxSuccessCount">Wallet balances updated</p><div class="slv-tx-success-line"></div></div></div>
