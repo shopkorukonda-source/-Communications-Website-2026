@@ -6410,6 +6410,78 @@ html body #loginView .slv-login-brand button.slv-login-square.slv-pan-apply-tile
 }
 </style>
 
+
+<!-- Apple-style smooth minimal login transition; other loaders remain unchanged -->
+<style id="slv-apple-minimal-login-transition">
+#slvLoadingOverlay:has(.slv-loader-card.slv-login-mode){
+ background:rgba(246,248,251,.82)!important;
+ -webkit-backdrop-filter:blur(18px) saturate(1.25)!important;
+ backdrop-filter:blur(18px) saturate(1.25)!important;
+ color:#1d1d1f!important;
+}
+#slvLoadingOverlay .slv-loader-card.slv-login-mode{
+ width:min(310px,86vw)!important;
+ padding:30px 26px 27px!important;
+ border:1px solid rgba(0,0,0,.055)!important;
+ border-radius:24px!important;
+ background:rgba(255,255,255,.94)!important;
+ box-shadow:0 18px 55px rgba(0,0,0,.10),0 2px 8px rgba(0,0,0,.035)!important;
+ color:#1d1d1f!important;
+ overflow:hidden!important;
+ animation:slvAppleCardIn .38s cubic-bezier(.2,.75,.25,1) both!important;
+}
+#slvLoadingOverlay .slv-loader-card.slv-login-mode:before{display:none!important}
+#slvLoadingOverlay .slv-loader-card.slv-login-mode .slv-loader-brand{
+ color:#1d1d1f!important;font-size:32px!important;font-style:normal!important;
+ letter-spacing:-1.8px!important;text-shadow:none!important;font-weight:700!important;
+}
+#slvLoadingOverlay .slv-loader-card.slv-login-mode .slv-loader-brand:after{
+ width:34px!important;height:2px!important;margin:8px auto 0!important;
+ background:#d2d2d7!important;
+}
+#slvLoadingOverlay .slv-loader-card.slv-login-mode .slv-loader-sub{
+ color:#86868b!important;font-size:9px!important;letter-spacing:2.4px!important;
+}
+#slvLoadingOverlay .slv-loader-card.slv-login-mode .slv-loader-symbol{
+ height:76px!important;margin:15px 0 7px!important;
+}
+#slvLoadingOverlay .slv-loader-card.slv-login-mode .slv-s-letter{
+ display:block!important;font-size:48px!important;font-style:normal!important;
+ font-weight:700!important;letter-spacing:-2px!important;color:#0071e3!important;
+ text-shadow:none!important;animation:slvAppleLogoBreathe 1.8s ease-in-out infinite!important;
+}
+#slvLoadingOverlay .slv-loader-card.slv-login-mode .slv-v-mark,
+#slvLoadingOverlay .slv-loader-card.slv-login-mode .slv-check-ring{display:none!important}
+#slvLoadingOverlay .slv-loader-card.slv-login-mode .slv-progress{
+ height:3px!important;margin:14px 3px 13px!important;background:#e8e8ed!important;
+ border-radius:20px!important;overflow:hidden!important;
+}
+#slvLoadingOverlay .slv-loader-card.slv-login-mode .slv-progress span{
+ width:32%!important;height:100%!important;border-radius:20px!important;
+ background:#0071e3!important;animation:slvAppleProgress 1.25s ease-in-out infinite!important;
+}
+#slvLoadingOverlay .slv-loader-card.slv-login-mode .slv-loader-message{
+ color:#6e6e73!important;font-size:13px!important;font-weight:500!important;
+ letter-spacing:.1px!important;min-height:20px!important;
+}
+@keyframes slvAppleCardIn{
+ from{opacity:0;transform:translateY(8px) scale(.985)}
+ to{opacity:1;transform:translateY(0) scale(1)}
+}
+@keyframes slvAppleLogoBreathe{
+ 0%,100%{opacity:.72;transform:scale(.97)}
+ 50%{opacity:1;transform:scale(1.035)}
+}
+@keyframes slvAppleProgress{
+ 0%{transform:translateX(-125%)}
+ 100%{transform:translateX(340%)}
+}
+@media(prefers-reduced-motion:reduce){
+ #slvLoadingOverlay .slv-loader-card.slv-login-mode,
+ #slvLoadingOverlay .slv-loader-card.slv-login-mode *{animation:none!important}
+}
+</style>
+
 </body>
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
