@@ -6482,6 +6482,21 @@ html body #loginView .slv-login-brand button.slv-login-square.slv-pan-apply-tile
 }
 </style>
 
+<style id="slv-transition-cleanup">
+/* SLV premium transition cleanup: show only the progress indicator */
+#slvLoadingOverlay .slv-loader-card.slv-login-mode .slv-loader-brand,
+#slvLoadingOverlay .slv-loader-card.slv-login-mode .slv-loader-sub,
+#slvLoadingOverlay .slv-loader-card.slv-login-mode .slv-loader-symbol,
+#slvLoadingOverlay .slv-loader-card.slv-login-mode .slv-loader-message{
+ display:none!important;
+}
+#slvLoadingOverlay .slv-loader-card.slv-login-mode{
+ min-height:0!important;padding:26px 28px!important;
+}
+#slvLoadingOverlay .slv-loader-card.slv-login-mode .slv-progress{
+ display:block!important;width:min(230px,65vw)!important;margin:0!important;
+}
+</style>
 </body>
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
