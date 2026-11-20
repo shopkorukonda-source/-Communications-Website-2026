@@ -5356,12 +5356,39 @@ const cardAction=/download|print|printout|printing|duplicate.?copy|pdf|pvc/i;
 const names={bank:'Banking & Payments',gov:'Government Services',print:'Printing & Documents',booking:'Bookings & Applications',other:'Other Services',cards:'Card Downloads & Prints'};
 function groupFor(name){if(cardType.test(name)&&cardAction.test(name))return 'cards';for(const [key,re] of Object.entries(groups))if(re.test(name))return key;return 'other'}
 function escapeText(x){return String(x||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+window.slvAnimateCategoryPanel=function(out,opening){
+ if(!out)return;
+ out.style.setProperty('overflow','hidden','important');
+ out.style.setProperty('transition','height 260ms cubic-bezier(.22,.61,.36,1), opacity 220ms ease, margin 260ms ease','important');
+ if(opening){
+  out.style.setProperty('height','0px','important');
+  out.style.setProperty('opacity','0','important');
+  out.style.setProperty('margin-top','0px','important');
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+   out.style.setProperty('height',out.scrollHeight+'px','important');
+   out.style.setProperty('opacity','1','important');
+   out.style.setProperty('margin-top','10px','important');
+  }));
+  const finish=(e)=>{if(e.propertyName!=='height')return;out.style.setProperty('height','auto','important');out.style.setProperty('overflow','visible','important');out.removeEventListener('transitionend',finish)};
+  out.addEventListener('transitionend',finish);
+ }else{
+  out.style.setProperty('height',out.scrollHeight+'px','important');
+  out.style.setProperty('opacity','1','important');
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+   out.style.setProperty('height','0px','important');
+   out.style.setProperty('opacity','0','important');
+   out.style.setProperty('margin-top','0px','important');
+  }));
+  const finish=(e)=>{if(e.propertyName!=='height')return;out.replaceChildren();out.dataset.openCategory='';out.style.setProperty('height','auto','important');out.style.setProperty('opacity','1','important');out.style.setProperty('margin-top','10px','important');out.style.setProperty('overflow','visible','important');out.removeEventListener('transitionend',finish)};
+  out.addEventListener('transitionend',finish);
+ }
+};
 window.slvChooseCategory=async function(role,cat,forceOpen=false){
 const hub=document.querySelector('#'+role+'View .slv-five-hub');if(!hub)return;
 const out=document.getElementById('slv-'+role+'-results');if(!out)return;
 const wasOpen=out.dataset.openCategory===cat&&out.childElementCount>0;
 if(role==='employee'&&!forceOpen&&wasOpen){
- out.replaceChildren();out.dataset.openCategory='';
+ window.slvAnimateCategoryPanel(out,false);
  hub.querySelectorAll('[data-cat]').forEach(b=>{b.classList.remove('active');b.setAttribute('aria-expanded','false');const a=b.querySelector('.slv-category-arrow');if(a)a.textContent='▾';});
  return;
 }
@@ -5409,9 +5436,9 @@ if(role==='employee'&&!options.length&&typeof window.slvTxLoadServices==='functi
  try{await window.slvTxLoadServices(true)}catch(e){p.textContent='Services load కాలేదు. Internet / login చెక్ చేయండి.';return}
  select=document.getElementById('slvTxService');options=select?Array.from(select.options).filter(o=>o.value&&!o.disabled):[];
 }
-if(!options.length){const p=document.createElement('p');p.textContent='Services are not available right now. Please refresh services.';out.append(p);return}
+if(!options.length){const p=document.createElement('p');p.textContent='Services are not available right now. Please refresh services.';out.append(p);window.slvAnimateCategoryPanel(out,true);return}
 const matches=options.filter(o=>groupFor(o.textContent||'')===cat);
-if(!matches.length){const p=document.createElement('p');p.textContent='ఈ Categoryలో ప్రస్తుతం Active Services లేవు.';out.append(p);return}
+if(!matches.length){const p=document.createElement('p');p.textContent='ఈ Categoryలో ప్రస్తుతం Active Services లేవు.';out.append(p);window.slvAnimateCategoryPanel(out,true);return}
 if(role==='employee'){
  const panel=document.createElement('div');panel.className='slv-compact-service-menu';
  const list=document.createElement('div');list.className='slv-compact-service-list';list.hidden=false;
@@ -5422,10 +5449,10 @@ if(role==='employee'){
   const native=document.getElementById('slvTxService');if(native){native.value=o.value;native.dispatchEvent(new Event('change',{bubbles:true}));}
   document.getElementById('slvCloudCheckout')?.scrollIntoView({behavior:'smooth',block:'start'});
  });list.append(item)});
- panel.append(list);out.append(panel);return;
+ panel.append(list);out.append(panel);window.slvAnimateCategoryPanel(out,true);return;
 }
 const grid=document.createElement('div');grid.className='slv-service-items';
-for(const o of matches){const btn=document.createElement('button');btn.type='button';btn.textContent=o.textContent.trim();btn.onclick=()=>{if(typeof window.showAdminSection==='function'){try{window.showAdminSection('adminServices')}catch(e){}}document.getElementById('servicesAdminList')?.scrollIntoView({behavior:'smooth'});};grid.append(btn)}out.append(grid)
+for(const o of matches){const btn=document.createElement('button');btn.type='button';btn.textContent=o.textContent.trim();btn.onclick=()=>{if(typeof window.showAdminSection==='function'){try{window.showAdminSection('adminServices')}catch(e){}}document.getElementById('servicesAdminList')?.scrollIntoView({behavior:'smooth'});};grid.append(btn)}out.append(grid);window.slvAnimateCategoryPanel(out,true)
 };
 const observe=()=>{const sel=document.getElementById('slvTxService');if(!sel)return;let pending=false;new MutationObserver(()=>{if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;for(const role of ['employee','admin']){const active=document.querySelector('#'+role+'View .slv-five-buttons button.active');if(active)window.slvChooseCategory(role,active.dataset.cat,true)}})}).observe(sel,{childList:true});};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',observe);else observe();
