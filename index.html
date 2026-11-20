@@ -5601,6 +5601,32 @@ window.slvUWRefresh=init;
 #employeeView .slv-compact-service-option:active{background:#d7eafa!important;border-color:#8fb7d8!important}
 @media(max-width:640px){#adminView .slv-five-buttons>button,#employeeView .slv-five-buttons>button{flex-basis:126px!important;min-width:126px!important;min-height:84px!important;padding:9px 7px!important}#adminView .slv-five-buttons button:last-child,#employeeView .slv-five-buttons button:last-child{grid-column:auto!important}}
 </style>
+
+<script id="slv-category-hover-open-20261120">
+/* Desktop: open the matching service list as soon as the pointer enters a category.
+   Touch devices continue to use the existing tap handler. */
+(function(){
+ function bindCategoryHover(){
+  const canHover=window.matchMedia&&window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  if(!canHover)return;
+  ['employee','admin'].forEach(role=>{
+   const hub=document.querySelector('#'+role+'View .slv-five-hub');
+   if(!hub||hub.dataset.hoverBound==='1')return;
+   hub.dataset.hoverBound='1';
+   hub.querySelectorAll('.slv-five-buttons [data-cat]').forEach(button=>{
+    button.addEventListener('pointerenter',function(){
+     const cat=this.getAttribute('data-cat');
+     if(cat&&typeof window.slvChooseCategory==='function'){
+      window.slvChooseCategory(role,cat);
+     }
+    });
+   });
+  });
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindCategoryHover);
+ else bindCategoryHover();
+})();
+</script>
 </body>
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
