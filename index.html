@@ -1243,6 +1243,15 @@ input:focus,select:focus,textarea:focus{border-color:#b9954e!important;box-shado
 #loginView button.slv-password-toggle svg path,
 #loginView button.slv-password-toggle svg circle{stroke:#000!important;color:#000!important;fill:none!important}
 </style>
+<style id="slv-login-gold-focus">
+#loginView #loginId:focus,
+#loginView #loginPass:focus{
+ border:1.5px solid #D4AF37!important;
+ outline:none!important;
+ box-shadow:0 0 0 3px rgba(212,175,55,.24)!important;
+ background:#fff!important;
+}
+</style>
 </head>
 <body>
 <div aria-label="Transaction successful" aria-live="polite" class="slv-tx-success" id="slvTxSuccess" role="status"><div class="slv-tx-success-card"><div class="slv-tx-success-check">✓</div><h3>Transaction Successful</h3><p>SLV Communications • Payment Recorded</p><div class="slv-tx-success-amount" id="slvTxSuccessAmount">₹0.00</div><p id="slvTxSuccessCount">Wallet balances updated</p><div class="slv-tx-success-line"></div></div></div>
