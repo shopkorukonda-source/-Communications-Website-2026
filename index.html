@@ -5373,18 +5373,21 @@ out.replaceChildren();out.dataset.openCategory=cat;
 const categoryButton=Array.from(hub.querySelectorAll('[data-cat]')).find(b=>b.dataset.cat===cat);
 if(categoryButton){
  const buttonRect=categoryButton.getBoundingClientRect();
- const viewportWidth=document.documentElement.clientWidth||window.innerWidth;
- const maxWidth=Math.min(270,Math.max(160,viewportWidth-24));
- let left=buttonRect.left;
- if(left+maxWidth>viewportWidth-8)left=buttonRect.right-maxWidth;
- left=Math.max(8,Math.min(left,viewportWidth-maxWidth-8));
- out.style.setProperty('position','fixed','important');
- out.style.setProperty('left',left+'px','important');
+ const hubRect=hub.getBoundingClientRect();
+ const maxWidth=Math.min(270,Math.max(160,hub.clientWidth-16));
+ let left=buttonRect.left-hubRect.left+hub.scrollLeft;
+ left=Math.max(0,Math.min(left,hub.clientWidth-maxWidth));
+ /* Keep the dropdown in normal document flow below the category row.
+    This prevents it covering attendance/shift cards on mobile. */
+ out.style.setProperty('position','relative','important');
+ out.style.setProperty('left','auto','important');
  out.style.setProperty('right','auto','important');
- out.style.setProperty('top',(buttonRect.bottom+6)+'px','important');
- out.style.setProperty('width',maxWidth+'px','important');
- out.style.setProperty('max-width','calc(100vw - 16px)','important');
+ out.style.setProperty('top','auto','important');
  out.style.setProperty('inset','auto','important');
+ out.style.setProperty('margin-left',left+'px','important');
+ out.style.setProperty('margin-top','10px','important');
+ out.style.setProperty('width',maxWidth+'px','important');
+ out.style.setProperty('max-width','calc(100% - 16px)','important');
 }
 
 let select=document.getElementById('slvTxService');
@@ -5771,8 +5774,8 @@ window.slvUWRefresh=init;
 @media(prefers-reduced-motion:reduce){#employeeView .slv-five-hub>.slv-category-results{animation:none!important}}
 </style>
 
-<style id="slv-fixed-category-dropdown-position-20261121">
-#employeeView .slv-five-hub>.slv-category-results{position:fixed!important;z-index:9999!important;transform:none!important}
+<style id="slv-flow-category-dropdown-position-20261121">
+#employeeView .slv-five-hub>.slv-category-results{position:relative!important;z-index:10!important;transform:none!important}
 </style>
 </body>
 </html>
