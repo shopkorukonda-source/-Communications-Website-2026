@@ -6031,6 +6031,52 @@ body:has(#loginView:not(.hidden)) .main-header .sub-title{
  body:has(#loginView:not(.hidden)) .main-header .header-title{font-size:clamp(20px,6vw,30px)!important;letter-spacing:1px!important}
 }
 </style>
+
+<!-- SLV login: two independent white cards with ultra-thin watermark borders -->
+<style id="slv-login-two-white-panels">
+#loginView.slv-premium-login{
+ display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+ gap:18px!important;max-width:930px!important;padding:0!important;
+ background:transparent!important;border:0!important;border-radius:0!important;
+ box-shadow:none!important;overflow:visible!important;
+}
+#loginView .slv-login-brand{
+ min-width:0!important;min-height:440px!important;margin:0!important;
+ box-sizing:border-box!important;display:flex!important;
+ background:linear-gradient(145deg,#fff 0%,#fbfcfe 55%,#f6f9fc 100%)!important;
+ color:#243b53!important;border:1px solid rgba(12,20,30,.22)!important;
+ outline:0!important;border-radius:17px!important;
+ box-shadow:0 5px 18px rgba(24,42,64,.045),inset 0 0 0 1px rgba(255,255,255,.9)!important;
+}
+#loginView .slv-login-brand:before,#loginView .slv-login-brand:after{
+ border-color:rgba(16,35,56,.055)!important;
+}
+#loginView .slv-brand-overline{color:#78899b!important}
+#loginView .slv-login-brand h2{
+ color:#b98524!important;text-shadow:none!important;
+}
+#loginView .slv-login-brand p{color:#718096!important}
+#loginView .slv-login-panel{
+ min-width:0!important;min-height:440px!important;align-self:stretch!important;
+ display:flex!important;flex-direction:column!important;justify-content:center!important;
+ box-sizing:border-box!important;padding:38px!important;
+ background:linear-gradient(145deg,#fff 0%,#fff 72%,#f9fbfd 100%)!important;
+ border:1px solid rgba(12,20,30,.22)!important;border-radius:17px!important;
+ box-shadow:0 5px 18px rgba(24,42,64,.045),inset 0 0 0 1px rgba(255,255,255,.9)!important;
+}
+@media(max-width:720px){
+ #loginView.slv-premium-login{
+  display:grid!important;grid-template-columns:minmax(0,1fr)!important;
+  gap:12px!important;max-width:500px!important;margin:20px auto 28px!important;
+ }
+ #loginView .slv-login-brand{
+  min-height:190px!important;margin:0!important;padding:24px 18px!important;
+ }
+ #loginView .slv-login-panel{
+  min-height:unset!important;padding:26px 24px!important;
+ }
+}
+</style>
 </body>
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
