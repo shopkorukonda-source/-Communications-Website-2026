@@ -5854,3 +5854,39 @@ window.slvUWRefresh=init;
 @media(max-width:640px){#adminServices .row{grid-template-columns:1fr}#servicesAdminList{grid-template-columns:1fr}#servicesAdminList .emp-row{grid-template-columns:minmax(0,1fr) auto auto}#servicesView{padding:10px!important}#slvCloudCheckout{padding:12px!important}#adminServices{padding:14px!important}}
 @media(prefers-reduced-motion:reduce){#slvEmployeeServiceSection .slv-link-card{transition:none}}
 </style>
+<style id="slv-employee-category-compact-dropdown-20261120">
+/* Employee dashboard: one compact horizontal row of category-name dropdown controls. */
+#employeeView .slv-five-hub{padding:12px 10px!important}
+#employeeView .slv-hub-head{margin-bottom:7px!important}
+#employeeView .slv-five-buttons{
+ display:flex!important;flex-wrap:nowrap!important;gap:7px!important;
+ overflow-x:auto!important;overflow-y:hidden!important;
+ padding:2px 1px 8px!important;scrollbar-width:thin!important;
+}
+#employeeView .slv-five-buttons button{
+ flex:0 0 auto!important;width:auto!important;min-width:0!important;
+ min-height:0!important;height:auto!important;grid-column:auto!important;
+ display:flex!important;flex-direction:column!important;
+ align-items:center!important;justify-content:center!important;gap:4px!important;
+ padding:8px 11px 7px!important;margin:0!important;
+ background:#f5f8fb!important;color:#244761!important;
+ border:1px solid #d9e4ed!important;border-radius:8px!important;
+ box-shadow:none!important;font-size:11px!important;white-space:nowrap!important;
+}
+#employeeView .slv-five-buttons button svg{display:none!important}
+#employeeView .slv-five-buttons button b{font-size:11px!important;line-height:1.2!important;font-weight:700!important}
+#employeeView .slv-five-buttons button:after{
+ content:"▾";display:block!important;font-size:15px!important;line-height:11px!important;
+ color:#2878a8!important;font-weight:800!important;
+}
+#employeeView .slv-five-buttons button.active{
+ background:#174a78!important;color:#fff!important;border-color:#174a78!important;
+}
+#employeeView .slv-five-buttons button.active:after{color:#fff!important}
+#employeeView .slv-category-results{margin-top:8px!important;padding-top:10px!important}
+@media(max-width:560px){
+ #employeeView .slv-five-hub{padding:10px 8px!important}
+ #employeeView .slv-five-buttons button{padding:7px 9px 6px!important;font-size:10px!important}
+ #employeeView .slv-five-buttons button b{font-size:10px!important}
+}
+</style>
