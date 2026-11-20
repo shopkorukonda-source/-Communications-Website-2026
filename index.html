@@ -575,8 +575,9 @@ body:has(#loginView:not(.hidden)) .sub-title{font-size:11px;color:#64748b;opacit
 #loginView input,#loginView select{width:100%;height:47px;border-radius:11px;border:1px solid #dce4ef;background:#f8fafd;color:#17365b;font-size:14px;padding:0 13px;outline:none;box-shadow:none}
 #loginView input:focus,#loginView select:focus{border-color:#2c6ad4;background:#fff;box-shadow:0 0 0 3px rgba(44,106,212,.11)}
 .slv-password-field{position:relative}
-#loginView .slv-password-field input{padding-right:68px}
-#loginView .slv-password-toggle{position:absolute;right:7px;top:6px;width:55px;height:35px;padding:0;border:0;background:transparent;box-shadow:none;color:#2463b8;font-size:12px;font-weight:700}
+#loginView .slv-password-field input{padding-right:48px}
+#loginView .slv-password-toggle{position:absolute;right:8px;top:6px;width:34px;height:35px;padding:0;border:0;background:transparent!important;box-shadow:none;color:#2463b8;display:flex;align-items:center;justify-content:center;cursor:pointer}
+#loginView .slv-password-toggle svg{width:19px;height:19px;display:block;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 #loginView .slv-signin-btn{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;height:49px;margin-top:24px;border:0;border-radius:11px;background:linear-gradient(100deg,#1453ad,#2677dc);color:#fff;font-size:14px;font-weight:800;box-shadow:0 9px 22px rgba(28,95,190,.24);cursor:pointer}
 #loginView .slv-signin-btn:hover{filter:brightness(1.06)}
 .slv-login-trust{display:flex;justify-content:space-between;gap:8px;margin-top:20px;color:#8491a4;font-size:10px}
@@ -1278,7 +1279,7 @@ input:focus,select:focus,textarea:focus{border-color:#b9954e!important;box-shado
 <input autocomplete="username" id="loginId" placeholder="Enter employee ID"/>
 </div>
 <label for="loginPass">Password</label>
-<div class="slv-password-field"><input autocomplete="current-password" id="loginPass" placeholder="Enter your password" type="password"/><button aria-label="Show or hide password" class="slv-password-toggle" onclick="slvTogglePassword()" title="Show / hide password" type="button">Show</button></div>
+<div class="slv-password-field"><input autocomplete="current-password" id="loginPass" placeholder="Enter your password" type="password"/><button aria-label="Show password" class="slv-password-toggle" onclick="slvTogglePassword()" title="Show password" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/><path d="M9.9 5.2A11.4 11.4 0 0 1 12 5c5.2 0 9 4.5 10 7-.4 1-1.3 2.3-2.7 3.5"/><path d="M6.2 6.2C3.8 7.7 2.5 10 2 12c1 2.5 4.8 7 10 7 1.1 0 2.1-.2 3-.5"/></svg></button></div>
 <button class="slv-signin-btn" onclick="handleLogin()">Secure Sign In <span aria-hidden="true">→</span></button>
 <div class="slv-login-trust"><span>◈ Secure access</span><span>● Authorized staff only</span></div>
 </div>
@@ -3535,7 +3536,7 @@ try {
 })();
 </script>
 <script>
-function slvTogglePassword(){const input=document.getElementById('loginPass');const button=document.querySelector('.slv-password-toggle');if(!input)return;const show=input.type==='password';input.type=show?'text':'password';if(button)button.textContent=show?'Hide':'Show';}
+function slvTogglePassword(){const input=document.getElementById('loginPass');const button=document.querySelector('.slv-password-toggle');if(!input||!button)return;const show=input.type==='password';input.type=show?'text':'password';button.setAttribute('aria-label',show?'Hide password':'Show password');button.title=show?'Hide password':'Show password';button.innerHTML=show?'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>':'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/><path d="M9.9 5.2A11.4 11.4 0 0 1 12 5c5.2 0 9 4.5 10 7-.4 1-1.3 2.3-2.7 3.5"/><path d="M6.2 6.2C3.8 7.7 2.5 10 2 12c1 2.5 4.8 7 10 7 1.1 0 2.1-.2 3-.5"/></svg>';}
 </script>
 <script>
 /* Clocks use Asia/Kolkata independent of device time zone; style preference saved locally. */
