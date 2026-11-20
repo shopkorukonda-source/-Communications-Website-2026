@@ -5361,9 +5361,14 @@ const hub=document.querySelector('#'+role+'View .slv-five-hub');if(!hub)return;
 const out=document.getElementById('slv-'+role+'-results');if(!out)return;
 const wasOpen=out.dataset.openCategory===cat&&out.childElementCount>0;
 if(role==='employee'&&!forceOpen&&wasOpen){
- out.replaceChildren();out.dataset.openCategory='';hub.querySelectorAll('[data-cat]').forEach(b=>b.classList.remove('active'));return;
+ out.replaceChildren();out.dataset.openCategory='';
+ hub.querySelectorAll('[data-cat]').forEach(b=>{b.classList.remove('active');b.setAttribute('aria-expanded','false');const a=b.querySelector('.slv-category-arrow');if(a)a.textContent='▾';});
+ return;
 }
-hub.querySelectorAll('[data-cat]').forEach(b=>b.classList.toggle('active',b.dataset.cat===cat));
+hub.querySelectorAll('[data-cat]').forEach(b=>{
+ const selected=b.dataset.cat===cat;b.classList.toggle('active',selected);b.setAttribute('aria-expanded',String(selected));
+ const a=b.querySelector('.slv-category-arrow');if(a)a.textContent=selected?'▴':'▾';
+});
 out.replaceChildren();out.dataset.openCategory=cat;
 const h=document.createElement('h3');h.textContent=names[cat]||'Services';out.append(h);
 let select=document.getElementById('slvTxService');
@@ -5631,6 +5636,33 @@ window.slvUWRefresh=init;
  else bindCategoryHover();
 })();
 </script>
+
+<script id="slv-visible-category-arrows-20261120">
+(function(){
+ function addCategoryArrows(){
+  ['employee','admin'].forEach(role=>{
+   const hub=document.querySelector('#'+role+'View .slv-five-hub');if(!hub)return;
+   hub.querySelectorAll('.slv-five-buttons [data-cat]').forEach(btn=>{
+    btn.setAttribute('aria-expanded','false');
+    if(!btn.querySelector('.slv-category-arrow')){
+     const arrow=document.createElement('span');arrow.className='slv-category-arrow';arrow.textContent='▾';arrow.setAttribute('aria-hidden','true');btn.append(arrow);
+    }
+   });
+  });
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',addCategoryArrows);
+ else addCategoryArrows();
+ const mo=new MutationObserver(addCategoryArrows);
+ mo.observe(document.documentElement,{childList:true,subtree:true});
+})();
+</script>
+<style id="slv-visible-category-arrows-css">
+.slv-five-buttons [data-cat]{position:relative!important;padding-bottom:23px!important}
+.slv-five-buttons [data-cat] .slv-category-arrow{display:inline-flex!important;align-items:center!important;justify-content:center!important;position:absolute!important;bottom:5px!important;left:50%!important;transform:translateX(-50%)!important;font-size:15px!important;line-height:16px!important;font-weight:800!important;color:inherit!important;opacity:.95!important;pointer-events:none!important}
+.slv-five-buttons [data-cat][aria-expanded="true"] .slv-category-arrow{color:#fff!important}
+.slv-category-results{display:block!important;overflow:visible!important}
+#employeeView .slv-compact-service-list{display:flex!important;flex-wrap:wrap!important;gap:7px!important;padding:9px!important;background:#f7fafd!important;border:1px solid #d8e3ec!important;border-radius:10px!important}
+</style>
 </body>
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
