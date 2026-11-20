@@ -5951,6 +5951,15 @@ window.slvUWRefresh=init;
  background:transparent!important;border:0!important;box-shadow:none!important;
 }
 </style>
+
+<!-- SLV login: hide both decorative brand logos while keeping authentication form intact -->
+<style id="slv-login-remove-brand-logos">
+body:has(#loginView:not(.hidden)) .main-header .header-title{display:none!important}
+#loginView .slv-login-brand{display:none!important}
+#loginView.slv-premium-login{display:block!important;grid-template-columns:minmax(0,1fr)!important;max-width:560px!important}
+#loginView .slv-login-panel{width:100%!important;box-sizing:border-box!important;padding:38px 42px!important}
+@media(max-width:720px){#loginView.slv-premium-login{max-width:500px!important}#loginView .slv-login-panel{padding:30px 25px!important}}
+</style>
 </body>
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
