@@ -5712,12 +5712,12 @@ window.slvUWRefresh=init;
 .slv-five-buttons{grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:9px!important}
 .slv-five-buttons button{min-width:0!important;min-height:100px!important;padding:10px 6px!important;font-size:22px!important}
 .slv-five-buttons button b{font-size:11px!important}
-.slv-service-category-wrap{border:1px solid #dbe5ed;border-radius:15px;padding:15px;background:#fff;margin:10px 0 14px}
-.slv-service-category-wrap h3{margin:0 0 5px;color:#102a43!important}
-.slv-service-category-wrap .slv-category-help{margin:0 0 12px;color:#536579!important;font-size:13px}
-.slv-service-category-row{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
-.slv-service-category-row button{min-width:0;min-height:72px;padding:9px 6px!important;margin:0!important;background:#f0f7f8!important;color:#102a43!important;border:1px solid #c9dfe1!important;border-radius:11px!important;font-size:12px!important;font-weight:750!important;box-shadow:none!important}
-.slv-service-category-row button.active{background:linear-gradient(135deg,#092c45,#087e83)!important;color:#fff!important;border-color:#087e83!important}
+.slv-service-category-wrap{border:0;border-radius:10px;padding:8px 0;background:transparent;margin:8px 0 12px}
+.slv-service-category-row{display:flex;flex-wrap:nowrap;gap:7px;align-items:stretch;overflow-x:auto;overflow-y:hidden;padding:2px 1px 8px;scrollbar-width:thin}
+.slv-service-category-row button{display:flex!important;flex:0 0 auto;align-items:center;justify-content:space-between;gap:7px;min-width:0;min-height:40px;padding:8px 10px!important;margin:0!important;background:#f4f8fb!important;color:#173b5d!important;border:1px solid #d6e2ed!important;border-radius:8px!important;font-size:11px!important;font-weight:700!important;box-shadow:none!important;white-space:nowrap}
+.slv-service-category-row button .slv-category-arrow{font-size:15px;line-height:1;color:#2878a8}
+.slv-service-category-row button.active{background:#174a78!important;color:#fff!important;border-color:#174a78!important}
+.slv-service-category-row button.active .slv-category-arrow{color:#fff!important}
 .slv-category-service-select{width:100%;min-height:44px;padding:10px 12px;border:1px solid #aebfce;border-radius:9px;background:#fff;color:#111827;font-size:14px}
 .slv-category-service-select:disabled{background:#f1f5f9;color:#64748b}
 #slvCloudCheckout>.slv-service-picker,#slvCloudCheckout>label[for="slvServiceSearch"],#slvCloudCheckout>.slv-native-service-label,#slvCloudCheckout>#slvTxService,#slvCloudCheckout>button[onclick*="slvTxLoadServices"]{display:none!important}
@@ -5727,8 +5727,8 @@ window.slvUWRefresh=init;
 #adminView .slv-five-buttons button.active{background:#e1f2f1!important;border:2px solid #087e83!important}
 #adminView .slv-service-items button{color:#102a43!important;background:#f8fbfc!important}
 #adminView .slv-clock-style,#employeeView .slv-clock-style{display:inline-block!important;min-width:88px!important;padding:5px 8px!important;border:1px solid #b8cbd2!important;border-radius:8px!important;background:#fff!important;color:#102a43!important}
-@media(max-width:900px){.slv-five-buttons{grid-template-columns:repeat(3,minmax(0,1fr))!important}.slv-service-category-row{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(max-width:560px){.slv-five-buttons{display:grid!important;grid-template-columns:repeat(6,minmax(128px,1fr))!important;overflow-x:auto!important;padding-bottom:7px}.slv-service-category-wrap{padding:10px}.slv-service-category-row{display:flex;overflow-x:auto;padding-bottom:6px}.slv-service-category-row button{flex:0 0 132px}}
+@media(max-width:900px){.slv-five-buttons{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+@media(max-width:560px){.slv-five-buttons{display:grid!important;grid-template-columns:repeat(6,minmax(128px,1fr))!important;overflow-x:auto!important;padding-bottom:7px}.slv-service-category-wrap{padding:5px 0}.slv-service-category-row button{min-height:38px;padding:7px 9px!important;font-size:10px!important}}
 </style>
 <script id="SLV_CATEGORY_THEME_MERGE_SCRIPT_20261120">
 (function(){
@@ -5749,14 +5749,12 @@ window.slvUWRefresh=init;
   const checkout=document.getElementById('slvCloudCheckout');
   if(!checkout||document.getElementById('slvEmployeeCategoryPicker'))return;
   const wrap=document.createElement('section');wrap.id='slvEmployeeCategoryPicker';wrap.className='slv-service-category-wrap';
-  const h=document.createElement('h3');h.textContent='Choose Service Category';
-  const help=document.createElement('p');help.className='slv-category-help';help.textContent='ముందుగా Category ఎంచుకోండి. ఆ Categoryలోని Services మాత్రమే Dropdownలో కనిపిస్తాయి.';
-  const row=document.createElement('div');row.className='slv-service-category-row';
+  const row=document.createElement('div');row.className='slv-service-category-row';row.setAttribute('aria-label','Service categories');
   const label=document.createElement('label');label.textContent='Select Service';
   const select=document.createElement('select');select.id='slvCategoryServiceSelect';select.className='slv-category-service-select';select.disabled=true;
-  select.add(new Option('ముందుగా Service Category ఎంచుకోండి',''));
-  categories.forEach(c=>{const btn=document.createElement('button');btn.type='button';btn.dataset.category=c.id;btn.textContent=c.name;btn.addEventListener('click',()=>choose(c.id));row.append(btn);});
-  wrap.append(h,help,row,label,select);
+  select.add(new Option('ముందుగా Category ఎంచుకోండి',''));
+  categories.forEach(c=>{const btn=document.createElement('button');btn.type='button';btn.dataset.category=c.id;btn.innerHTML='<span class="slv-category-name"></span><span class="slv-category-arrow" aria-hidden="true">▾</span>';btn.querySelector('.slv-category-name').textContent=c.name;btn.setAttribute('aria-label',c.name+' dropdown');btn.addEventListener('click',()=>choose(c.id));row.append(btn);});
+  wrap.append(row,label,select);
   checkout.insertBefore(wrap,checkout.firstChild.nextSibling);
   function choose(id){
    row.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.category===id));
