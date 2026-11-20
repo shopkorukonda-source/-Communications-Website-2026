@@ -5358,8 +5358,12 @@ function groupFor(name){if(cardType.test(name)&&cardAction.test(name))return 'ca
 function escapeText(x){return String(x||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 window.slvChooseCategory=async function(role,cat){
 const hub=document.querySelector('#'+role+'View .slv-five-hub');if(!hub)return;
+const active=hub.querySelector('[data-cat="'+cat+'"]');
+const wasActive=active?.classList.contains('active');
 hub.querySelectorAll('[data-cat]').forEach(b=>b.classList.toggle('active',b.dataset.cat===cat));
-const out=document.getElementById('slv-'+role+'-results');if(!out)return;out.replaceChildren();
+const out=document.getElementById('slv-'+role+'-results');if(!out)return;
+if(role==='employee'&&wasActive&&out.dataset.openCategory===cat){out.replaceChildren();out.dataset.openCategory='';return;}
+out.replaceChildren();out.dataset.openCategory=cat;
 const h=document.createElement('h3');h.textContent=names[cat]||'Services';out.append(h);
 let select=document.getElementById('slvTxService');
 let options=select?Array.from(select.options).filter(o=>o.value&&!o.disabled):[];
@@ -5373,16 +5377,15 @@ const matches=options.filter(o=>groupFor(o.textContent||'')===cat);
 if(!matches.length){const p=document.createElement('p');p.textContent='ఈ Categoryలో ప్రస్తుతం Active Services లేవు.';out.append(p);return}
 if(role==='employee'){
  const panel=document.createElement('div');panel.className='slv-compact-service-menu';
- const trigger=document.createElement('button');trigger.type='button';trigger.className='slv-compact-service-trigger';trigger.textContent='Select Service  ▾';trigger.setAttribute('aria-expanded','false');
- const list=document.createElement('div');list.className='slv-compact-service-list';list.hidden=true;
- trigger.addEventListener('click',()=>{list.hidden=!list.hidden;trigger.setAttribute('aria-expanded',String(!list.hidden));trigger.textContent=list.hidden?'Select Service  ▾':'Select Service  ▴';});
+ const list=document.createElement('div');list.className='slv-compact-service-list';list.hidden=false;
  matches.forEach(o=>{const item=document.createElement('button');item.type='button';item.className='slv-compact-service-option';item.textContent=o.textContent.trim();item.addEventListener('click',()=>{
-  trigger.textContent=o.textContent.trim()+'  ▾';list.hidden=true;trigger.setAttribute('aria-expanded','false');
+  list.querySelectorAll('.slv-compact-service-option').forEach(x=>x.classList.remove('selected'));
+  item.classList.add('selected');
   if(typeof showView==='function')showView('servicesView');
   const native=document.getElementById('slvTxService');if(native){native.value=o.value;native.dispatchEvent(new Event('change',{bubbles:true}));}
   document.getElementById('slvCloudCheckout')?.scrollIntoView({behavior:'smooth',block:'start'});
  });list.append(item)});
- panel.append(trigger,list);out.append(panel);return;
+ panel.append(list);out.append(panel);return;
 }
 const grid=document.createElement('div');grid.className='slv-service-items';
 for(const o of matches){const btn=document.createElement('button');btn.type='button';btn.textContent=o.textContent.trim();btn.onclick=()=>{if(typeof window.showAdminSection==='function'){try{window.showAdminSection('adminServices')}catch(e){}}document.getElementById('servicesAdminList')?.scrollIntoView({behavior:'smooth'});};grid.append(btn)}out.append(grid)
@@ -5591,6 +5594,8 @@ window.slvUWRefresh=init;
 #adminView .slv-five-buttons,#employeeView .slv-five-buttons{display:flex!important;flex-wrap:nowrap!important;gap:8px!important;overflow-x:auto!important;overflow-y:hidden!important;padding:3px 2px 10px!important;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
 #adminView .slv-five-buttons>button,#employeeView .slv-five-buttons>button{flex:0 0 145px!important;min-width:145px!important;min-height:92px!important;scroll-snap-align:start}
 #employeeView .slv-compact-service-menu{position:relative;margin:8px 0 4px;max-width:100%}
+#employeeView .slv-category-results:has(.slv-compact-service-menu){display:block!important}
+#employeeView .slv-compact-service-option.selected{background:#d2e8f8!important;border-color:#78a9ce!important;color:#123d60!important}
 #employeeView .slv-compact-service-trigger{width:100%!important;min-height:42px!important;padding:10px 12px!important;text-align:left!important;background:#f5f8fb!important;color:#244761!important;border:1px solid #cbdbe8!important;border-radius:8px!important;font-size:13px!important;font-weight:650!important;box-shadow:none!important}
 #employeeView .slv-compact-service-list{display:flex;flex-wrap:wrap;align-items:flex-start;gap:7px;margin-top:7px;max-height:220px;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:9px;background:#f7fafd;border:1px solid #d8e3ec;border-radius:10px;box-shadow:0 3px 10px rgba(20,50,75,.07)}
 #employeeView .slv-compact-service-list[hidden]{display:none!important}
