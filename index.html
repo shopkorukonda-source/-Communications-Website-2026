@@ -6523,6 +6523,37 @@ html body #loginView .slv-login-brand button.slv-login-square.slv-pan-apply-tile
  animation:slvAppleProgress 1.25s ease-in-out infinite!important;
 }
 </style>
+<style id="slv-mobile-quick-tiles-final">
+/* FINAL MOBILE QUICK TILES: equal 3-column layout and white PAN labels */
+@media(max-width:720px){
+ html body #loginView .slv-login-brand{
+  display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  grid-template-rows:auto!important;align-items:stretch!important;
+  justify-items:stretch!important;align-content:center!important;
+  gap:10px!important;min-height:0!important;height:auto!important;
+  padding:18px 14px!important;
+ }
+ html body #loginView .slv-login-brand > .slv-login-square{
+  display:flex!important;grid-column:auto!important;grid-row:auto!important;
+  width:100%!important;max-width:none!important;min-width:0!important;
+  height:auto!important;min-height:0!important;aspect-ratio:1/1!important;
+  margin:0!important;padding:7px 4px!important;gap:7px!important;
+  border-radius:14px!important;box-sizing:border-box!important;
+ }
+ html body #loginView .slv-login-brand > .slv-login-square .slv-tile-icon{
+  font-size:clamp(22px,7vw,30px)!important;line-height:1!important;
+ }
+ html body #loginView .slv-login-brand > .slv-login-square > b{
+  color:#fff!important;-webkit-text-fill-color:#fff!important;
+  font-size:clamp(11px,3.4vw,14px)!important;font-weight:800!important;
+  line-height:1.15!important;letter-spacing:0!important;text-shadow:none!important;
+  white-space:normal!important;
+ }
+ html body #loginView .slv-login-brand > .slv-login-square > i{
+  display:none!important;
+ }
+}
+</style>
 </body>
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
