@@ -5438,11 +5438,12 @@ if(role==='employee'&&!options.length&&typeof window.slvTxLoadServices==='functi
 }
 if(!options.length){const p=document.createElement('p');p.textContent='Services are not available right now. Please refresh services.';out.append(p);window.slvAnimateCategoryPanel(out,true);return}
 const matches=options.filter(o=>groupFor(o.textContent||'')===cat);
+const serviceLabel=o=>(o.textContent||'').replace(/\s*(?:[-–—|:]\s*)?(?:₹|Rs\.?\s*)\s*[\d,]+(?:\.\d{1,2})?/gi,'').replace(/\s*[-–—|:]\s*$/,'').trim();
 if(!matches.length){const p=document.createElement('p');p.textContent='ఈ Categoryలో ప్రస్తుతం Active Services లేవు.';out.append(p);window.slvAnimateCategoryPanel(out,true);return}
 if(role==='employee'){
  const panel=document.createElement('div');panel.className='slv-compact-service-menu';
  const list=document.createElement('div');list.className='slv-compact-service-list';list.hidden=false;
- matches.forEach(o=>{const item=document.createElement('button');item.type='button';item.className='slv-compact-service-option';item.textContent=o.textContent.trim();item.addEventListener('click',()=>{
+ matches.forEach(o=>{const item=document.createElement('button');item.type='button';item.className='slv-compact-service-option';item.textContent=serviceLabel(o);item.addEventListener('click',()=>{
   list.querySelectorAll('.slv-compact-service-option').forEach(x=>x.classList.remove('selected'));
   item.classList.add('selected');
   if(typeof showView==='function')showView('servicesView');
@@ -5452,7 +5453,7 @@ if(role==='employee'){
  panel.append(list);out.append(panel);window.slvAnimateCategoryPanel(out,true);return;
 }
 const grid=document.createElement('div');grid.className='slv-service-items';
-for(const o of matches){const btn=document.createElement('button');btn.type='button';btn.textContent=o.textContent.trim();btn.onclick=()=>{if(typeof window.showAdminSection==='function'){try{window.showAdminSection('adminServices')}catch(e){}}document.getElementById('servicesAdminList')?.scrollIntoView({behavior:'smooth'});};grid.append(btn)}out.append(grid);window.slvAnimateCategoryPanel(out,true)
+for(const o of matches){const btn=document.createElement('button');btn.type='button';btn.textContent=serviceLabel(o);btn.onclick=()=>{if(typeof window.showAdminSection==='function'){try{window.showAdminSection('adminServices')}catch(e){}}document.getElementById('servicesAdminList')?.scrollIntoView({behavior:'smooth'});};grid.append(btn)}out.append(grid);window.slvAnimateCategoryPanel(out,true)
 };
 const observe=()=>{const sel=document.getElementById('slvTxService');if(!sel)return;let pending=false;new MutationObserver(()=>{if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;for(const role of ['employee','admin']){const active=document.querySelector('#'+role+'View .slv-five-buttons button.active');if(active)window.slvChooseCategory(role,active.dataset.cat,true)}})}).observe(sel,{childList:true});};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',observe);else observe();
@@ -5906,6 +5907,34 @@ window.slvUWRefresh=init;
 })();
 </script>
 
+
+<!-- SLV dropdown service tiles: match category button dimensions; show names only -->
+<style id="slv-dropdown-service-tile-size">
+#adminView .slv-five-hub .slv-compact-service-option,
+#employeeView .slv-five-hub .slv-compact-service-option,
+#adminView .slv-five-hub .slv-service-items>button,
+#employeeView .slv-five-hub .slv-service-items>button{
+ box-sizing:border-box!important;flex:0 0 145px!important;width:145px!important;min-width:145px!important;max-width:145px!important;
+ min-height:92px!important;height:92px!important;padding:10px 8px!important;
+ display:flex!important;align-items:center!important;justify-content:center!important;text-align:center!important;
+ white-space:normal!important;overflow-wrap:anywhere!important;font-size:12px!important;line-height:1.35!important;font-weight:700!important;
+ border-radius:12px!important;
+}
+#adminView .slv-five-hub .slv-compact-service-list,
+#employeeView .slv-five-hub .slv-compact-service-list,
+#adminView .slv-five-hub .slv-service-items,
+#employeeView .slv-five-hub .slv-service-items{
+ display:flex!important;flex-direction:row!important;flex-wrap:wrap!important;align-items:stretch!important;gap:8px!important;
+}
+@media(max-width:650px){
+ #adminView .slv-five-hub .slv-compact-service-option,
+ #employeeView .slv-five-hub .slv-compact-service-option,
+ #adminView .slv-five-hub .slv-service-items>button,
+ #employeeView .slv-five-hub .slv-service-items>button{
+  flex-basis:126px!important;width:126px!important;min-width:126px!important;max-width:126px!important;min-height:84px!important;height:84px!important;
+ }
+}
+</style>
 </body>
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
