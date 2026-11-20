@@ -1300,6 +1300,13 @@ hr{border:0;border-top:1px solid var(--slv-line)}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}
 
 </style>
+<style id="slv-category-billing-flow-2026">
+.slv-category-service-select{display:block;width:100%;max-width:620px;margin:14px 0 4px;padding:14px 15px;border:1px solid #cbd8e8;border-radius:12px;background:#fff;color:#17375e;font-size:15px;font-weight:700;box-shadow:0 4px 14px rgba(17,55,94,.07)}
+.slv-selected-service-banner{display:flex;flex-direction:column;gap:4px;margin:8px 0 14px;padding:12px 14px;border:1px solid #cbdcf0;border-radius:12px;background:#f2f7fd;color:#244362}
+.slv-selected-service-banner span{font-size:11px;color:#657b94;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.slv-selected-service-banner strong{font-size:16px;color:#123f70}
+#servicesView #slvServiceSearch,#servicesView .slv-service-picker,#servicesView .slv-native-service-label,#servicesView #slvTxService,#servicesView #slvCloudCheckout>button[onclick*="slvTxLoadServices"]{display:none!important}
+</style>
 </head>
 <body>
 <div aria-label="Transaction successful" aria-live="polite" class="slv-tx-success" id="slvTxSuccess" role="status"><div class="slv-tx-success-card"><div class="slv-tx-success-check">✓</div><h3>Transaction Successful</h3><p>SLV Communications • Payment Recorded</p><div class="slv-tx-success-amount" id="slvTxSuccessAmount">₹0.00</div><p id="slvTxSuccessCount">Wallet balances updated</p><div class="slv-tx-success-line"></div></div></div>
@@ -1759,6 +1766,7 @@ hr{border:0;border-top:1px solid var(--slv-line)}
 </section>
 <section class="section-box" id="slvCloudCheckout" style="margin:12px 0">
 <h3>💳 Payment &amp; Save</h3>
+<div class="slv-selected-service-banner" aria-live="polite"><span>Selected Service</span><strong id="slvSelectedServiceName">Choose a service from the dashboard</strong></div>
 <label for="slvServiceSearch">🔎 Search Service</label><div class="slv-service-picker"><input aria-controls="slvServiceSuggestions" aria-expanded="false" autocomplete="off" id="slvServiceSearch" placeholder="Type service name (PAN, Xerox, Aadhaar...)" type="search"/><div class="slv-service-suggestions" hidden="" id="slvServiceSuggestions" role="listbox"></div></div><label class="slv-native-service-label" for="slvTxService">Selected Service</label><select aria-label="Selected Cloud Service" id="slvTxService"><option value="">Load services first</option></select>
 <button class="btn-secondary btn-small" onclick="slvTxLoadServices()" type="button">↻ Load Cloud Services</button>
 <section class="section-box hidden" id="slvFinancialBilling" style="border:1px solid #b8d5f5"><h3>🏦 AEPS / PhonePe Billing</h3><div class="grid"><div><label>Service</label><select id="finBillType" onchange="slvFinQuote();slvFinWallets()"><option value="aeps">AEPS Withdrawal</option><option value="cash_upi">Cash → UPI</option><option value="upi_cash">UPI → Cash</option></select></div><div><label>Amount ₹</label><input id="finBillAmount" min="1" oninput="slvFinQuote()" step="0.01" type="number"/></div><div><label>Wallet</label><select id="finBillWallet"><option value="">Choose wallet</option></select></div><div><label>Charge ₹ (Auto Slab)</label><input id="finBillCharge" readonly="" type="text"/></div><div><label>Charge Type</label><select id="finBillMode" onchange="slvFinQuote()"><option value="extra">Extra</option><option value="deduct">Deduct</option></select></div></div><p class="total" id="finBillResult">Enter amount</p><button class="btn-green" id="finBillSave" onclick="slvFinPost()" type="button">☁️ Save Billing</button><p class="muted" id="finBillStatus" role="status"></p><small>Provider transaction must already be completed. Wallet names only; balances hidden.</small></section>
@@ -5433,11 +5441,26 @@ const select=document.getElementById('slvTxService');const options=select?Array.
 if(!options.length){const p=document.createElement('p');p.textContent='Services loading… Login and refresh services if needed.';out.append(p);return}
 const matches=options.filter(o=>groupFor(o.textContent||'')===cat);
 if(!matches.length){const p=document.createElement('p');p.textContent='No card download or print services are configured yet. Add them from Admin Services if required.';out.append(p);return}
-const grid=document.createElement('div');grid.className='slv-service-items';
-for(const o of matches){const btn=document.createElement('button');btn.type='button';btn.textContent=o.textContent.trim();btn.onclick=()=>{
-if(role==='employee'){if(typeof showView==='function')showView('servicesView');const sel=document.getElementById('slvTxService');if(sel){sel.value=o.value;sel.dispatchEvent(new Event('change',{bubbles:true}));}document.getElementById('slvCloudCheckout')?.scrollIntoView({behavior:'smooth',block:'start'});}
-else{const menu=document.querySelector('#adminView [onclick*="adminServices"]');if(typeof window.showAdminSection==='function'){try{window.showAdminSection('adminServices')}catch(e){}}const target=document.getElementById('servicesAdminList');target?.scrollIntoView({behavior:'smooth'});}
-};grid.append(btn)}out.append(grid)
+if(role==='employee'){
+ const picker=document.createElement('select');picker.className='slv-category-service-select';picker.setAttribute('aria-label','Select service for billing');
+ const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent='— Select a service —';picker.append(placeholder);
+ matches.forEach(o=>{const opt=document.createElement('option');opt.value=o.value;opt.textContent=o.textContent.trim();picker.append(opt)});
+ picker.onchange=()=>{
+  if(!picker.value)return;
+  const chosen=matches.find(x=>x.value===picker.value);if(!chosen)return;
+  if(typeof showView==='function')showView('servicesView');
+  const billingSelect=document.getElementById('slvTxService');
+  if(billingSelect){billingSelect.value=chosen.value;billingSelect.dispatchEvent(new Event('change',{bubbles:true}));}
+  const display=document.getElementById('slvSelectedServiceName');if(display)display.textContent=chosen.textContent.trim();
+ };
+ out.append(picker);
+}else{
+ const grid=document.createElement('div');grid.className='slv-service-items';
+ for(const o of matches){const btn=document.createElement('button');btn.type='button';btn.textContent=o.textContent.trim();btn.onclick=()=>{
+  if(typeof window.showAdminSection==='function'){try{window.showAdminSection('adminServices')}catch(e){}}
+  const target=document.getElementById('servicesAdminList');target?.scrollIntoView({behavior:'smooth'});
+ };grid.append(btn)}out.append(grid)
+}
 };
 const observe=()=>{const sel=document.getElementById('slvTxService');if(!sel)return;let pending=false;new MutationObserver(()=>{if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;for(const role of ['employee','admin']){const active=document.querySelector('#'+role+'View .slv-five-buttons button.active');if(active)window.slvChooseCategory(role,active.dataset.cat)}})}).observe(sel,{childList:true});};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',observe);else observe();
