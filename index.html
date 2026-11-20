@@ -5664,6 +5664,124 @@ window.slvUWRefresh=init;
  };
 })();
 </script>
+
+<style id="SLV_CATEGORY_THEME_MERGE_20261120">
+/* SLV service categories + accepted visual themes */
+:root{--slv-merge-navy:#071d35;--slv-merge-teal:#087e83;--slv-merge-ink:#111827}
+#loginView{background:linear-gradient(135deg,#06172d 0%,#0b2c4a 52%,#087e83 100%)!important;border:0!important;border-radius:22px!important;box-shadow:0 24px 70px rgba(2,12,27,.24)!important;color:#111827!important}
+#loginView .slv-login-brand,#loginView .slv-wordmark-hero{background:linear-gradient(135deg,#06172d,#0b3b55 68%,#087e83)!important;color:#fff!important}
+#loginView .slv-signin-btn,#loginView button[type=submit]{background:linear-gradient(110deg,#07334b,#07939a)!important;color:#fff!important;border:0!important}
+#loginView label,#loginView h1,#loginView h2,#loginView p{color:#111827}
+#adminView,#employeeView,#servicesView{color:#111827!important;background:#fff!important}
+#adminView :is(h1,h2,h3,h4,label,p,span,b,strong,td,th,small),#employeeView :is(h1,h2,h3,h4,label,p,span,b,strong,td,th,small),#servicesView :is(h1,h2,h3,h4,label,p,span,b,strong,td,th,small){color:#111827}
+#adminView input,#adminView select,#adminView textarea,#employeeView input,#employeeView select,#employeeView textarea,#servicesView input,#servicesView select,#servicesView textarea{color:#111827!important;background:#fff!important}
+.slv-five-buttons{grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:9px!important}
+.slv-five-buttons button{min-width:0!important;min-height:100px!important;padding:10px 6px!important;font-size:22px!important}
+.slv-five-buttons button b{font-size:11px!important}
+.slv-service-category-wrap{border:1px solid #dbe5ed;border-radius:15px;padding:15px;background:#fff;margin:10px 0 14px}
+.slv-service-category-wrap h3{margin:0 0 5px;color:#102a43!important}
+.slv-service-category-wrap .slv-category-help{margin:0 0 12px;color:#536579!important;font-size:13px}
+.slv-service-category-row{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.slv-service-category-row button{min-width:0;min-height:72px;padding:9px 6px!important;margin:0!important;background:#f0f7f8!important;color:#102a43!important;border:1px solid #c9dfe1!important;border-radius:11px!important;font-size:12px!important;font-weight:750!important;box-shadow:none!important}
+.slv-service-category-row button.active{background:linear-gradient(135deg,#092c45,#087e83)!important;color:#fff!important;border-color:#087e83!important}
+.slv-category-service-select{width:100%;min-height:44px;padding:10px 12px;border:1px solid #aebfce;border-radius:9px;background:#fff;color:#111827;font-size:14px}
+.slv-category-service-select:disabled{background:#f1f5f9;color:#64748b}
+#slvCloudCheckout>.slv-service-picker,#slvCloudCheckout>label[for="slvServiceSearch"],#slvCloudCheckout>.slv-native-service-label,#slvCloudCheckout>#slvTxService,#slvCloudCheckout>button[onclick*="slvTxLoadServices"]{display:none!important}
+#adminView .slv-five-hub{border-color:#dbe5ed!important;background:#fff!important}
+#adminView .slv-hub-head h2,#adminView .slv-five-buttons button b{color:#111827!important}
+#adminView .slv-five-buttons button{background:#f2f7f8!important;color:#102a43!important;border-color:#d3e2e5!important}
+#adminView .slv-five-buttons button.active{background:#e1f2f1!important;border:2px solid #087e83!important}
+#adminView .slv-service-items button{color:#102a43!important;background:#f8fbfc!important}
+#adminView .slv-clock-style,#employeeView .slv-clock-style{display:inline-block!important;min-width:88px!important;padding:5px 8px!important;border:1px solid #b8cbd2!important;border-radius:8px!important;background:#fff!important;color:#102a43!important}
+@media(max-width:900px){.slv-five-buttons{grid-template-columns:repeat(3,minmax(0,1fr))!important}.slv-service-category-row{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:560px){.slv-five-buttons{display:grid!important;grid-template-columns:repeat(6,minmax(128px,1fr))!important;overflow-x:auto!important;padding-bottom:7px}.slv-service-category-wrap{padding:10px}.slv-service-category-row{display:flex;overflow-x:auto;padding-bottom:6px}.slv-service-category-row button{flex:0 0 132px}}
+</style>
+<script id="SLV_CATEGORY_THEME_MERGE_SCRIPT_20261120">
+(function(){
+ const categories=[
+  {id:'gov',name:'Government Services',match:/pan|aadhaar|aadhar|voter|ration|caste|income certificate|residence certificate|birth certificate|death certificate|passport|driving licence|driving license|e.?shram|udyam|scholarship|sainik school|government|govt/},
+  {id:'bank',name:'Banking Services',match:/aeps|money transfer|cash withdrawal|cash deposit|bank|micro.?atm|dmt|account opening|payout/},
+  {id:'bill',name:'Bill Payments',match:/current bill|electricity|power bill|water bill|gas bill|mobile recharge|dth recharge|recharge|bill payment|utility/},
+  {id:'print',name:'Printing & Digital Services',match:/xerox|photocopy|print|lamination|pvc|photo|scan|typing|document|colour|color|digital/},
+  {id:'ticket',name:'Ticket Bookings',match:/apsrtc|bus ticket|private bus|irctc|train ticket|railway|ttd|darshan|flight|ticket booking|hotel booking/},
+  {id:'other',name:'Other Services',match:/.*/}
+ ];
+ function categoryFor(name){
+  const n=String(name||'').toLowerCase();
+  for(let i=0;i<categories.length-1;i++)if(categories[i].match.test(n))return categories[i].id;
+  return 'other';
+ }
+ function addEmployeePicker(){
+  const checkout=document.getElementById('slvCloudCheckout');
+  if(!checkout||document.getElementById('slvEmployeeCategoryPicker'))return;
+  const wrap=document.createElement('section');wrap.id='slvEmployeeCategoryPicker';wrap.className='slv-service-category-wrap';
+  const h=document.createElement('h3');h.textContent='Choose Service Category';
+  const help=document.createElement('p');help.className='slv-category-help';help.textContent='ముందుగా Category ఎంచుకోండి. ఆ Categoryలోని Services మాత్రమే Dropdownలో కనిపిస్తాయి.';
+  const row=document.createElement('div');row.className='slv-service-category-row';
+  const label=document.createElement('label');label.textContent='Select Service';
+  const select=document.createElement('select');select.id='slvCategoryServiceSelect';select.className='slv-category-service-select';select.disabled=true;
+  select.add(new Option('ముందుగా Service Category ఎంచుకోండి',''));
+  categories.forEach(c=>{const btn=document.createElement('button');btn.type='button';btn.dataset.category=c.id;btn.textContent=c.name;btn.addEventListener('click',()=>choose(c.id));row.append(btn);});
+  wrap.append(h,help,row,label,select);
+  checkout.insertBefore(wrap,checkout.firstChild.nextSibling);
+  function choose(id){
+   row.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.category===id));
+   const native=document.getElementById('slvTxService');
+   const options=native?[...native.options].filter(o=>o.value&&categoryFor(o.textContent)===id):[];
+   select.replaceChildren();select.add(new Option(options.length?'— Select '+categories.find(c=>c.id===id).name+' Service —':'ఈ Categoryలో Services లేవు',''));
+   options.forEach(o=>select.add(new Option(o.textContent,o.value)));
+   select.disabled=!options.length;select.value='';
+   if(native){native.value='';native.dispatchEvent(new Event('change',{bubbles:true}));}
+   if(!options.length&&typeof window.slvTxLoadServices==='function'){
+    window.slvTxLoadServices(true).then(()=>choose(id)).catch(()=>{});
+   }
+  }
+  select.addEventListener('change',()=>{
+   const native=document.getElementById('slvTxService');if(!native)return;
+   native.value=select.value;native.dispatchEvent(new Event('change',{bubbles:true}));
+  });
+  window.slvCategoryChoose=choose;
+ }
+ function refreshEmployeePicker(){
+  const picker=document.getElementById('slvCategoryServiceSelect');
+  if(!picker)return;
+  const active=document.querySelector('#slvEmployeeCategoryPicker .slv-service-category-row button.active');
+  if(active&&window.slvCategoryChoose)window.slvCategoryChoose(active.dataset.category);
+ }
+ function patchAdminHub(){
+  const hub=document.querySelector('.slv-five-hub[data-role="admin"]');if(!hub)return;
+  const row=hub.querySelector('.slv-five-buttons');if(!row)return;
+  const buttons=[...row.querySelectorAll('button')];
+  categories.forEach((c,i)=>{
+   const b=buttons[i];if(!b)return;b.dataset.cat=c.id;b.onclick=()=>window.slvChooseCategory('admin',c.id);
+   const title=b.querySelector('b');if(title)title.textContent=c.name;
+  });
+  window.slvChooseCategory=function(role,id){
+   const target=document.getElementById('slv-admin-results');if(!target)return;
+   row.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.cat===id));
+   let items=[];try{items=typeof getServices==='function'?getServices():[]}catch(e){}
+   const filtered=items.filter(s=>categoryFor(s.name||s.service_name)===id);
+   target.replaceChildren();
+   const heading=document.createElement('p');heading.textContent=categories.find(c=>c.id===id)?.name||'Services';target.append(heading);
+   if(!filtered.length){const p=document.createElement('p');p.textContent='ఈ Categoryకి సంబంధించిన services ప్రస్తుతం Admin service listలో లేవు.';target.append(p);return;}
+   const list=document.createElement('div');list.className='slv-service-items';
+   filtered.forEach(s=>{const item=document.createElement('div');item.className='slv-service-option';item.textContent=s.name||s.service_name;list.append(item);});
+   target.append(list);
+  };
+ }
+ function init(){
+  addEmployeePicker();patchAdminHub();
+  const oldLoad=window.slvTxLoadServices;
+  if(typeof oldLoad==='function'&&!oldLoad.__slvCategoryWrapped){
+   const wrapped=async function(...args){const result=await oldLoad.apply(this,args);refreshEmployeePicker();return result;};
+   wrapped.__slvCategoryWrapped=true;window.slvTxLoadServices=wrapped;
+  }
+  if(typeof window.slvTxLoadServices==='function')window.slvTxLoadServices().then(refreshEmployeePicker).catch(()=>{});
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
+</script>
+
 </body>
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
