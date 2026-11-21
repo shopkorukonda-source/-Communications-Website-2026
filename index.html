@@ -5699,17 +5699,18 @@ if(categoryButton){
  hub.style.setProperty('overflow','visible','important');
  const categoryRow=hub.querySelector('.slv-five-buttons');
  const rowRect=categoryRow?categoryRow.getBoundingClientRect():buttonRect;
- const top=rowRect.bottom-hubRect.top+8;
- out.style.setProperty('position','absolute','important');
- out.style.setProperty('z-index','999','important');
+ const top=Math.min(window.innerHeight-90,rowRect.bottom+8);
+ const fixedLeft=Math.max(8,Math.min(window.innerWidth-maxWidth-8,buttonRect.left));
+ out.style.setProperty('position','fixed','important');
+ out.style.setProperty('z-index','2147482000','important');
  out.style.setProperty('float','none','important');
  out.style.setProperty('clear','none','important');
  out.style.setProperty('display','block','important');
- out.style.setProperty('left',Math.max(0,left)+'px','important');
+ out.style.setProperty('left',fixedLeft+'px','important');
  out.style.setProperty('right','auto','important');
  out.style.setProperty('top',top+'px','important');
  out.style.setProperty('bottom','auto','important');
- out.style.setProperty('inset','auto auto auto '+Math.max(0,left)+'px','important');
+ out.style.setProperty('inset','auto auto auto '+fixedLeft+'px','important');
  out.style.setProperty('transform','none','important');
  out.style.setProperty('margin','0','important');
  out.style.setProperty('padding','8px','important');
@@ -9003,8 +9004,19 @@ body.slv-xerox-selected #slvInlineBillingHost #slvXeroxPanel{display:block!impor
    hub.dataset.slvHoverCloseBound='1';
    hub.addEventListener('pointerleave',e=>{
     if(e.pointerType==='touch')return;
+    const out=document.getElementById('slv-'+role+'-results');
+    if(out&&e.relatedTarget&&out.contains(e.relatedTarget))return;
     closeCategory(role);
    });
+   const out=document.getElementById('slv-'+role+'-results');
+   if(out&&!out.dataset.slvHoverCloseBound){
+    out.dataset.slvHoverCloseBound='1';
+    out.addEventListener('pointerleave',e=>{
+     if(e.pointerType==='touch')return;
+     if(e.relatedTarget&&hub.contains(e.relatedTarget))return;
+     closeCategory(role);
+    });
+   }
   });
   const wrap=document.querySelector('.slv-profile-wrap');
   const menu=document.getElementById('slvProfileMenu');
@@ -9022,3 +9034,22 @@ body.slv-xerox-selected #slvInlineBillingHost #slvXeroxPanel{display:block!impor
  observer.observe(document.documentElement,{childList:true,subtree:true});
 })();
 </script>
+\n
+<style id="slv-dropdown-overlay-no-white-panel">
+/* Service dropdown floats over billing/wallet without moving them; no white board behind buttons. */
+#employeeView .slv-five-hub{position:relative!important;overflow:visible!important}
+#employeeView #slv-employee-results.slv-category-results,
+#employeeView #slv-employee-results{
+ position:fixed!important;z-index:2147482000!important;
+ background:transparent!important;border:0!important;border-radius:0!important;
+ box-shadow:none!important;padding:0!important;margin:0!important;
+ min-height:0!important;width:170px!important;max-width:calc(100vw - 16px)!important;
+ overflow:visible!important;pointer-events:auto!important;
+}
+#employeeView #slv-employee-results .slv-compact-service-menu,
+#employeeView #slv-employee-results .slv-compact-service-list{
+ background:transparent!important;border:0!important;border-radius:0!important;
+ box-shadow:none!important;padding:0!important;margin:0!important;
+ width:100%!important;max-width:100%!important;
+}
+</style>
