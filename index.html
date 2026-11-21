@@ -5751,6 +5751,7 @@ if(role==='employee'){
  });
  out.append(list);
  return;
+}
 const grid=document.createElement('div');grid.className='slv-service-items';
 for(const o of matches){const btn=document.createElement('button');btn.type='button';btn.textContent=serviceLabel(o);btn.onclick=()=>{if(typeof window.showAdminSection==='function'){try{window.showAdminSection('adminServices')}catch(e){}}document.getElementById('servicesAdminList')?.scrollIntoView({behavior:'smooth'});};grid.append(btn)}out.append(grid);window.slvAnimateCategoryPanel(out,true)
 };
