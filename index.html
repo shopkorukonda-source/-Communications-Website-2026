@@ -7757,6 +7757,16 @@ html body .slv-five-hub .slv-five-buttons > button[data-cat="print"]::before{
 #employeeView .slv-shift-actions button{color:#fff!important;font-weight:700;text-shadow:none!important}
 #employeeView .slv-shift-actions button:disabled{color:#fff!important;opacity:.65}
 </style>
+
+<style>
+/* Force white text paint on shift action buttons, overriding inherited theme text fills */
+#employeeView .slv-shift-actions button#shiftStartQuickBtn,
+#employeeView .slv-shift-actions button#lunchStartBtn,
+#employeeView .slv-shift-actions button#resumeShiftBtn{color:#fff!important;-webkit-text-fill-color:#fff!important;text-shadow:none!important;font-weight:800!important}
+#employeeView .slv-shift-actions button#shiftStartQuickBtn *,
+#employeeView .slv-shift-actions button#lunchStartBtn *,
+#employeeView .slv-shift-actions button#resumeShiftBtn *{color:#fff!important;-webkit-text-fill-color:#fff!important}
+</style>
 </body>
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
