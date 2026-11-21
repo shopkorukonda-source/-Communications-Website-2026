@@ -7729,22 +7729,24 @@ html body .slv-five-hub .slv-five-buttons > button[data-cat="print"]::before{
 
 <style>
 /* Compact employee shift/leave widget */
-#employeeView>#slvShiftLeaveBox{width:100%;max-width:180px;padding:6px;gap:5px}
+#employeeView>#slvShiftLeaveBox{width:100%;max-width:240px;padding:5px;gap:3px}
 #employeeView .slv-shift-leave-box .slv-shift-details,
 #employeeView .slv-shift-leave-box .slv-leave-management,
-#employeeView .slv-shift-leave-box .slv-shift-actions{padding:5px;margin:0}
-#employeeView .slv-shift-leave-box h4{font-size:10px;margin:0 0 4px}
-#employeeView .slv-shift-leave-box .attendance-stats{grid-template-columns:1fr 1fr;gap:3px}
-#employeeView .slv-shift-leave-box .attendance-stats>div{padding:4px 2px;border-radius:5px}
-#employeeView .slv-shift-leave-box .attendance-stats small{font-size:7px;line-height:1.15}
+#employeeView .slv-shift-leave-box .slv-shift-actions{padding:4px;margin:0}
+#employeeView .slv-shift-leave-box h4{font-size:10px;margin:0 0 3px}
+#employeeView .slv-shift-leave-box .attendance-stats{grid-template-columns:1fr 1fr;gap:2px}
+#employeeView .slv-shift-leave-box .attendance-stats>div{padding:3px 4px;border-radius:4px}
+#employeeView .slv-shift-leave-box .attendance-stats small{font-size:7px;line-height:1.1}
 #employeeView .slv-shift-leave-box .attendance-stats b{font-size:8px;margin-top:1px;overflow-wrap:anywhere}
-#employeeView .slv-leave-management details#slvLeaveDetails>summary{font-size:9px;padding:4px 0}
-#employeeView .slv-shift-actions button{display:block;width:100%;margin:3px 0 0;padding:5px 3px;font-size:9px;border-radius:5px}
+#employeeView .slv-leave-management details#slvLeaveDetails>summary{font-size:9px;padding:3px 0}
+#employeeView .slv-shift-actions{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+#employeeView .slv-shift-actions h4{grid-column:1/-1}
+#employeeView .slv-shift-actions button{display:block;width:100%;margin:0;padding:5px 2px;font-size:9px;border-radius:5px}
 #employeeView .slv-leave-management details#slvLeaveDetails[open]{font-size:9px}
 #employeeView .slv-leave-management details#slvLeaveDetails label{font-size:8px}
 #employeeView .slv-leave-management details#slvLeaveDetails input,
 #employeeView .slv-leave-management details#slvLeaveDetails select{font-size:9px;padding:5px;margin:2px 0 5px}
-@media(max-width:899px){#employeeView>#slvShiftLeaveBox{width:180px;max-width:180px;align-self:flex-end;margin:0 0 8px auto}}
+@media(max-width:899px){#employeeView>#slvShiftLeaveBox{width:240px;max-width:240px;align-self:flex-end;margin:0 0 8px auto}}
 </style>
 </body>
 </html>
