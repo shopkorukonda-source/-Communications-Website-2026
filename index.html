@@ -8240,6 +8240,53 @@ html body .slv-five-hub .slv-five-buttons > button[data-cat="print"]::before{
   }
 }
 </style>
+
+<style>
+/* Make Shift Off / Cash Tally exactly match the wallet card width and restore orange/white styling */
+#employeeView>.slv-wallet-actions{
+  width:165px!important;
+  min-width:165px!important;
+  max-width:165px!important;
+  box-sizing:border-box!important;
+  align-items:stretch!important;
+}
+#employeeView>.slv-wallet-actions>.slv-wallet-widget{
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  flex:0 0 150px!important;
+  box-sizing:border-box!important;
+}
+#employeeView>.slv-wallet-actions>.shift-close-trigger{
+  display:block!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  align-self:stretch!important;
+  flex:0 0 auto!important;
+  box-sizing:border-box!important;
+  background:#f97316!important;
+  background-image:none!important;
+  border:1.5px solid #c2410c!important;
+  color:#fff!important;
+  -webkit-text-fill-color:#fff!important;
+  font-weight:800!important;
+  text-shadow:none!important;
+}
+@media(max-width:899px){
+  #employeeView>.slv-wallet-actions{
+    width:165px!important;
+    min-width:165px!important;
+    max-width:165px!important;
+  }
+  #employeeView>.slv-wallet-actions>.slv-wallet-widget,
+  #employeeView>.slv-wallet-actions>.shift-close-trigger{
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+  }
+}
+</style>
 </body>
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
