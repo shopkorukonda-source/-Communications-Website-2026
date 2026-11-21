@@ -8178,6 +8178,44 @@ html body .slv-five-hub .slv-five-buttons > button[data-cat="print"]::before{
  #employeeView>.slv-wallet-actions>.slv-wallet-widget{width:150px!important;max-width:150px!important}
 }
 </style>
+
+<style>
+/* Keep the original Shift Details card on the right and wallet controls on the left,
+   including narrow/mobile layouts. */
+@media(max-width:899px){
+  #employeeView:not(.hidden){
+    display:grid!important;
+    grid-template-columns:165px minmax(230px,300px)!important;
+    grid-auto-flow:row!important;
+    align-items:start!important;
+    column-gap:8px!important;
+  }
+  #employeeView>.slv-five-hub,
+  #employeeView>.menu-shade,
+  #employeeView>.employee-side-menu,
+  #employeeView>.banner{
+    grid-column:1/-1!important;
+  }
+  #employeeView>#slvShiftLeaveBox{
+    grid-column:2!important;
+    grid-row:2/span 12!important;
+    width:100%!important;
+    max-width:300px!important;
+    align-self:start!important;
+    justify-self:stretch!important;
+    margin:0 0 8px!important;
+  }
+  #employeeView>.slv-wallet-actions{
+    grid-column:1!important;
+    grid-row:2!important;
+    width:165px!important;
+    max-width:165px!important;
+    align-self:start!important;
+    justify-self:start!important;
+    margin:0 0 10px!important;
+  }
+}
+</style>
 </body>
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
