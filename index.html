@@ -1328,20 +1328,20 @@ body:has(#loginView:not(.hidden)) .main-header{
 }
 body:has(#loginView:not(.hidden)) .main-header .slv-brand-mark{
   position:relative!important;z-index:2!important;
-  display:flex!important;flex-direction:column!important;
-  align-items:center!important;justify-content:center!important;
+  display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;
+  align-items:baseline!important;justify-content:center!important;gap:10px!important;white-space:nowrap!important;
   margin:0!important;padding:0 18px!important;
   background:transparent!important;text-align:center!important;
 }
 body:has(#loginView:not(.hidden)) .main-header .slv-brand-main{
   color:#f5cf58!important;-webkit-text-fill-color:#f5cf58!important;
   font-family:Georgia,serif!important;font-size:38px!important;
-  font-weight:900!important;letter-spacing:3px!important;line-height:1!important;
+  font-weight:900!important;letter-spacing:2px!important;line-height:1!important;white-space:nowrap!important;
 }
 body:has(#loginView:not(.hidden)) .main-header .slv-brand-sub{
   color:#fff!important;-webkit-text-fill-color:#fff!important;
   font-size:15px!important;font-weight:800!important;
-  letter-spacing:3px!important;line-height:1.5!important;
+  letter-spacing:1.5px!important;line-height:1!important;white-space:nowrap!important;
 }
 body:has(#loginView:not(.hidden)) .main-header:before,
 body:has(#loginView:not(.hidden)) .main-header:after{
@@ -1359,8 +1359,8 @@ body:has(#loginView:not(.hidden)) .main-header .slv-header-actions,
 body:has(#loginView:not(.hidden)) .main-header #headerSubtitle{display:none!important}
 @media(max-width:600px){
  body:has(#loginView:not(.hidden)) .main-header{min-height:94px!important;padding:14px 10px!important}
- body:has(#loginView:not(.hidden)) .main-header .slv-brand-main{font-size:31px!important}
- body:has(#loginView:not(.hidden)) .main-header .slv-brand-sub{font-size:11px!important;letter-spacing:2px!important}
+ body:has(#loginView:not(.hidden)) .main-header .slv-brand-main{font-size:29px!important;letter-spacing:1.5px!important}
+ body:has(#loginView:not(.hidden)) .main-header .slv-brand-sub{font-size:10px!important;letter-spacing:1px!important}
  body:has(#loginView:not(.hidden)) .main-header:before,
  body:has(#loginView:not(.hidden)) .main-header:after{width:22%!important;height:2px!important}
 }
