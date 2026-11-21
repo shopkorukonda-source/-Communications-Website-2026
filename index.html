@@ -8517,6 +8517,7 @@ html body .slv-five-hub .slv-five-buttons > button[data-cat="print"]::before{
 #slvInlineBillingHost #slvFinancialBilling:not(.hidden){display:block!important}
 #slvInlineBillingHost #slvTxSave{width:100%}
 #employeeView #slvInlineBillingHost input,#employeeView #slvInlineBillingHost select{max-width:100%}
+body.slv-xerox-selected #slvInlineBillingHost #slvXeroxPanel{display:block!important}
 </style>
 <script>
 (function(){
@@ -8531,7 +8532,7 @@ html body .slv-five-hub .slv-five-buttons > button[data-cat="print"]::before{
   const select=document.getElementById('slvTxService');
   const update=()=>{
    const option=select?.selectedOptions?.[0];
-   const label=(option?.textContent||'').replace(/\\s*(?:[•·|–—-]\\s*)?(?:₹|Rs\\.?\\s*)[\\d,]+(?:\\.\\d{1,2})?/gi,'').replace(/[\\s•·|–—-]+$/,'').trim();
+   const label=(option?.textContent||'').replace(/\s*(?:[•·|–—-]\s*)?(?:₹|Rs\.?\s*)[\d,]+(?:\.\d{1,2})?/gi,'').replace(/[\s•·|–—-]+$/,'').trim();
    const title=document.getElementById('slvInlineSelectedService');
    if(title)title.textContent=label||'Select a service from Service Center';
   };
