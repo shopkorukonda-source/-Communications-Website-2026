@@ -7080,6 +7080,73 @@ html body #loginView .slv-signin-btn span{
 #employeeView .slv-five-buttons [data-cat="booking"] b{margin-top:1px!important}
 </style>
 
+
+<style id="slv-logo-only-no-blue-category-tile">
+/* Remove the blue category tile: show only framed brand logo, then category label */
+#adminView .slv-five-buttons [data-cat="gov"],
+#employeeView .slv-five-buttons [data-cat="gov"],
+#adminView .slv-five-buttons [data-cat="bank"],
+#employeeView .slv-five-buttons [data-cat="bank"],
+#adminView .slv-five-buttons [data-cat="bills"],
+#employeeView .slv-five-buttons [data-cat="bills"],
+#adminView .slv-five-buttons [data-cat="print"],
+#employeeView .slv-five-buttons [data-cat="print"],
+#adminView .slv-five-buttons [data-cat="booking"],
+#employeeView .slv-five-buttons [data-cat="booking"]{
+ display:flex!important;flex-direction:column!important;
+ align-items:center!important;justify-content:flex-start!important;
+ gap:9px!important;min-height:112px!important;height:auto!important;
+ padding:5px 4px!important;margin:0!important;
+ background:transparent!important;background-color:transparent!important;
+ border:0!important;border-radius:0!important;
+ box-shadow:none!important;outline:0!important;
+ color:#263b4a!important;
+}
+#adminView .slv-five-buttons [data-cat="gov"]:hover,
+#employeeView .slv-five-buttons [data-cat="gov"]:hover,
+#adminView .slv-five-buttons [data-cat="bank"]:hover,
+#employeeView .slv-five-buttons [data-cat="bank"]:hover,
+#adminView .slv-five-buttons [data-cat="bills"]:hover,
+#employeeView .slv-five-buttons [data-cat="bills"]:hover,
+#adminView .slv-five-buttons [data-cat="print"]:hover,
+#employeeView .slv-five-buttons [data-cat="print"]:hover,
+#adminView .slv-five-buttons [data-cat="booking"]:hover,
+#employeeView .slv-five-buttons [data-cat="booking"]:hover,
+#adminView .slv-five-buttons [data-cat].active,
+#employeeView .slv-five-buttons [data-cat].active{
+ background:transparent!important;border:0!important;box-shadow:none!important;
+}
+#adminView .slv-five-buttons [data-cat="gov"] b,
+#employeeView .slv-five-buttons [data-cat="gov"] b,
+#adminView .slv-five-buttons [data-cat="bank"] b,
+#employeeView .slv-five-buttons [data-cat="bank"] b,
+#adminView .slv-five-buttons [data-cat="bills"] b,
+#employeeView .slv-five-buttons [data-cat="bills"] b,
+#adminView .slv-five-buttons [data-cat="print"] b,
+#employeeView .slv-five-buttons [data-cat="print"] b,
+#adminView .slv-five-buttons [data-cat="booking"] b,
+#employeeView .slv-five-buttons [data-cat="booking"] b{
+ display:block!important;width:100%!important;margin:0!important;
+ padding:0!important;text-align:center!important;
+ color:#263b4a!important;font-size:12px!important;font-weight:700!important;
+ line-height:1.3!important;background:transparent!important;
+}
+#adminView .slv-five-buttons [data-cat="gov"] .slv-category-arrow,
+#employeeView .slv-five-buttons [data-cat="gov"] .slv-category-arrow,
+#adminView .slv-five-buttons [data-cat="bank"] .slv-category-arrow,
+#employeeView .slv-five-buttons [data-cat="bank"] .slv-category-arrow,
+#adminView .slv-five-buttons [data-cat="bills"] .slv-category-arrow,
+#employeeView .slv-five-buttons [data-cat="bills"] .slv-category-arrow,
+#adminView .slv-five-buttons [data-cat="print"] .slv-category-arrow,
+#employeeView .slv-five-buttons [data-cat="print"] .slv-category-arrow,
+#adminView .slv-five-buttons [data-cat="booking"] .slv-category-arrow,
+#employeeView .slv-five-buttons [data-cat="booking"] .slv-category-arrow{
+ position:static!important;transform:none!important;
+ margin:0!important;font-size:13px!important;line-height:12px!important;
+ color:#53636d!important;
+}
+</style>
+
 </body>
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
