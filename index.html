@@ -8398,6 +8398,111 @@ html body .slv-five-hub .slv-five-buttons > button[data-cat="print"]::before{
   }
 }
 </style>
+
+<style>
+/* SLV dashboard: compact vertical Wallet + Shift Off cards in one shared black frame */
+#employeeView>.slv-wallet-actions{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  justify-content:flex-start!important;
+  gap:6px!important;
+  grid-column:1!important;
+  grid-row:2!important;
+  width:180px!important;
+  min-width:180px!important;
+  max-width:min(180px,100%)!important;
+  height:auto!important;
+  min-height:0!important;
+  padding:6px!important;
+  margin:8px 0 10px!important;
+  border:2px solid #111!important;
+  border-radius:14px!important;
+  background:#fff!important;
+  box-sizing:border-box!important;
+  justify-self:start!important;
+  align-self:start!important;
+}
+#employeeView>.slv-wallet-actions>.slv-wallet-widget,
+#employeeView>.slv-wallet-actions>.shift-close-trigger{
+  display:flex!important;
+  flex:0 0 100px!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  height:100px!important;
+  min-height:100px!important;
+  max-height:100px!important;
+  margin:0!important;
+  padding:7px!important;
+  border:0!important;
+  border-radius:9px!important;
+  box-sizing:border-box!important;
+  text-align:center!important;
+  white-space:normal!important;
+  box-shadow:none!important;
+}
+#employeeView>.slv-wallet-actions>.slv-wallet-widget{
+  background:linear-gradient(145deg,#16a34a,#075b2a)!important;
+}
+#employeeView>.slv-wallet-actions>.slv-wallet-widget .cash-wallet-employee-card{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:4px!important;
+  width:100%!important;
+  height:100%!important;
+  margin:0!important;
+  padding:3px!important;
+  border:0!important;
+  background:transparent!important;
+  text-align:center!important;
+}
+#employeeView>.slv-wallet-actions>.slv-wallet-widget .cash-wallet-employee-card span,
+#employeeView>.slv-wallet-actions>.slv-wallet-widget .cash-wallet-employee-card strong,
+#employeeView>.slv-wallet-actions>.slv-wallet-widget .cash-wallet-employee-card small,
+#employeeView>.slv-wallet-actions>.slv-wallet-widget .cash-wallet-employee-card b{
+  color:#fff!important;
+  -webkit-text-fill-color:#fff!important;
+}
+#employeeView>.slv-wallet-actions>.slv-wallet-widget .cash-wallet-employee-card span{
+  font-size:11px!important;
+  line-height:1.2!important;
+  font-weight:800!important;
+}
+#employeeView>.slv-wallet-actions>.slv-wallet-widget .cash-wallet-employee-card strong{
+  font-size:20px!important;
+  line-height:1.1!important;
+  font-weight:900!important;
+}
+#employeeView>.slv-wallet-actions>.slv-wallet-widget .cash-wallet-employee-card small{
+  font-size:8px!important;
+  line-height:1.15!important;
+}
+#employeeView>.slv-wallet-actions>.shift-close-trigger{
+  background:linear-gradient(145deg,#249bd8,#1685c4)!important;
+  color:#ffd43b!important;
+  -webkit-text-fill-color:#ffd43b!important;
+  font-size:12px!important;
+  line-height:1.3!important;
+  font-weight:900!important;
+  border:0!important;
+}
+@media(max-width:899px){
+  #employeeView>.slv-wallet-actions{
+    grid-column:1!important;
+    grid-row:2!important;
+    width:180px!important;
+    min-width:180px!important;
+    max-width:min(180px,100%)!important;
+    margin:8px 0 10px!important;
+  }
+}
+</style>
 </body>
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
