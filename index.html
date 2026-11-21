@@ -1339,6 +1339,8 @@ html body #loginView .slv-login-brand button.slv-pan-apply-tile > b{
       <div class="slv-profile-menu hidden" id="slvProfileMenu">
         <div class="slv-profile-menu-name" id="slvProfileName">Employee</div>
         <button type="button" onclick="slvChangeEmployeePassword()">🔑 Change Password</button>
+        <button type="button" onclick="slvTriggerProfilePhotoUpload()">📷 Upload Profile Photo</button>
+        <input type="file" id="slvProfilePhotoInput" accept="image/png,image/jpeg,image/webp" hidden onchange="slvUploadProfilePhoto(event)">
         <button type="button" class="slv-profile-signout" onclick="logout()">↪ Sign Out</button>
       </div>
     </div>
@@ -1900,6 +1902,7 @@ function slvShowPersonalGreeting(viewId){
     return;
   }
   if(profile)profile.style.display='block';
+  slvSyncProfilePhotoFromAuth();
   const update=()=>{
     const now=new Date();
     const hour=Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',hour:'2-digit',hourCycle:'h23'}).format(now));
@@ -1922,6 +1925,73 @@ function slvShowPersonalGreeting(viewId){
   update();
   if(window.slvHeaderClockTimer)clearInterval(window.slvHeaderClockTimer);
   window.slvHeaderClockTimer=setInterval(update,1000);
+}
+async function slvSyncProfilePhotoFromAuth(){
+  const db=window.slvSupabase;
+  if(!db||!currentUser||!['Admin','Employee'].includes(currentUser.role))return;
+  try{
+    const {data,error}=await db.auth.getUser();
+    if(error||!data?.user)return;
+    const url=data.user.user_metadata?.avatar_url||'';
+    currentUser.avatarUrl=url;
+    const photo=document.getElementById('slvProfilePhoto');
+    const initials=document.getElementById('slvProfileInitials');
+    if(photo){
+      if(url){photo.src=url;photo.classList.remove('hidden');if(initials)initials.style.display='none';}
+      else{photo.removeAttribute('src');photo.classList.add('hidden');if(initials)initials.style.display='grid';}
+    }
+  }catch(error){console.warn('Could not load profile photo:',error)}
+}
+function slvTriggerProfilePhotoUpload(){
+  const input=document.getElementById('slvProfilePhotoInput');
+  if(input)input.click();
+}
+async function slvUploadProfilePhoto(event){
+  const input=event?.target;
+  const file=input?.files?.[0];
+  if(!file)return;
+  const reset=()=>{if(input)input.value='';};
+  if(!['image/jpeg','image/png','image/webp'].includes(file.type)){
+    alert('JPG, PNG లేదా WEBP image మాత్రమే upload చేయండి.');reset();return;
+  }
+  if(file.size>8*1024*1024){
+    alert('Image size 8 MB కంటే తక్కువగా ఉండాలి.');reset();return;
+  }
+  const db=window.slvSupabase;
+  if(!db){alert('Cloud connection unavailable.');reset();return;}
+  try{
+    const {data:{user},error:userError}=await db.auth.getUser();
+    if(userError||!user?.id)throw new Error('Please login again and try.');
+    const bitmap=await createImageBitmap(file);
+    const canvas=document.createElement('canvas');
+    const maxSide=512,scale=Math.min(1,maxSide/Math.max(bitmap.width,bitmap.height));
+    canvas.width=Math.max(1,Math.round(bitmap.width*scale));
+    canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+    const ctx=canvas.getContext('2d');
+    if(!ctx)throw new Error('Image processing is not supported in this browser.');
+    ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
+    bitmap.close?.();
+    const blob=await new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('Image conversion failed.')),'image/webp',0.86));
+    const path=user.id+'/avatar.webp';
+    const {error:uploadError}=await db.storage.from('slv-profile-photos').upload(path,blob,{
+      contentType:'image/webp',upsert:true,cacheControl:'3600'
+    });
+    if(uploadError)throw uploadError;
+    const publicUrl=db.storage.from('slv-profile-photos').getPublicUrl(path).data.publicUrl+'?v='+Date.now();
+    const {error:updateError}=await db.auth.updateUser({data:{avatar_url:publicUrl}});
+    if(updateError)throw updateError;
+    currentUser.avatarUrl=publicUrl;
+    const photo=document.getElementById('slvProfilePhoto');
+    const initials=document.getElementById('slvProfileInitials');
+    if(photo){photo.src=publicUrl;photo.classList.remove('hidden');}
+    if(initials)initials.style.display='none';
+    document.getElementById('slvProfileMenu')?.classList.add('hidden');
+    document.getElementById('slvProfileButton')?.setAttribute('aria-expanded','false');
+    alert('Profile photo విజయవంతంగా upload అయింది.');
+  }catch(error){
+    console.error('Profile photo upload failed:',error);
+    alert('Profile photo upload కాలేదు: '+(error.message||'Please try again.'));
+  }finally{reset();}
 }
 function slvToggleProfileMenu(){
   const menu=document.getElementById('slvProfileMenu'),button=document.getElementById('slvProfileButton');
@@ -6779,6 +6849,12 @@ html body #loginView .slv-login-brand button.slv-login-square.slv-pan-apply-tile
  transform:none!important;isolation:isolate;
 }
 .slv-dashboard-header,.slv-profile-wrap{overflow:visible!important}
+</style>
+<style id="slv-profile-photo-upload-style">
+#slvProfileMenu button[onclick="slvTriggerProfilePhotoUpload()"]{
+ background:#fff8e7;color:#77551b;border:1px solid #ecd28a;
+}
+#slvProfilePhoto{object-fit:cover}
 </style>
 </body>
 </html>
