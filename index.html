@@ -1413,7 +1413,7 @@ body:has(#loginView:not(.hidden)) .main-header #headerSubtitle{display:none!impo
 </button>
 </div>
 <div class="slv-login-panel">
-<div class="slv-login-intro"><h3>Welcome back</h3></div>
+<div class="slv-login-intro"><h3>Welcome back</h3><p>Access your secure SLV workspace</p></div>
 <label for="loginRole">Account type</label>
 <select id="loginRole" onchange="toggleLoginInputs()">
 <option value="Employee">Employee</option>
@@ -6988,23 +6988,14 @@ html body #loginView .slv-login-brand button.slv-login-square.slv-pan-apply-tile
 }
 </style>
 
-<style id="slv-login-welcome-back-final">
-/* Login greeting: centered, black and underlined; supporting tagline removed */
-#loginView .slv-login-intro{
- text-align:center!important;
- margin-left:auto!important;margin-right:auto!important;
+<style id="slv-pan-find-apply-white-final">
+/* Keep PAN Find and PAN Apply labels white on every screen size */
+html body #loginView .slv-login-brand .slv-login-square.slv-pan-find-tile > b,
+html body #loginView .slv-login-brand .slv-login-square.slv-pan-apply-tile > b{
+ color:#fff!important;
+ -webkit-text-fill-color:#fff!important;
+ opacity:1!important;
 }
-#loginView .slv-login-intro h3{
- color:#000!important;-webkit-text-fill-color:#000!important;
- text-align:center!important;
- text-decoration:underline!important;
- text-decoration-color:#000!important;
- text-underline-offset:6px!important;
- text-decoration-thickness:2px!important;
- margin:0 0 24px!important;
-}
-#loginView .slv-login-intro h3:after{display:none!important;content:none!important}
-#loginView .slv-login-intro p{display:none!important}
 </style>
 
 </body>
