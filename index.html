@@ -1789,12 +1789,7 @@ body:has(#loginView:not(.hidden)) .main-header #headerSubtitle{display:none!impo
 <div class="slab-box slv-extra-employee"><b>🕒 Assigned Shift:</b> <span id="shiftInfo" style="color:#1a73e8">Loading...</span></div>
 <section class="section-box attendance-panel" id="attendancePanel">
 <h4>🕘 Today's Attendance &amp; Shift</h4>
-<div class="attendance-stats">
-<div><small>Shift Start / Login</small><b id="attStart">--</b></div>
-<div><small>Lunch Break</small><b id="attLunch">Not started</b></div>
-<div><small>Shift Close</small><b id="attClose">Pending</b></div>
-<div><small>Working Hours</small><b id="attHours">0h 0m</b></div>
-</div>
+
 <div class="attendance-status" id="attStatus">Loading attendance...</div>
 <div class="row attendance-actions">
 <button class="btn-orange" id="lunchStartBtn" onclick="startLunchBreak()">🍽️ Lunch Break Start</button>
@@ -1802,6 +1797,26 @@ body:has(#loginView:not(.hidden)) .main-header #headerSubtitle{display:none!impo
 </div>
 <p class="muted">Shift Start login సమయంలో ఆటోమేటిక్‌గా నమోదు అవుతుంది. Shift Close కోసం కింద Cash Tally పూర్తి చేయండి.</p>
 </section>
+<aside class="slv-shift-leave-box" id="slvShiftLeaveBox">
+<section class="slv-shift-details">
+<h4>🗓️ Shift Details</h4>
+<div class="attendance-stats">
+<div><small>Shift Start / Login</small><b id="attStart">--</b></div>
+<div><small>Lunch Break</small><b id="attLunch">Not started</b></div>
+<div><small>Shift Close</small><b id="attClose">Pending</b></div>
+<div><small>Working Hours</small><b id="attHours">0h 0m</b></div>
+</div>
+</section>
+<section class="slv-leave-management">
+<h4>🌴 Leave Management</h4>
+<details class="section-box" id="slvLeaveDetails"><summary style="cursor:pointer;font-weight:800">🌴 Apply for Leave</summary>
+<label for="leaveType">Leave Type</label><select id="leaveType"><option value="paid">Paid Leave</option><option value="unpaid">Unpaid Leave</option><option value="split">Split Leave (Paid + Unpaid)</option></select><label for="leaveDate">From Date</label>
+<input id="leaveDate" required="" type="date"/>
+<label for="leaveToDate">To Date</label><input id="leaveToDate" type="date"/><label for="leaveReason">Reason for leave</label>
+<input id="leaveReason" placeholder="Reason for leave"/>
+<button class="btn-green" onclick="applyLeave()">Submit Leave</button><h4>My Cloud Leave History</h4><div class="muted" id="slvEmployeeLeaveHistory">Loading leave history...</div></details>
+</section>
+</aside>
 <div class="slab-box slv-extra-employee" style="background:#e6f4ea;border-color:#34a853;margin-top:10px">
 <b id="drawerTitle">💵 Cash Drawer:</b>
 <div style="font-size:22px;font-weight:bold;color:#137333">₹ <span id="drawerCash">0</span></div>
@@ -1816,12 +1831,7 @@ body:has(#loginView:not(.hidden)) .main-header #headerSubtitle{display:none!impo
 </div>
 <button class="btn-orange shift-close-trigger" onclick="openShiftClose()">🔒 Shift Off / Cash Tally</button>
 <div class="shift-close-panel" id="shiftClosePanel" style="display:none"></div>
-<details class="section-box" id="slvLeaveDetails"><summary style="cursor:pointer;font-weight:800">🌴 Apply for Leave</summary>
-<label for="leaveType">Leave Type</label><select id="leaveType"><option value="paid">Paid Leave</option><option value="unpaid">Unpaid Leave</option><option value="split">Split Leave (Paid + Unpaid)</option></select><label for="leaveDate">From Date</label>
-<input id="leaveDate" required="" type="date"/>
-<label for="leaveToDate">To Date</label><input id="leaveToDate" type="date"/><label for="leaveReason">Reason for leave</label>
-<input id="leaveReason" placeholder="Reason for leave"/>
-<button class="btn-green" onclick="applyLeave()">Submit Leave</button><h4>My Cloud Leave History</h4><div class="muted" id="slvEmployeeLeaveHistory">Loading leave history...</div></details>
+
 <div class="section-box slv-extra-employee">
 <h4>📢 Shop Announcement</h4>
 <div class="muted" id="employeeHolidayText">No current announcement.</div>
@@ -7691,6 +7701,30 @@ html body .slv-five-hub .slv-five-buttons > button[data-cat="print"]::before{
 }
 </style>
 
+
+<style id="slv-shift-leave-right-panel-v1">
+@media(min-width:900px){
+#employeeView{display:grid!important;grid-template-columns:minmax(0,1.8fr) minmax(280px,.85fr);align-items:start;column-gap:16px}
+#employeeView>.slv-five-hub,#employeeView>.menu-shade,#employeeView>.employee-side-menu,#employeeView>.banner{grid-column:1/-1}
+#employeeView>#attendancePanel{grid-column:1;grid-row:auto}
+#employeeView>#slvShiftLeaveBox{grid-column:2;grid-row:4 / span 12;align-self:start}
+#employeeView>.slv-extra-employee,#employeeView>.cash-wallet-employee-card,#employeeView>.grid,#employeeView>.shift-close-trigger,#employeeView>#shiftClosePanel{grid-column:1}
+#employeeView>.slv-extra-employee{max-width:100%}
+}
+.slv-shift-leave-box{background:#fff;border:1px solid #cbdced;border-radius:16px;padding:14px;box-shadow:0 4px 14px rgba(20,60,100,.07);display:flex;flex-direction:column;gap:14px}
+.slv-shift-details,.slv-leave-management{background:#f8fbff;border:1px solid #dbe7f3;border-radius:12px;padding:12px}
+.slv-shift-leave-box h4{margin:0 0 12px;color:#123b63;font-weight:800}
+.slv-shift-leave-box .attendance-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.slv-shift-leave-box .attendance-stats>div{background:#fff;border:1px solid #e0e8f0;border-radius:9px;padding:10px;text-align:center}
+.slv-shift-leave-box .attendance-stats small{display:block;color:#65758b;font-size:11px}
+.slv-shift-leave-box .attendance-stats b{display:block;color:#123b63;margin-top:4px}
+.slv-leave-management details#slvLeaveDetails{margin:0;border:0;padding:0;background:transparent}
+.slv-leave-management details#slvLeaveDetails>summary{color:#123b63;padding:8px 0}
+@media(max-width:899px){
+#employeeView{display:flex!important;flex-direction:column}
+.slv-shift-leave-box{width:100%;box-sizing:border-box}
+}
+</style>
 </body>
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
