@@ -8556,6 +8556,36 @@ body.slv-xerox-selected #slvInlineBillingHost #slvXeroxPanel{display:block!impor
  window.addEventListener('load',mount,{once:true});
 })();
 </script>
+
+<style id="slv-dashboard-three-column-billing-position">
+@media(min-width:900px){
+  #employeeView:not(.hidden){
+    grid-template-columns:190px minmax(320px,1fr) 300px!important;
+    column-gap:14px!important;
+    align-items:start!important;
+  }
+  #employeeView>.slv-five-hub{grid-column:1/-1!important;grid-row:1!important}
+  #employeeView>.slv-wallet-actions{grid-column:1!important;grid-row:2!important;justify-self:start!important}
+  #employeeView>#slvInlineBillingHost{
+    grid-column:2!important;grid-row:2!important;
+    width:100%!important;max-width:none!important;
+    min-width:0!important;margin:8px 0 18px!important;
+    align-self:start!important;justify-self:stretch!important;
+  }
+  #employeeView>#slvShiftLeaveBox{
+    grid-column:3!important;grid-row:2!important;
+    width:100%!important;max-width:300px!important;
+    align-self:start!important;justify-self:stretch!important;
+  }
+}
+@media(max-width:899px){
+  #employeeView>#slvInlineBillingHost{
+    order:3!important;width:100%!important;max-width:100%!important;
+    margin:12px 0!important;
+  }
+}
+</style>
+
 </body>
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
