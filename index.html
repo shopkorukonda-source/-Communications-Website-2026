@@ -8533,7 +8533,7 @@ body.slv-xerox-selected #slvInlineBillingHost #slvXeroxPanel{display:block!impor
   host.style.setProperty('visibility','visible','important');
   host.style.setProperty('opacity','1','important');
   host.style.setProperty('min-height','120px','important');
-  host.style.setProperty('grid-column','1 / -1','important');
+  host.style.removeProperty('grid-column');
   if(xerox&&xerox.parentElement!==host)host.appendChild(xerox);
   if(checkout.parentElement!==host)host.appendChild(checkout);
   checkout.classList.remove('hidden');
