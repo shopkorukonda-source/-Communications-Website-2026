@@ -7553,6 +7553,65 @@ html body #loginView .slv-signin-btn span{
 }
 </style>
 
+
+
+<style id="slv-category-tile-watermark-hard-fix-v9">
+/* Hard override for the live employee/admin category cards. Keep the logo artwork from ::before. */
+html body #employeeView .slv-five-buttons button[data-cat],
+html body #adminView .slv-five-buttons button[data-cat]{
+  background:#fff!important;
+  background-color:#fff!important;
+  background-image:none!important;
+  border:2px solid #000!important;
+  border-radius:9px!important;
+  box-shadow:none!important;
+  color:#000!important;
+}
+html body #employeeView .slv-five-buttons button[data-cat] > b,
+html body #adminView .slv-five-buttons button[data-cat] > b{
+  color:#000!important;
+  -webkit-text-fill-color:#000!important;
+  background:#fff!important;
+  background-color:#fff!important;
+  text-shadow:none!important;
+}
+html body #employeeView .slv-five-buttons button[data-cat]::before,
+html body #adminView .slv-five-buttons button[data-cat]::before{
+  background-color:#fff!important;
+  border:0!important;
+  box-shadow:none!important;
+  border-radius:0!important;
+}
+html body #employeeView .slv-five-buttons button[data-cat] .slv-category-arrow,
+html body #adminView .slv-five-buttons button[data-cat] .slv-category-arrow{
+  color:#000!important;
+  -webkit-text-fill-color:#000!important;
+}
+html body #employeeView .slv-five-buttons button[data-cat]::after,
+html body #adminView .slv-five-buttons button[data-cat]::after{
+  content:""!important;
+  position:absolute!important;
+  inset:3px!important;
+  z-index:0!important;
+  pointer-events:none!important;
+  border:1px solid rgba(0,145,195,.22)!important;
+  border-radius:6px!important;
+  background:
+    radial-gradient(ellipse at 0% 0%,rgba(0,174,220,.13),transparent 46%),
+    radial-gradient(ellipse at 100% 100%,rgba(0,145,205,.12),transparent 46%),
+    repeating-linear-gradient(135deg,transparent 0 12px,rgba(0,145,195,.035) 12px 13px)!important;
+}
+html body #employeeView .slv-five-buttons button[data-cat]::before,
+html body #adminView .slv-five-buttons button[data-cat]::before,
+html body #employeeView .slv-five-buttons button[data-cat] > b,
+html body #adminView .slv-five-buttons button[data-cat] > b,
+html body #employeeView .slv-five-buttons button[data-cat] .slv-category-arrow,
+html body #adminView .slv-five-buttons button[data-cat] .slv-category-arrow{
+  position:relative!important;
+  z-index:1!important;
+}
+</style>
+
 </body>
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
