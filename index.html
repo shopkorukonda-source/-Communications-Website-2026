@@ -5717,31 +5717,40 @@ const serviceLabel=o=>(o.textContent||'').replace(/\s*(?:[•·|–—-]\s*)?(?:
 if(!matches.length){const p=document.createElement('p');p.textContent='ఈ Categoryలో ప్రస్తుతం Active Services లేవు.';out.append(p);window.slvAnimateCategoryPanel(out,true);return}
 if(role==='employee'){
  const oldMenu=document.getElementById('slvServiceFloatingMenu');if(oldMenu)oldMenu.remove();
- /* Keep the real results slot empty: the visible menu is a separate fixed overlay in BODY. */
- out.replaceChildren();out.style.setProperty('display','none','important');
- const menu=document.createElement('div');menu.id='slvServiceFloatingMenu';
- menu.style.cssText='position:fixed!important;z-index:2147483647!important;display:flex!important;flex-direction:column!important;gap:8px!important;width:170px!important;max-width:calc(100vw - 16px)!important;max-height:55vh!important;overflow-y:auto!important;padding:0!important;margin:0!important;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;pointer-events:auto!important;';
+ out.replaceChildren();
+ out.style.setProperty('position','fixed','important');
+ out.style.setProperty('z-index','2147483647','important');
+ out.style.setProperty('display','block','important');
+ out.style.setProperty('left',Math.max(8,Math.min(window.innerWidth-178,buttonRect.left))+'px','important');
  const billing=document.getElementById('slvInlineBillingHost');
  const billingRect=billing?billing.getBoundingClientRect():null;
- const visualTop=(window.visualViewport?window.visualViewport.offsetTop:0);
  const menuTop=billingRect?Math.max(8,Math.min(window.innerHeight-100,billingRect.top+10)):Math.min(window.innerHeight-90,buttonRect.bottom+8);
- const menuLeft=Math.max(8,Math.min(window.innerWidth-178,buttonRect.left));
- menu.style.top=(menuTop+visualTop)+'px';menu.style.left=menuLeft+'px';
+ out.style.setProperty('top',(menuTop+(window.visualViewport?window.visualViewport.offsetTop:0))+'px','important');
+ out.style.setProperty('right','auto','important');
+ out.style.setProperty('bottom','auto','important');
+ out.style.setProperty('width','170px','important');
+ out.style.setProperty('max-width','calc(100vw - 16px)','important');
+ out.style.setProperty('max-height','55vh','important');
+ out.style.setProperty('overflow-y','auto','important');
+ out.style.setProperty('margin','0','important');
+ out.style.setProperty('padding','0','important');
+ out.style.setProperty('background','transparent','important');
+ out.style.setProperty('border','0','important');
+ out.style.setProperty('box-shadow','none','important');
+ const list=document.createElement('div');list.className='slv-compact-service-list';list.style.cssText='display:flex!important;flex-direction:column!important;gap:8px!important;background:transparent!important;border:0!important;padding:0!important;margin:0!important;';
  matches.forEach(o=>{
   const item=document.createElement('button');item.type='button';item.className='slv-compact-service-option';item.textContent=serviceLabel(o);
-  item.style.cssText='box-sizing:border-box!important;display:flex!important;align-items:center!important;justify-content:center!important;width:170px!important;min-width:170px!important;max-width:170px!important;height:48px!important;min-height:48px!important;padding:8px 10px!important;background:#1769aa!important;color:#fff!important;-webkit-text-fill-color:#fff!important;border:1px solid #0f568f!important;border-radius:9px!important;font-size:13px!important;line-height:1.2!important;font-weight:700!important;text-align:center!important;white-space:normal!important;box-shadow:0 2px 5px rgba(15,86,143,.16)!important;';
   item.addEventListener('click',()=>{
    const native=document.getElementById('slvTxService');if(native){native.value=o.value;native.dispatchEvent(new Event('change',{bubbles:true}));}
    const chosen=document.getElementById('slvInlineSelectedService');if(chosen)chosen.textContent=serviceLabel(o);
-   menu.remove();out.dataset.openCategory='';
+   out.replaceChildren();out.dataset.openCategory='';
+   out.removeAttribute('style');
    document.querySelectorAll('#employeeView .slv-five-buttons [data-cat]').forEach(b=>{b.classList.remove('active');b.setAttribute('aria-expanded','false');const ar=b.querySelector('.slv-category-arrow');if(ar)ar.textContent='▾';});
   });
-  menu.append(item);
+  list.append(item);
  });
- menu.addEventListener('pointerleave',e=>{if(e.pointerType==='touch')return;menu.remove();out.dataset.openCategory='';document.querySelectorAll('#employeeView .slv-five-buttons [data-cat]').forEach(b=>{b.classList.remove('active');b.setAttribute('aria-expanded','false');});});
- document.body.appendChild(menu);
+ out.append(list);
  return;
-}
 const grid=document.createElement('div');grid.className='slv-service-items';
 for(const o of matches){const btn=document.createElement('button');btn.type='button';btn.textContent=serviceLabel(o);btn.onclick=()=>{if(typeof window.showAdminSection==='function'){try{window.showAdminSection('adminServices')}catch(e){}}document.getElementById('servicesAdminList')?.scrollIntoView({behavior:'smooth'});};grid.append(btn)}out.append(grid);window.slvAnimateCategoryPanel(out,true)
 };
