@@ -1787,16 +1787,7 @@ body:has(#loginView:not(.hidden)) .main-header #headerSubtitle{display:none!impo
 </aside>
 <div class="banner" id="holidayAlert">🚨 HOLIDAY: <span id="holidayText"></span></div>
 <div class="slab-box slv-extra-employee"><b>🕒 Assigned Shift:</b> <span id="shiftInfo" style="color:#1a73e8">Loading...</span></div>
-<section class="section-box attendance-panel" id="attendancePanel">
-<h4>🕘 Today's Attendance &amp; Shift</h4>
-
-<div class="attendance-status" id="attStatus">Loading attendance...</div>
-<div class="row attendance-actions">
-<button class="btn-orange" id="lunchStartBtn" onclick="startLunchBreak()">🍽️ Lunch Break Start</button>
-<button class="btn-green hidden" id="resumeShiftBtn" onclick="resumeShift()">▶️ Resume Shift</button>
-</div>
-<p class="muted">Shift Start login సమయంలో ఆటోమేటిక్‌గా నమోదు అవుతుంది. Shift Close కోసం కింద Cash Tally పూర్తి చేయండి.</p>
-</section>
+<div class="hidden" id="attStatus" aria-hidden="true">Loading attendance...</div>
 <aside class="slv-shift-leave-box" id="slvShiftLeaveBox">
 <section class="slv-shift-details">
 <h4>🗓️ Shift Details</h4>
