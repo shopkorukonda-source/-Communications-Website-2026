@@ -7612,6 +7612,53 @@ html body #adminView .slv-five-buttons button[data-cat] .slv-category-arrow{
 }
 </style>
 
+
+
+<style id="slv-all-category-tiles-always-white-v10">
+/* Unscoped, high-specificity rule: every category tile stays white before and after selection */
+html body .slv-five-hub .slv-five-buttons > button[data-cat],
+html body #employeeView .slv-five-hub .slv-five-buttons > button[data-cat],
+html body #adminView .slv-five-hub .slv-five-buttons > button[data-cat]{
+  background:#fff!important;
+  background-color:#fff!important;
+  background-image:none!important;
+  border:2px solid #000!important;
+  border-radius:9px!important;
+  color:#000!important;
+  -webkit-text-fill-color:#000!important;
+  box-shadow:none!important;
+  outline:0!important;
+}
+html body .slv-five-hub .slv-five-buttons > button[data-cat]:hover,
+html body .slv-five-hub .slv-five-buttons > button[data-cat]:focus,
+html body .slv-five-hub .slv-five-buttons > button[data-cat]:active,
+html body .slv-five-hub .slv-five-buttons > button[data-cat].active{
+  background:#fff!important;
+  background-color:#fff!important;
+  background-image:none!important;
+  border:2px solid #000!important;
+  color:#000!important;
+  -webkit-text-fill-color:#000!important;
+  box-shadow:none!important;
+}
+html body .slv-five-hub .slv-five-buttons > button[data-cat] > b{
+  background:#fff!important;
+  background-color:#fff!important;
+  color:#000!important;
+  -webkit-text-fill-color:#000!important;
+  text-shadow:none!important;
+}
+html body .slv-five-hub .slv-five-buttons > button[data-cat]::before{
+  background-color:#fff!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+html body .slv-five-hub .slv-five-buttons > button[data-cat] .slv-category-arrow{
+  color:#000!important;
+  -webkit-text-fill-color:#000!important;
+}
+</style>
+
 </body>
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
