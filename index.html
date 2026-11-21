@@ -7025,7 +7025,62 @@ html body #loginView .slv-signin-btn span{
  display:none!important;
 }
 </style>
-\n</body>
+\n
+<style id="slv-brand-logo-black-frame-final">
+/* Branded logo panels with a crisp black watermark-style frame */
+#adminView .slv-five-buttons [data-cat="gov"]::before,
+#employeeView .slv-five-buttons [data-cat="gov"]::before,
+#adminView .slv-five-buttons [data-cat="bank"]::before,
+#employeeView .slv-five-buttons [data-cat="bank"]::before,
+#adminView .slv-five-buttons [data-cat="bills"]::before,
+#employeeView .slv-five-buttons [data-cat="bills"]::before,
+#adminView .slv-five-buttons [data-cat="print"]::before,
+#employeeView .slv-five-buttons [data-cat="print"]::before,
+#adminView .slv-five-buttons [data-cat="booking"]::before,
+#employeeView .slv-five-buttons [data-cat="booking"]::before{
+ content:"";
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ width:116px!important;height:48px!important;min-height:48px!important;
+ box-sizing:border-box!important;padding:5px 8px!important;
+ background:#fff!important;border:2px solid #171717!important;
+ border-radius:8px!important;
+ box-shadow:inset 0 0 0 2px rgba(0,0,0,.045),0 2px 4px rgba(0,0,0,.10)!important;
+ font-family:Arial,sans-serif!important;font-weight:900!important;
+ letter-spacing:.25px!important;line-height:1!important;text-align:center!important;
+}
+#adminView .slv-five-buttons [data-cat="gov"]::before,
+#employeeView .slv-five-buttons [data-cat="gov"]::before{content:"AADHAAR"!important;color:#c62828!important;font-size:19px!important;letter-spacing:1px!important}
+#adminView .slv-five-buttons [data-cat="bank"]::before,
+#employeeView .slv-five-buttons [data-cat="bank"]::before{content:"AXIS"!important;color:#8b1d45!important;font-size:25px!important;font-style:italic!important;letter-spacing:1px!important}
+#adminView .slv-five-buttons [data-cat="bills"]::before,
+#employeeView .slv-five-buttons [data-cat="bills"]::before{content:"DIGITAL SEVA"!important;color:#14558a!important;font-size:15px!important;letter-spacing:.4px!important}
+#adminView .slv-five-buttons [data-cat="print"]::before,
+#employeeView .slv-five-buttons [data-cat="print"]::before{content:"XEROX"!important;color:#171717!important;font-size:24px!important;letter-spacing:1px!important}
+#adminView .slv-five-buttons [data-cat="booking"]::before,
+#employeeView .slv-five-buttons [data-cat="booking"]::before{content:"seatseller"!important;color:#d13a32!important;font-size:19px!important;letter-spacing:-.4px!important}
+#adminView .slv-five-buttons [data-cat="gov"] .slv-category-icon,
+#employeeView .slv-five-buttons [data-cat="gov"] .slv-category-icon,
+#adminView .slv-five-buttons [data-cat="bank"] .slv-category-icon,
+#employeeView .slv-five-buttons [data-cat="bank"] .slv-category-icon,
+#adminView .slv-five-buttons [data-cat="bills"] .slv-category-icon,
+#employeeView .slv-five-buttons [data-cat="bills"] .slv-category-icon,
+#adminView .slv-five-buttons [data-cat="print"] .slv-category-icon,
+#employeeView .slv-five-buttons [data-cat="print"] .slv-category-icon,
+#adminView .slv-five-buttons [data-cat="booking"] .slv-category-icon,
+#employeeView .slv-five-buttons [data-cat="booking"] .slv-category-icon{display:none!important}
+#adminView .slv-five-buttons [data-cat="gov"] b,
+#employeeView .slv-five-buttons [data-cat="gov"] b,
+#adminView .slv-five-buttons [data-cat="bank"] b,
+#employeeView .slv-five-buttons [data-cat="bank"] b,
+#adminView .slv-five-buttons [data-cat="bills"] b,
+#employeeView .slv-five-buttons [data-cat="bills"] b,
+#adminView .slv-five-buttons [data-cat="print"] b,
+#employeeView .slv-five-buttons [data-cat="print"] b,
+#adminView .slv-five-buttons [data-cat="booking"] b,
+#employeeView .slv-five-buttons [data-cat="booking"] b{margin-top:1px!important}
+</style>
+
+</body>
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
 <!-- SLV Quick Links: popup accessed from employee side menu; cloud read uses authenticated RLS. -->
