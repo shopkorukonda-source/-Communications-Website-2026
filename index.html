@@ -5699,7 +5699,10 @@ if(categoryButton){
  hub.style.setProperty('overflow','visible','important');
  const categoryRow=hub.querySelector('.slv-five-buttons');
  const rowRect=categoryRow?categoryRow.getBoundingClientRect():buttonRect;
- const top=Math.min(window.innerHeight-90,rowRect.bottom+8);
+ const billingHost=document.getElementById(role==='employee'?'slvInlineBillingHost':'slvInlineBillingHost');
+ const billingRect=billingHost?billingHost.getBoundingClientRect():null;
+ /* Place the menu over the billing form itself, not in the gap below categories. */
+ const top=billingRect?Math.max(8,Math.min(window.innerHeight-100,billingRect.top+12)):Math.min(window.innerHeight-90,rowRect.bottom+8);
  const fixedLeft=Math.max(8,Math.min(window.innerWidth-maxWidth-8,buttonRect.left));
  out.style.setProperty('position','fixed','important');
  out.style.setProperty('z-index','2147482000','important');
@@ -5713,17 +5716,17 @@ if(categoryButton){
  out.style.setProperty('inset','auto auto auto '+fixedLeft+'px','important');
  out.style.setProperty('transform','none','important');
  out.style.setProperty('margin','0','important');
- out.style.setProperty('padding','8px','important');
- out.style.setProperty('width',maxWidth+'px','important');
- out.style.setProperty('max-width','min('+maxWidth+'px, calc(100vw - 32px))','important');
+ out.style.setProperty('padding','0','important');
+ out.style.setProperty('width','170px','important');
+ out.style.setProperty('max-width','min(170px, calc(100vw - 16px))','important');
  out.style.setProperty('height','auto','important');
  out.style.setProperty('min-height','0','important');
  out.style.setProperty('max-height','min(55vh, 360px)','important');
  out.style.setProperty('overflow-y','auto','important');
- out.style.setProperty('background','#fff','important');
- out.style.setProperty('border','1px solid #dce6ed','important');
- out.style.setProperty('border-radius','12px','important');
- out.style.setProperty('box-shadow','0 8px 24px rgba(20,45,65,.22)','important');
+ out.style.setProperty('background','transparent','important');
+ out.style.setProperty('border','0','important');
+ out.style.setProperty('border-radius','0','important');
+ out.style.setProperty('box-shadow','none','important');
 }
 
 let select=document.getElementById('slvTxService');
@@ -9051,5 +9054,15 @@ body.slv-xerox-selected #slvInlineBillingHost #slvXeroxPanel{display:block!impor
  background:transparent!important;border:0!important;border-radius:0!important;
  box-shadow:none!important;padding:0!important;margin:0!important;
  width:100%!important;max-width:100%!important;
+}
+</style>
+\n
+<style id="slv-dropdown-no-card-background-final">
+#employeeView #slv-employee-results,
+#employeeView #slv-employee-results.slv-category-results,
+#employeeView #slv-employee-results .slv-compact-service-menu,
+#employeeView #slv-employee-results .slv-compact-service-list{
+ background:transparent!important;border:0!important;border-radius:0!important;
+ box-shadow:none!important;padding:0!important;margin:0!important;min-height:0!important;
 }
 </style>
