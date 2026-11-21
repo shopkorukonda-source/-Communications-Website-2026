@@ -8813,3 +8813,47 @@ body.slv-xerox-selected #slvInlineBillingHost #slvXeroxPanel{display:block!impor
  #employeeView #slvEmployeeServiceGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 }
 </style>
+\n
+<style id="slv-actual-category-service-buttons-fix-20261121">
+/* Target the real service buttons shown directly beneath the category cards. */
+#employeeView .slv-category-results .slv-service-items{
+ display:grid!important;
+ grid-template-columns:repeat(3,minmax(0,1fr))!important;
+ gap:10px!important;
+ align-items:stretch!important;
+}
+#employeeView .slv-category-results .slv-service-items button{
+ box-sizing:border-box!important;
+ display:flex!important;
+ width:100%!important;
+ min-width:0!important;
+ min-height:58px!important;
+ height:58px!important;
+ margin:0!important;
+ padding:8px 10px!important;
+ align-items:center!important;
+ justify-content:center!important;
+ text-align:center!important;
+ background:#1769aa!important;
+ color:#fff!important;
+ -webkit-text-fill-color:#fff!important;
+ border:1px solid #0f568f!important;
+ border-radius:10px!important;
+ font-size:14px!important;
+ line-height:1.2!important;
+ font-weight:700!important;
+ white-space:normal!important;
+ overflow-wrap:anywhere!important;
+ text-shadow:none!important;
+ box-shadow:0 2px 5px rgba(15,86,143,.16)!important;
+}
+#employeeView .slv-category-results .slv-service-items button *,
+#employeeView .slv-category-results .slv-service-items button b,
+#employeeView .slv-category-results .slv-service-items button span{
+ color:#fff!important;
+ -webkit-text-fill-color:#fff!important;
+}
+@media(max-width:650px){
+ #employeeView .slv-category-results .slv-service-items{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+</style>
