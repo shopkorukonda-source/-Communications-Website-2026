@@ -1929,6 +1929,29 @@ function slvToggleProfileMenu(){
   const opening=menu.classList.contains('hidden');
   menu.classList.toggle('hidden',!opening);
   button.setAttribute('aria-expanded',String(opening));
+  if(opening){
+    /* Detach the popup visually from header stacking/overflow so it floats above the dashboard. */
+    menu.style.position='fixed';
+    menu.style.zIndex='2147483000';
+    menu.style.right='auto';
+    menu.style.bottom='auto';
+    const place=()=>{
+      const rect=button.getBoundingClientRect();
+      const width=menu.offsetWidth||190;
+      const left=Math.max(8,Math.min(window.innerWidth-width-8,rect.right-width));
+      let top=rect.bottom+8;
+      const height=menu.offsetHeight||150;
+      if(top+height>window.innerHeight-8)top=Math.max(8,rect.top-height-8);
+      menu.style.left=left+'px';
+      menu.style.top=top+'px';
+    };
+    requestAnimationFrame(place);
+    window.addEventListener('resize',place,{passive:true});
+    menu._slvReposition=place;
+  }else{
+    window.removeEventListener('resize',menu._slvReposition);
+    menu._slvReposition=null;
+  }
 }
 async function slvChangeEmployeePassword(){
   const db=window.slvSupabase;
@@ -6747,6 +6770,15 @@ html body #loginView .slv-login-brand button.slv-login-square.slv-pan-apply-tile
  .main-header.slv-dashboard-header .slv-header-datetime strong{font-size:8px!important}
  .main-header.slv-dashboard-header .slv-profile-button{width:29px!important;height:29px!important;min-width:29px!important}
 }
+</style>
+<style id="slv-profile-popup-layer-fix">
+/* Keep the profile dropdown above all dashboard panels and prevent clipping. */
+#slvProfileMenu.slv-profile-menu{
+ position:fixed!important;z-index:2147483000!important;
+ max-height:calc(100vh - 24px);overflow-y:auto;
+ transform:none!important;isolation:isolate;
+}
+.slv-dashboard-header,.slv-profile-wrap{overflow:visible!important}
 </style>
 </body>
 </html>
