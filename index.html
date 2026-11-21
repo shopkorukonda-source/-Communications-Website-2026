@@ -1774,6 +1774,7 @@ body:has(#loginView:not(.hidden)) .main-header #headerSubtitle{display:none!impo
 
 
 <section class="slv-five-hub" data-role="employee"><div class="slv-hub-head"><button type="button" aria-label="Open employee menu" class="hamburger-btn slv-employee-hub-menu" onclick="toggleEmployeeMenu()">☰</button><div><h2>Service Center</h2><p>Choose a category to view available services</p></div><span class="slv-hub-tag">7 Categories</span></div><div aria-label="Service categories" class="slv-five-buttons" role="group"><button data-cat="bank" onclick="slvChooseCategory('employee','bank')" type="button"><svg class="slv-category-icon" viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10h18M5 10v9m5-9v9m4-9v9m5-9v9M2 21h20M12 3 2 9h20L12 3Z"/></svg><b>Banking &amp; Payments</b></button><button data-cat="bills" onclick="slvChooseCategory('employee','bills')" type="button"><svg class="slv-category-icon" viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2h9l4 4v16H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z"/><path d="M14 2v5h5M8 12h8M8 16h8"/><path d="M12 9v2m-2-1h4"/></svg><b>Bill Payments</b></button><button data-cat="gov" onclick="slvChooseCategory('employee','gov')" type="button"><svg class="slv-category-icon" viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-7h6v7M3 10h18"/></svg><b>Government Services</b></button><button data-cat="print" onclick="slvChooseCategory('employee','print')" type="button"><svg class="slv-category-icon" viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6zM18 12h.01"/></svg><b>Printing &amp; Documents</b></button><button data-cat="booking" onclick="slvChooseCategory('employee','booking')" type="button"><svg class="slv-category-icon" viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a3 3 0 0 0 0 6v4a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-4a3 3 0 0 0 0-6ZM13 5v2m0 4v2m0 4v2"/></svg><b>Bookings &amp; Applications</b></button><button data-cat="other" onclick="slvChooseCategory('employee','other')" type="button"><svg class="slv-category-icon" viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><b>Other Services</b></button><button data-cat="cards" onclick="slvChooseCategory('employee','cards')" type="button"><svg class="slv-category-icon" viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="M2 9h20M6 15h5"/></svg><b>Card Downloads &amp; Prints</b></button></div><div aria-live="polite" class="slv-category-results" id="slv-employee-results"><p>Select a category above.</p></div></section>
+<section id="slvInlineBillingHost" class="slv-inline-billing-host" aria-label="Service Entry Form"><div class="slv-inline-billing-title"><b>🧾 Service Entry</b><strong id="slvInlineSelectedService">Select a service from Service Center</strong></div></section>
 <div class="menu-shade" id="employeeMenuShade" onclick="toggleEmployeeMenu(false)"></div>
 <aside class="employee-side-menu" id="employeeSideMenu">
 <div class="side-menu-head"><b>SLV Communications</b><button onclick="toggleEmployeeMenu(false)">✕</button></div>
@@ -4882,7 +4883,7 @@ body.slv-xerox-selected #slvTxPreview{display:none!important}
 <script>
 /* Xerox/Print cloud posting requires companion SQL migration before Print bills are saved. */
 let slvXeroxRequest=null,slvXeroxBusy=false;
-function slvXeroxSelected(){const sel=document.getElementById('slvTxService');return /xerox|photocopy/i.test(sel?.selectedOptions[0]?.textContent||'')}
+function slvXeroxSelected(){const sel=document.getElementById('slvTxService');return /xerox|photocopy|print|printout|printing/i.test(sel?.selectedOptions[0]?.textContent||'')}
 function slvXeroxCents(n){return Math.round((Number(n)+Number.EPSILON)*100)}
 function slvXeroxQuote(){
  const manual=document.getElementById('xeroxManual').checked;
@@ -5592,7 +5593,7 @@ const old=window.adminMenuGo;if(typeof old==='function')window.adminMenuGo=funct
   });
  }
  function openFinancial(key){
-  if(typeof window.showView==='function')window.showView('servicesView');
+  /* Keep the employee on the dashboard; billing is fixed in the inline panel. */
   ensureOptions();
   const sel=document.getElementById('slvTxService');if(!sel)return;
   sel.value='slv-fin-'+key;
@@ -5732,9 +5733,10 @@ if(role==='employee'){
  matches.forEach(o=>{const item=document.createElement('button');item.type='button';item.className='slv-compact-service-option';item.textContent=serviceLabel(o);item.addEventListener('click',()=>{
   list.querySelectorAll('.slv-compact-service-option').forEach(x=>x.classList.remove('selected'));
   item.classList.add('selected');
-  if(typeof showView==='function')showView('servicesView');
   const native=document.getElementById('slvTxService');if(native){native.value=o.value;native.dispatchEvent(new Event('change',{bubbles:true}));}
-  document.getElementById('slvCloudCheckout')?.scrollIntoView({behavior:'smooth',block:'start'});
+  const chosen=document.getElementById('slvInlineSelectedService');if(chosen)chosen.textContent=serviceLabel(o);
+  const results=document.getElementById('slv-employee-results');if(results){results.replaceChildren();results.dataset.openCategory='';}
+  document.querySelectorAll('#employeeView .slv-five-buttons [data-cat]').forEach(b=>{b.classList.remove('active');b.setAttribute('aria-expanded','false');});
  });list.append(item)});
  panel.append(list);out.append(panel);window.slvAnimateCategoryPanel(out,true);return;
 }
@@ -8503,6 +8505,42 @@ html body .slv-five-hub .slv-five-buttons > button[data-cat="print"]::before{
   }
 }
 </style>
+
+<style>
+/* Fixed employee service-entry form: reuses the existing secure cloud billing controls. */
+#slvInlineBillingHost{display:block!important;grid-column:1/-1;width:100%;max-width:760px;margin:14px 0 18px;padding:12px;border:1.5px solid #243b53;border-radius:13px;background:#fff;box-sizing:border-box}
+#slvInlineBillingHost .slv-inline-billing-title{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;padding-bottom:9px;border-bottom:1px solid #d9e2ec}
+#slvInlineSelectedService{color:#1456a4;font-size:14px}
+#slvInlineBillingHost #slvCloudCheckout{max-width:none!important;width:100%;margin:0!important;padding:0!important;border:0!important;box-shadow:none!important}
+#slvInlineBillingHost #slvXeroxPanel{max-width:none!important;width:100%;margin:0 0 10px!important}
+#slvInlineBillingHost #slvServiceSearch,#slvInlineBillingHost .slv-service-picker,#slvInlineBillingHost .slv-native-service-label,#slvInlineBillingHost #slvTxService,#slvInlineBillingHost button[onclick="slvTxLoadServices()"]{display:none!important}
+#slvInlineBillingHost #slvFinancialBilling:not(.hidden){display:block!important}
+#slvInlineBillingHost #slvTxSave{width:100%}
+#employeeView #slvInlineBillingHost input,#employeeView #slvInlineBillingHost select{max-width:100%}
+</style>
+<script>
+(function(){
+ function mount(){
+  const host=document.getElementById('slvInlineBillingHost');
+  const checkout=document.getElementById('slvCloudCheckout');
+  const xerox=document.getElementById('slvXeroxPanel');
+  if(!host||!checkout||host.dataset.mounted==='1')return;
+  host.dataset.mounted='1';
+  if(xerox)host.appendChild(xerox);
+  host.appendChild(checkout);
+  const select=document.getElementById('slvTxService');
+  const update=()=>{
+   const option=select?.selectedOptions?.[0];
+   const label=(option?.textContent||'').replace(/\\s*(?:[•·|–—-]\\s*)?(?:₹|Rs\\.?\\s*)[\\d,]+(?:\\.\\d{1,2})?/gi,'').replace(/[\\s•·|–—-]+$/,'').trim();
+   const title=document.getElementById('slvInlineSelectedService');
+   if(title)title.textContent=label||'Select a service from Service Center';
+  };
+  select?.addEventListener('change',update);
+  update();
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
+})();
+</script>
 </body>
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
