@@ -1798,6 +1798,16 @@ body:has(#loginView:not(.hidden)) .main-header #headerSubtitle{display:none!impo
 <div><small>Working Hours</small><b id="attHours">0h 0m</b></div>
 </div>
 </section>
+<div class="slv-wallet-actions">
+<section class="slv-wallet-widget" aria-label="Live Cash Wallet">
+<div class="cash-wallet-employee-card">
+<span>💵 Live Cash Wallet</span>
+<strong>₹<b id="employeeCashWalletBalance">0.00</b></strong>
+<small>Cash IN / OUT updated balance</small>
+</div>
+</section>
+<button class="btn-orange shift-close-trigger" onclick="openShiftClose()">🔒 Shift Off / Cash Tally</button>
+</div>
 <section class="slv-leave-management">
 <h4>🌴 Leave Management</h4>
 <details class="section-box" id="slvLeaveDetails"><summary style="cursor:pointer;font-weight:800">🌴 Apply for Leave</summary>
@@ -1818,16 +1828,7 @@ body:has(#loginView:not(.hidden)) .main-header #headerSubtitle{display:none!impo
 <b id="drawerTitle">💵 Cash Drawer:</b>
 <div style="font-size:22px;font-weight:bold;color:#137333">₹ <span id="drawerCash">0</span></div>
 </div>
-<div class="slv-wallet-actions">
-<section class="slv-wallet-widget" aria-label="Live Cash Wallet">
-<div class="cash-wallet-employee-card">
-<span>💵 Live Cash Wallet</span>
-<strong>₹<b id="employeeCashWalletBalance">0.00</b></strong>
-<small>Cash IN / OUT updated balance</small>
-</div>
-</section>
-<button class="btn-orange shift-close-trigger" onclick="openShiftClose()">🔒 Shift Off / Cash Tally</button>
-</div>
+
 <div class="shift-close-panel" id="shiftClosePanel" style="display:none"></div>
 
 <div class="section-box slv-extra-employee">
@@ -8034,6 +8035,76 @@ html body .slv-five-hub .slv-five-buttons > button[data-cat="print"]::before{
   border:1.5px solid #111!important;
   border-radius:10px!important;
   box-sizing:border-box!important;
+}
+</style>
+
+<style>
+/* One shared bordered container for Shift Details and Live Cash Wallet */
+#employeeView>#slvShiftLeaveBox{
+  border:2px solid #111!important;
+  border-radius:14px!important;
+  padding:7px!important;
+  gap:7px!important;
+  background:#fff!important;
+  box-sizing:border-box!important;
+}
+/* Shift Details: blue panel with white text */
+#employeeView #slvShiftLeaveBox>.slv-shift-details{
+  background:linear-gradient(135deg,#1685e8,#123f91)!important;
+  border:1px solid #0b3678!important;
+  border-radius:10px!important;
+  padding:8px!important;
+}
+#employeeView #slvShiftLeaveBox>.slv-shift-details h4,
+#employeeView #slvShiftLeaveBox>.slv-shift-details .attendance-stats small,
+#employeeView #slvShiftLeaveBox>.slv-shift-details .attendance-stats b{
+  color:#fff!important;
+  -webkit-text-fill-color:#fff!important;
+}
+/* Wallet: green panel with white text, inside the same outer box */
+#employeeView #slvShiftLeaveBox>.slv-wallet-actions{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:flex-start!important;
+  gap:6px!important;
+  width:100%!important;
+  max-width:100%!important;
+  margin:0!important;
+}
+#employeeView #slvShiftLeaveBox .slv-wallet-widget{
+  width:150px!important;
+  height:150px!important;
+  min-width:150px!important;
+  max-width:150px!important;
+  margin:0!important;
+  background:linear-gradient(145deg,#16a34a,#075b2a)!important;
+  border:1.5px solid #064e3b!important;
+  border-radius:12px!important;
+  box-shadow:0 3px 10px rgba(22,163,74,.2)!important;
+}
+#employeeView #slvShiftLeaveBox .slv-wallet-widget .cash-wallet-employee-card{
+  background:transparent!important;
+}
+#employeeView #slvShiftLeaveBox .slv-wallet-widget .cash-wallet-employee-card span,
+#employeeView #slvShiftLeaveBox .slv-wallet-widget .cash-wallet-employee-card strong,
+#employeeView #slvShiftLeaveBox .slv-wallet-widget .cash-wallet-employee-card small,
+#employeeView #slvShiftLeaveBox .slv-wallet-widget .cash-wallet-employee-card b{
+  color:#fff!important;
+  -webkit-text-fill-color:#fff!important;
+}
+#employeeView #slvShiftLeaveBox .slv-wallet-actions .shift-close-trigger{
+  width:150px!important;
+  min-width:150px!important;
+  max-width:150px!important;
+  margin:0!important;
+}
+@media(max-width:899px){
+  #employeeView>#slvShiftLeaveBox{
+    width:300px!important;
+    max-width:min(300px,100%)!important;
+    align-self:flex-end!important;
+    margin:0 0 8px auto!important;
+  }
 }
 </style>
 </body>
