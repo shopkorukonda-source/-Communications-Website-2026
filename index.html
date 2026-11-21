@@ -8661,3 +8661,38 @@ body.slv-xerox-selected #slvInlineBillingHost #slvXeroxPanel{display:block!impor
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
 <!-- SLV Quick Links: popup accessed from employee side menu; cloud read uses authenticated RLS. -->
+
+<style id="slv-service-entry-final-visibility-fix">
+/* Final employee billing cleanup: keep selected service only in centered header. */
+#employeeView #slvInlineBillingHost .slv-inline-billing-title{
+ display:flex!important;flex-direction:column!important;align-items:center!important;
+ justify-content:center!important;text-align:center!important;width:100%!important;
+}
+#employeeView #slvInlineBillingHost .slv-inline-billing-title>*{
+ display:block!important;width:100%!important;text-align:center!important;
+}
+#employeeView #slvInlineBillingHost label[for="slvServiceSearch"],
+#employeeView #slvInlineBillingHost #slvServiceSearch,
+#employeeView #slvInlineBillingHost #slvServiceSuggestions,
+#employeeView #slvInlineBillingHost .slv-service-picker,
+#employeeView #slvInlineBillingHost label[for="slvTxService"],
+#employeeView #slvInlineBillingHost .slv-native-service-label,
+#employeeView #slvInlineBillingHost #slvTxService,
+#employeeView #slvInlineBillingHost button[onclick*="slvTxLoadServices"]{
+ display:none!important;visibility:hidden!important;
+}
+#employeeView #slvInlineBillingHost #slvFinancialBilling #finBillType{
+ display:none!important;visibility:hidden!important;
+}
+#employeeView #slvInlineBillingHost #slvFinancialBilling .grid>div:has(>#finBillType){
+ display:none!important;
+}
+#employeeView #slvInlineBillingHost #slvFinancialBilling .grid>div:has(>#finBillType) label{
+ display:none!important;
+}
+#employeeView #slvInlineBillingHost #slvTxSave,
+#employeeView #slvInlineBillingHost #finBillSave,
+#employeeView #slvInlineBillingHost #slvManualSave{
+ display:block!important;margin:9px auto!important;
+}
+</style>
