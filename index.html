@@ -5673,8 +5673,8 @@ hub.querySelectorAll('[data-cat]').forEach(b=>{
 });
 out.replaceChildren();out.dataset.openCategory=cat;
 const categoryButton=Array.from(hub.querySelectorAll('[data-cat]')).find(b=>b.dataset.cat===cat);
+const buttonRect=categoryButton?categoryButton.getBoundingClientRect():null;
 if(categoryButton){
- const buttonRect=categoryButton.getBoundingClientRect();
  const billingHost=document.getElementById('slvInlineBillingHost');
  const billingRect=billingHost?billingHost.getBoundingClientRect():null;
  const maxWidth=Math.min(170,window.innerWidth-16);
