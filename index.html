@@ -8982,3 +8982,43 @@ body.slv-xerox-selected #slvInlineBillingHost #slvXeroxPanel{display:block!impor
  font-weight:700!important;
 }
 </style>
+\n
+<script id="slv-close-hover-menus-on-mouseleave">
+(function(){
+ function closeCategory(role){
+  const hub=document.querySelector('#'+role+'View .slv-five-hub');
+  const out=document.getElementById('slv-'+role+'-results');
+  if(!hub||!out||!out.dataset.openCategory)return;
+  if(typeof window.slvAnimateCategoryPanel==='function')window.slvAnimateCategoryPanel(out,false);
+  hub.querySelectorAll('[data-cat]').forEach(b=>{
+   b.classList.remove('active');
+   b.setAttribute('aria-expanded','false');
+   const arrow=b.querySelector('.slv-category-arrow');if(arrow)arrow.textContent='▾';
+  });
+ }
+ function setup(){
+  ['employee','admin'].forEach(role=>{
+   const hub=document.querySelector('#'+role+'View .slv-five-hub');
+   if(!hub||hub.dataset.slvHoverCloseBound)return;
+   hub.dataset.slvHoverCloseBound='1';
+   hub.addEventListener('pointerleave',e=>{
+    if(e.pointerType==='touch')return;
+    closeCategory(role);
+   });
+  });
+  const wrap=document.querySelector('.slv-profile-wrap');
+  const menu=document.getElementById('slvProfileMenu');
+  if(wrap&&!wrap.dataset.slvHoverCloseBound){
+   wrap.dataset.slvHoverCloseBound='1';
+   wrap.addEventListener('pointerleave',e=>{
+    if(e.pointerType==='touch'||!menu||menu.classList.contains('hidden'))return;
+    if(typeof window.slvToggleProfileMenu==='function')window.slvToggleProfileMenu();
+   });
+  }
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup);
+ else setup();
+ const observer=new MutationObserver(setup);
+ observer.observe(document.documentElement,{childList:true,subtree:true});
+})();
+</script>
