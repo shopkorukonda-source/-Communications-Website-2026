@@ -1818,6 +1818,7 @@ body:has(#loginView:not(.hidden)) .main-header #headerSubtitle{display:none!impo
 <b id="drawerTitle">💵 Cash Drawer:</b>
 <div style="font-size:22px;font-weight:bold;color:#137333">₹ <span id="drawerCash">0</span></div>
 </div>
+<div class="slv-wallet-actions">
 <section class="slv-wallet-widget" aria-label="Live Cash Wallet">
 <div class="cash-wallet-employee-card">
 <span>💵 Live Cash Wallet</span>
@@ -1826,6 +1827,7 @@ body:has(#loginView:not(.hidden)) .main-header #headerSubtitle{display:none!impo
 </div>
 </section>
 <button class="btn-orange shift-close-trigger" onclick="openShiftClose()">🔒 Shift Off / Cash Tally</button>
+</div>
 <div class="shift-close-panel" id="shiftClosePanel" style="display:none"></div>
 
 <div class="section-box slv-extra-employee">
@@ -7974,6 +7976,51 @@ html body .slv-five-hub .slv-five-buttons > button[data-cat="print"]::before{
     width:150px!important;
     height:150px!important;
     min-width:150px!important;
+    max-width:150px!important;
+    align-self:flex-start!important;
+    margin:8px auto 10px 0!important;
+  }
+}
+</style>
+
+<style>
+/* Keep Shift Off / Cash Tally directly below the square Live Cash Wallet */
+#employeeView>.slv-wallet-actions{
+  grid-column:1!important;
+  justify-self:start!important;
+  align-self:start!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  gap:7px!important;
+  width:150px!important;
+  max-width:150px!important;
+  margin:8px 0 10px!important;
+}
+#employeeView>.slv-wallet-actions>.slv-wallet-widget{
+  width:150px!important;
+  height:150px!important;
+  min-width:150px!important;
+  max-width:150px!important;
+  margin:0!important;
+}
+#employeeView>.slv-wallet-actions>.shift-close-trigger{
+  display:block!important;
+  width:150px!important;
+  min-width:150px!important;
+  max-width:150px!important;
+  min-height:38px!important;
+  margin:0!important;
+  padding:7px 5px!important;
+  box-sizing:border-box!important;
+  border-radius:8px!important;
+  font-size:10px!important;
+  line-height:1.2!important;
+  white-space:normal!important;
+}
+@media(max-width:899px){
+  #employeeView>.slv-wallet-actions{
+    width:150px!important;
     max-width:150px!important;
     align-self:flex-start!important;
     margin:8px auto 10px 0!important;
