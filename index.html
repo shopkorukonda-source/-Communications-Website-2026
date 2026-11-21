@@ -1346,13 +1346,14 @@ body:has(#loginView:not(.hidden)) .main-header .slv-brand-sub{
 body:has(#loginView:not(.hidden)) .main-header:before,
 body:has(#loginView:not(.hidden)) .main-header:after{
   content:""!important;display:block!important;position:absolute!important;
-  top:50%!important;width:31%!important;height:3px!important;
-  transform:translateY(-50%)!important;border:0!important;border-radius:5px!important;
+  top:50%!important;bottom:auto!important;width:27%!important;height:3px!important;
+  left:auto!important;right:auto!important;transform:translateY(-50%)!important;
+  border:0!important;border-radius:5px!important;
   background:linear-gradient(90deg,transparent,#d4af37 35%,#ffe69a 75%,#d4af37)!important;
   box-shadow:0 1px 8px rgba(212,175,55,.35)!important;
 }
-body:has(#loginView:not(.hidden)) .main-header:before{left:3%!important}
-body:has(#loginView:not(.hidden)) .main-header:after{right:3%!important;transform:translateY(-50%) scaleX(-1)!important}
+body:has(#loginView:not(.hidden)) .main-header:before{left:3%!important;right:auto!important}
+body:has(#loginView:not(.hidden)) .main-header:after{right:3%!important;left:auto!important;transform:translateY(-50%) scaleX(-1)!important}
 body:has(#loginView:not(.hidden)) .main-header .slv-header-greeting,
 body:has(#loginView:not(.hidden)) .main-header .slv-header-actions,
 body:has(#loginView:not(.hidden)) .main-header #headerSubtitle{display:none!important}
@@ -1361,7 +1362,7 @@ body:has(#loginView:not(.hidden)) .main-header #headerSubtitle{display:none!impo
  body:has(#loginView:not(.hidden)) .main-header .slv-brand-main{font-size:31px!important}
  body:has(#loginView:not(.hidden)) .main-header .slv-brand-sub{font-size:11px!important;letter-spacing:2px!important}
  body:has(#loginView:not(.hidden)) .main-header:before,
- body:has(#loginView:not(.hidden)) .main-header:after{width:23%!important;height:2px!important}
+ body:has(#loginView:not(.hidden)) .main-header:after{width:22%!important;height:2px!important}
 }
 </style>
 </head>
