@@ -8518,6 +8518,9 @@ html body .slv-five-hub .slv-five-buttons > button[data-cat="print"]::before{
 #slvInlineBillingHost #slvTxSave{width:100%}
 #employeeView #slvInlineBillingHost input,#employeeView #slvInlineBillingHost select{max-width:100%}
 body.slv-xerox-selected #slvInlineBillingHost #slvXeroxPanel{display:block!important}
+#slvInlineBillingHost{display:block!important;visibility:visible!important;opacity:1!important;min-height:120px!important}
+#slvInlineBillingHost>#slvCloudCheckout{display:block!important;visibility:visible!important;opacity:1!important}
+#slvInlineBillingHost .slv-inline-billing-title{display:flex!important;visibility:visible!important}
 </style>
 <script>
 (function(){
@@ -8525,21 +8528,32 @@ body.slv-xerox-selected #slvInlineBillingHost #slvXeroxPanel{display:block!impor
   const host=document.getElementById('slvInlineBillingHost');
   const checkout=document.getElementById('slvCloudCheckout');
   const xerox=document.getElementById('slvXeroxPanel');
-  if(!host||!checkout||host.dataset.mounted==='1')return;
-  host.dataset.mounted='1';
-  if(xerox)host.appendChild(xerox);
-  host.appendChild(checkout);
+  if(!host||!checkout)return false;
+  host.style.setProperty('display','block','important');
+  host.style.setProperty('visibility','visible','important');
+  host.style.setProperty('opacity','1','important');
+  host.style.setProperty('min-height','120px','important');
+  host.style.setProperty('grid-column','1 / -1','important');
+  if(xerox&&xerox.parentElement!==host)host.appendChild(xerox);
+  if(checkout.parentElement!==host)host.appendChild(checkout);
+  checkout.classList.remove('hidden');
+  checkout.style.setProperty('display','block','important');
+  checkout.style.setProperty('visibility','visible','important');
+  checkout.style.setProperty('opacity','1','important');
   const select=document.getElementById('slvTxService');
+  const title=document.getElementById('slvInlineSelectedService');
   const update=()=>{
-   const option=select?.selectedOptions?.[0];
-   const label=(option?.textContent||'').replace(/\s*(?:[•·|–—-]\s*)?(?:₹|Rs\.?\s*)[\d,]+(?:\.\d{1,2})?/gi,'').replace(/[\s•·|–—-]+$/,'').trim();
-   const title=document.getElementById('slvInlineSelectedService');
+   const option=select&&select.selectedOptions?select.selectedOptions[0]:null;
+   const raw=(option&&option.value?option.textContent:'')||'';
+   const label=raw.replace(/\s*(?:[•·|–—-]\s*)?(?:₹|Rs\.?\s*)[\d,]+(?:\.\d{1,2})?/gi,'').replace(/[\s•·|–—-]+$/,'').trim();
    if(title)title.textContent=label||'Select a service from Service Center';
   };
-  select?.addEventListener('change',update);
-  update();
+  if(select&&!select.dataset.inlineFormBound){select.addEventListener('change',update);select.dataset.inlineFormBound='1';}
+  update(); return true;
  }
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
+ function start(){if(mount())return;let tries=0;const retry=setInterval(()=>{tries++;if(mount()||tries>=20)clearInterval(retry);},250);}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+ window.addEventListener('load',mount,{once:true});
 })();
 </script>
 </body>
