@@ -5648,16 +5648,12 @@ window.slvAnimateCategoryPanel=function(out,opening){
  out.style.setProperty('overflow','hidden','important');
  out.style.setProperty('transition','height 260ms cubic-bezier(.22,.61,.36,1), opacity 220ms ease, margin 260ms ease','important');
  if(opening){
-  out.style.setProperty('height','0px','important');
+  /* Portal to BODY so this menu is removed from page flow and cannot push wallet/billing down. */
+  out.style.setProperty('height','auto','important');
+  out.style.setProperty('margin-top','0','important');
+  out.style.setProperty('overflow','visible','important');
   out.style.setProperty('opacity','0','important');
-  out.style.setProperty('margin-top','0px','important');
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{
-   out.style.setProperty('height',out.scrollHeight+'px','important');
-   out.style.setProperty('opacity','1','important');
-   out.style.setProperty('margin-top','10px','important');
-  }));
-  const finish=(e)=>{if(e.propertyName!=='height')return;out.style.setProperty('height','auto','important');out.style.setProperty('overflow','visible','important');out.removeEventListener('transitionend',finish)};
-  out.addEventListener('transitionend',finish);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>out.style.setProperty('opacity','1','important')));
  }else{
   out.style.setProperty('height',out.scrollHeight+'px','important');
   out.style.setProperty('opacity','1','important');
@@ -5666,7 +5662,7 @@ window.slvAnimateCategoryPanel=function(out,opening){
    out.style.setProperty('opacity','0','important');
    out.style.setProperty('margin-top','0px','important');
   }));
-  const finish=(e)=>{if(e.propertyName!=='height')return;out.replaceChildren();out.dataset.openCategory='';out.style.setProperty('height','auto','important');out.style.setProperty('opacity','1','important');out.style.setProperty('margin-top','10px','important');out.style.setProperty('overflow','visible','important');out.removeEventListener('transitionend',finish)};
+  const finish=(e)=>{if(e.propertyName!=='height')return;out.replaceChildren();out.dataset.openCategory='';out.style.setProperty('height','auto','important');out.style.setProperty('opacity','1','important');out.style.setProperty('margin-top','0','important');out.style.setProperty('overflow','visible','important');out.removeEventListener('transitionend',finish);if(out.__slvOriginParent){const p=out.__slvOriginParent,n=out.__slvOriginNext;if(n&&n.parentNode===p)p.insertBefore(out,n);else p.appendChild(out);out.__slvOriginParent=null;out.__slvOriginNext=null;out.removeAttribute('style')}};
   out.addEventListener('transitionend',finish);
  }
 };
@@ -5704,6 +5700,7 @@ if(categoryButton){
  /* Place the menu over the billing form itself, not in the gap below categories. */
  const top=billingRect?Math.max(8,Math.min(window.innerHeight-100,billingRect.top+12)):Math.min(window.innerHeight-90,rowRect.bottom+8);
  const fixedLeft=Math.max(8,Math.min(window.innerWidth-maxWidth-8,buttonRect.left));
+ if(out.parentNode!==document.body){out.__slvOriginParent=out.parentNode;out.__slvOriginNext=out.nextSibling;document.body.appendChild(out);}
  out.style.setProperty('position','fixed','important');
  out.style.setProperty('z-index','2147482000','important');
  out.style.setProperty('float','none','important');
