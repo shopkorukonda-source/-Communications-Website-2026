@@ -8616,6 +8616,47 @@ body.slv-xerox-selected #slvInlineBillingHost #slvXeroxPanel{display:block!impor
 }
 </style>
 
+
+<style id="slv-service-entry-header-cleanup">
+#employeeView #slvInlineBillingHost .slv-inline-billing-title{
+ display:flex!important;flex-direction:column!important;align-items:center!important;
+ justify-content:center!important;text-align:center!important;gap:3px!important;
+ padding:3px 0 7px!important;margin:0 0 7px!important;
+ border-bottom:1px solid #d9e2ec!important;
+}
+#employeeView #slvInlineBillingHost .slv-inline-billing-title b{
+ display:block!important;width:100%!important;text-align:center!important;
+ font-size:15px!important;font-weight:900!important;
+}
+#employeeView #slvInlineBillingHost #slvInlineSelectedService{
+ display:block!important;width:100%!important;text-align:center!important;
+ font-size:12px!important;font-weight:800!important;color:#1456a4!important;
+}
+#employeeView #slvInlineBillingHost #slvCloudCheckout>h3{display:none!important}
+#employeeView #slvInlineBillingHost #slvServiceSearch,
+#employeeView #slvInlineBillingHost .slv-service-picker,
+#employeeView #slvInlineBillingHost .slv-native-service-label,
+#employeeView #slvInlineBillingHost #slvTxService,
+#employeeView #slvInlineBillingHost button[onclick="slvTxLoadServices()"]{display:none!important}
+#employeeView #slvInlineBillingHost #slvTxSave,
+#employeeView #slvInlineBillingHost #finBillSave,
+#employeeView #slvInlineBillingHost #slvManualSave{
+ display:block!important;width:82%!important;max-width:300px!important;
+ margin:9px auto 5px!important;padding:9px 12px!important;
+ min-height:38px!important;border:1px solid #075985!important;
+ border-radius:9px!important;
+ background:linear-gradient(135deg,#0b6bcb,#06458a)!important;
+ color:#fff!important;-webkit-text-fill-color:#fff!important;
+ font-size:13px!important;font-weight:900!important;
+ box-shadow:0 3px 8px rgba(6,69,138,.22)!important;
+}
+#employeeView #slvInlineBillingHost #slvTxSave:hover,
+#employeeView #slvInlineBillingHost #finBillSave:hover,
+#employeeView #slvInlineBillingHost #slvManualSave:hover{
+ background:linear-gradient(135deg,#087f8c,#075985)!important;
+}
+</style>
+
 </body>
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
