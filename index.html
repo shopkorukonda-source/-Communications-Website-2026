@@ -8703,3 +8703,23 @@ body.slv-xerox-selected #slvInlineBillingHost #slvXeroxPanel{display:block!impor
 #employeeView #slvInlineBillingHost #slvFinancialBilling>h3{display:none!important}
 #employeeView #slvInlineBillingHost #slvFinancialBilling{padding-top:8px!important}
 </style>
+
+
+<style id="slv-live-wallet-pulse-indicator">
+#employeeView>.slv-wallet-actions>.slv-wallet-widget .cash-wallet-employee-card>span{
+ display:flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;
+}
+#employeeView>.slv-wallet-actions>.slv-wallet-widget .cash-wallet-employee-card>span::before{
+ content:"";display:inline-block;flex:0 0 9px;width:9px;height:9px;border-radius:50%;
+ background:#ff2020;box-shadow:0 0 0 0 rgba(255,32,32,.65);
+ animation:slvLiveWalletPulse 1.15s ease-out infinite;
+}
+@keyframes slvLiveWalletPulse{
+ 0%{box-shadow:0 0 0 0 rgba(255,32,32,.7);opacity:1}
+ 70%{box-shadow:0 0 0 7px rgba(255,32,32,0);opacity:.85}
+ 100%{box-shadow:0 0 0 0 rgba(255,32,32,0);opacity:1}
+}
+@media(prefers-reduced-motion:reduce){
+ #employeeView>.slv-wallet-actions>.slv-wallet-widget .cash-wallet-employee-card>span::before{animation:none;box-shadow:0 0 0 2px rgba(255,32,32,.2)}
+}
+</style>
