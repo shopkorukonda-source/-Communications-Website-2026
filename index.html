@@ -8902,3 +8902,35 @@ body.slv-xerox-selected #slvInlineBillingHost #slvXeroxPanel{display:block!impor
   -webkit-text-fill-color:#fff!important;
 }
 </style>
+\n
+<style id="slv-service-buttons-match-category-width-20261121">
+/* Keep service buttons visually compact, matching category-card width. */
+#employeeView #slv-employee-results .slv-compact-service-menu,
+#employeeView #slv-employee-results .slv-compact-service-list{
+ display:grid!important;
+ grid-template-columns:minmax(0,170px)!important;
+ width:170px!important;
+ max-width:100%!important;
+ gap:8px!important;
+}
+#employeeView #slv-employee-results .slv-compact-service-option{
+ width:170px!important;
+ min-width:170px!important;
+ max-width:170px!important;
+ height:48px!important;
+ min-height:48px!important;
+ padding:8px 10px!important;
+ font-size:13px!important;
+ border-radius:9px!important;
+}
+@media(max-width:380px){
+ #employeeView #slv-employee-results .slv-compact-service-menu,
+ #employeeView #slv-employee-results .slv-compact-service-list{
+  grid-template-columns:minmax(0,160px)!important;
+  width:160px!important;
+ }
+ #employeeView #slv-employee-results .slv-compact-service-option{
+  width:160px!important;min-width:160px!important;max-width:160px!important;
+ }
+}
+</style>
