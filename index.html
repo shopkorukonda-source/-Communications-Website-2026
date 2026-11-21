@@ -7695,15 +7695,21 @@ html body .slv-five-hub .slv-five-buttons > button[data-cat="print"]::before{
 
 <style id="slv-shift-leave-right-panel-v1">
 @media(min-width:620px){
-#employeeView:not(.hidden){display:grid!important;grid-template-columns:minmax(0,1.15fr) minmax(250px,.85fr);align-items:start;column-gap:14px}
+#employeeView:not(.hidden){display:grid!important;width:100%!important;max-width:1200px!important;box-sizing:border-box!important;grid-template-columns:minmax(0,1fr) 260px;align-items:start;column-gap:18px}
 #employeeView>.slv-five-hub{grid-column:1;grid-row:1}
 #employeeView>.menu-shade,#employeeView>.employee-side-menu{grid-column:1/-1}
 #employeeView>.banner{grid-column:1}
-#employeeView>#slvShiftLeaveBox{grid-column:2;grid-row:1 / span 12;align-self:start}
+#employeeView>#slvShiftLeaveBox{grid-column:2;grid-row:1 / span 12;align-self:center;justify-self:center;width:100%;max-width:245px;box-sizing:border-box;margin:38px 0 0}
 #employeeView>.slv-extra-employee,#employeeView>.cash-wallet-employee-card,#employeeView>.grid,#employeeView>.shift-close-trigger,#employeeView>#shiftClosePanel{grid-column:1}
 #employeeView>.slv-extra-employee{max-width:100%}
 }
-.slv-shift-leave-box{background:#fff;border:1px solid #cbdced;border-radius:16px;padding:14px;box-shadow:0 4px 14px rgba(20,60,100,.07);display:flex;flex-direction:column;gap:14px}
+.slv-shift-leave-box{width:100%;max-width:245px;background:#fff;border:1px solid #cbdced;border-radius:14px;padding:10px;box-shadow:0 4px 14px rgba(20,60,100,.07);display:flex;flex-direction:column;gap:9px}
+.slv-shift-leave-box .slv-shift-details,.slv-shift-leave-box .slv-leave-management{padding:9px}
+.slv-shift-leave-box h4{font-size:12px;margin:0 0 7px}
+.slv-shift-leave-box .attendance-stats{gap:5px}
+.slv-shift-leave-box .attendance-stats>div{padding:6px}
+.slv-shift-leave-box .attendance-stats small{font-size:9px}
+.slv-shift-leave-box .attendance-stats b{font-size:10px;margin-top:2px}
 .slv-shift-details,.slv-leave-management{background:#f8fbff;border:1px solid #dbe7f3;border-radius:12px;padding:12px}
 .slv-shift-leave-box h4{margin:0 0 12px;color:#123b63;font-weight:800}
 .slv-shift-leave-box .attendance-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
