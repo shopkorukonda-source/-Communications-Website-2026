@@ -5691,29 +5691,38 @@ if(categoryButton){
  const maxWidth=Math.min(270,Math.max(160,hub.clientWidth-16));
  let left=buttonRect.left-hubRect.left+hub.scrollLeft;
  left=Math.max(0,Math.min(left,hub.clientWidth-maxWidth));
- /* Keep the dropdown in normal document flow below the category row.
-    This prevents it covering attendance/shift cards on mobile. */
+ /* Overlay dropdown over the billing area; do not push wallet, shift or billing panels down. */
+ hub.style.setProperty('position','relative','important');
  hub.style.setProperty('display','block','important');
  hub.style.setProperty('height','auto','important');
  hub.style.setProperty('min-height','0','important');
  hub.style.setProperty('overflow','visible','important');
- out.style.setProperty('position','static','important');
+ const categoryRow=hub.querySelector('.slv-five-buttons');
+ const rowRect=categoryRow?categoryRow.getBoundingClientRect():buttonRect;
+ const top=rowRect.bottom-hubRect.top+8;
+ out.style.setProperty('position','absolute','important');
+ out.style.setProperty('z-index','999','important');
  out.style.setProperty('float','none','important');
- out.style.setProperty('clear','both','important');
+ out.style.setProperty('clear','none','important');
  out.style.setProperty('display','block','important');
- out.style.setProperty('left','auto','important');
+ out.style.setProperty('left',Math.max(0,left)+'px','important');
  out.style.setProperty('right','auto','important');
- out.style.setProperty('top','auto','important');
+ out.style.setProperty('top',top+'px','important');
  out.style.setProperty('bottom','auto','important');
- out.style.setProperty('inset','auto','important');
+ out.style.setProperty('inset','auto auto auto '+Math.max(0,left)+'px','important');
  out.style.setProperty('transform','none','important');
- out.style.setProperty('margin','10px 0 0','important');
- out.style.setProperty('padding','0','important');
- out.style.setProperty('width','100%','important');
- out.style.setProperty('max-width','100%','important');
+ out.style.setProperty('margin','0','important');
+ out.style.setProperty('padding','8px','important');
+ out.style.setProperty('width',maxWidth+'px','important');
+ out.style.setProperty('max-width','min('+maxWidth+'px, calc(100vw - 32px))','important');
  out.style.setProperty('height','auto','important');
  out.style.setProperty('min-height','0','important');
- out.style.setProperty('overflow','visible','important');
+ out.style.setProperty('max-height','min(55vh, 360px)','important');
+ out.style.setProperty('overflow-y','auto','important');
+ out.style.setProperty('background','#fff','important');
+ out.style.setProperty('border','1px solid #dce6ed','important');
+ out.style.setProperty('border-radius','12px','important');
+ out.style.setProperty('box-shadow','0 8px 24px rgba(20,45,65,.22)','important');
 }
 
 let select=document.getElementById('slvTxService');
