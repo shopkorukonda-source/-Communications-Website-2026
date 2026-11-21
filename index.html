@@ -7518,6 +7518,41 @@ html body #loginView .slv-signin-btn span{
 }
 </style>
 
+
+
+<style id="slv-category-tile-watermark-wave-v8">
+/* Subtle blue watermark wave around each white category tile; preserves logos, labels and click handlers */
+#adminView .slv-five-buttons button[data-cat],
+#employeeView .slv-five-buttons button[data-cat]{
+  position:relative!important;
+  isolation:isolate!important;
+  overflow:hidden!important;
+}
+#adminView .slv-five-buttons button[data-cat]::after,
+#employeeView .slv-five-buttons button[data-cat]::after{
+  content:""!important;
+  position:absolute!important;
+  inset:4px!important;
+  z-index:0!important;
+  pointer-events:none!important;
+  border:1px solid rgba(0,145,195,.20)!important;
+  border-radius:6px!important;
+  background:
+    radial-gradient(ellipse at 0% 0%,rgba(0,174,220,.12),transparent 43%),
+    radial-gradient(ellipse at 100% 100%,rgba(0,145,205,.11),transparent 45%),
+    repeating-linear-gradient(135deg,transparent 0 10px,rgba(0,145,195,.035) 10px 11px)!important;
+}
+#adminView .slv-five-buttons button[data-cat]::before,
+#employeeView .slv-five-buttons button[data-cat]::before,
+#adminView .slv-five-buttons button[data-cat] b,
+#employeeView .slv-five-buttons button[data-cat] b,
+#adminView .slv-five-buttons button[data-cat] .slv-category-icon,
+#employeeView .slv-five-buttons button[data-cat] .slv-category-icon{
+  position:relative!important;
+  z-index:1!important;
+}
+</style>
+
 </body>
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
