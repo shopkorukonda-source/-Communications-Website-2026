@@ -7695,10 +7695,11 @@ html body .slv-five-hub .slv-five-buttons > button[data-cat="print"]::before{
 
 <style id="slv-shift-leave-right-panel-v1">
 @media(min-width:900px){
-#employeeView{display:grid!important;grid-template-columns:minmax(0,1.8fr) minmax(280px,.85fr);align-items:start;column-gap:16px}
-#employeeView>.slv-five-hub,#employeeView>.menu-shade,#employeeView>.employee-side-menu,#employeeView>.banner{grid-column:1/-1}
-#employeeView>#attendancePanel{grid-column:1;grid-row:auto}
-#employeeView>#slvShiftLeaveBox{grid-column:2;grid-row:4 / span 12;align-self:start}
+#employeeView:not(.hidden){display:grid!important;grid-template-columns:minmax(0,1.8fr) minmax(280px,.85fr);align-items:start;column-gap:16px}
+#employeeView>.slv-five-hub{grid-column:1;grid-row:1}
+#employeeView>.menu-shade,#employeeView>.employee-side-menu{grid-column:1/-1}
+#employeeView>.banner{grid-column:1}
+#employeeView>#slvShiftLeaveBox{grid-column:2;grid-row:1 / span 12;align-self:start}
 #employeeView>.slv-extra-employee,#employeeView>.cash-wallet-employee-card,#employeeView>.grid,#employeeView>.shift-close-trigger,#employeeView>#shiftClosePanel{grid-column:1}
 #employeeView>.slv-extra-employee{max-width:100%}
 }
@@ -7712,7 +7713,7 @@ html body .slv-five-hub .slv-five-buttons > button[data-cat="print"]::before{
 .slv-leave-management details#slvLeaveDetails{margin:0;border:0;padding:0;background:transparent}
 .slv-leave-management details#slvLeaveDetails>summary{color:#123b63;padding:8px 0}
 @media(max-width:899px){
-#employeeView{display:flex!important;flex-direction:column}
+#employeeView:not(.hidden){display:flex!important;flex-direction:column}
 .slv-shift-leave-box{width:100%;box-sizing:border-box}
 }
 </style>
