@@ -6894,6 +6894,47 @@ html body #loginView .slv-login-brand button.slv-login-square.slv-pan-apply-tile
  background:transparent!important;box-shadow:none!important;color:#000!important;
 }
 </style>
+<style id="slv-service-center-centered-heading">
+/* Employee Service Center: left plain black menu, centered title, no button box */
+#employeeView .slv-five-hub .slv-hub-head{
+ display:grid!important;
+ grid-template-columns:38px minmax(0,1fr) auto!important;
+ align-items:center!important;
+ gap:8px!important;
+}
+#employeeView .slv-five-hub .slv-hub-head>button.slv-employee-hub-menu{
+ display:flex!important;visibility:visible!important;opacity:1!important;
+ align-items:center!important;justify-content:flex-start!important;
+ width:30px!important;min-width:30px!important;max-width:30px!important;
+ height:40px!important;min-height:40px!important;flex:none!important;
+ margin:0!important;padding:0!important;
+ appearance:none!important;-webkit-appearance:none!important;
+ background:none!important;background-color:transparent!important;
+ background-image:none!important;
+ color:#000!important;-webkit-text-fill-color:#000!important;
+ border:0!important;border-radius:0!important;outline:0!important;
+ box-shadow:none!important;text-shadow:none!important;
+ font-family:Arial,sans-serif!important;font-size:29px!important;
+ font-weight:700!important;line-height:1!important;
+}
+#employeeView .slv-five-hub .slv-hub-head>button.slv-employee-hub-menu::before,
+#employeeView .slv-five-hub .slv-hub-head>button.slv-employee-hub-menu::after{
+ content:none!important;display:none!important;background:none!important;
+}
+#employeeView .slv-five-hub .slv-hub-head>div{
+ grid-column:2!important;min-width:0!important;flex:none!important;
+ text-align:center!important;
+}
+#employeeView .slv-five-hub .slv-hub-head>div h2{
+ text-align:center!important;width:100%!important;
+}
+#employeeView .slv-five-hub .slv-hub-head>div p{
+ text-align:center!important;width:100%!important;
+}
+#employeeView .slv-five-hub .slv-hub-head>.slv-hub-tag{
+ grid-column:3!important;white-space:nowrap!important;
+}
+</style>
 </body>
 </html>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
