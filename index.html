@@ -1818,11 +1818,13 @@ body:has(#loginView:not(.hidden)) .main-header #headerSubtitle{display:none!impo
 <b id="drawerTitle">💵 Cash Drawer:</b>
 <div style="font-size:22px;font-weight:bold;color:#137333">₹ <span id="drawerCash">0</span></div>
 </div>
+<section class="slv-wallet-widget" aria-label="Live Cash Wallet">
 <div class="cash-wallet-employee-card">
 <span>💵 Live Cash Wallet</span>
 <strong>₹<b id="employeeCashWalletBalance">0.00</b></strong>
 <small>Cash IN / OUT updated balance</small>
 </div>
+</section>
 <button class="btn-orange shift-close-trigger" onclick="openShiftClose()">🔒 Shift Off / Cash Tally</button>
 <div class="shift-close-panel" id="shiftClosePanel" style="display:none"></div>
 
@@ -7821,6 +7823,58 @@ html body .slv-five-hub .slv-five-buttons > button[data-cat="print"]::before{
 #employeeView .slv-leave-management details#slvLeaveDetails>summary *{
   color:#fff!important;
   -webkit-text-fill-color:#fff!important;
+}
+</style>
+
+<style>
+/* Compact Live Cash Wallet card on the left side of the employee dashboard */
+#employeeView>.slv-wallet-widget{
+  grid-column:1!important;
+  justify-self:start!important;
+  align-self:start!important;
+  width:230px!important;
+  max-width:100%!important;
+  margin:8px 0 10px!important;
+  padding:8px!important;
+  box-sizing:border-box!important;
+  background:#fff!important;
+  border:1px solid #111!important;
+  border-radius:9px!important;
+  box-shadow:none!important;
+}
+#employeeView>.slv-wallet-widget .cash-wallet-employee-card{
+  display:grid!important;
+  grid-template-columns:1fr auto!important;
+  align-items:center!important;
+  gap:3px 8px!important;
+  width:100%!important;
+  margin:0!important;
+  padding:5px!important;
+  border:0!important;
+  border-radius:5px!important;
+  background:#f7fbff!important;
+}
+#employeeView>.slv-wallet-widget .cash-wallet-employee-card span{
+  font-size:10px!important;
+  line-height:1.25!important;
+}
+#employeeView>.slv-wallet-widget .cash-wallet-employee-card strong{
+  font-size:15px!important;
+  white-space:nowrap!important;
+}
+#employeeView>.slv-wallet-widget .cash-wallet-employee-card small{
+  grid-column:1/-1!important;
+  width:auto!important;
+  font-size:8px!important;
+  line-height:1.2!important;
+}
+@media(max-width:899px){
+  #employeeView>.slv-wallet-widget{
+    width:230px!important;
+    max-width:min(230px,100%)!important;
+    align-self:flex-start!important;
+    margin:8px auto 10px 0!important;
+  }
 }
 </style>
 </body>
