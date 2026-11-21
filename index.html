@@ -1807,6 +1807,12 @@ body:has(#loginView:not(.hidden)) .main-header #headerSubtitle{display:none!impo
 <input id="leaveReason" placeholder="Reason for leave"/>
 <button class="btn-green" onclick="applyLeave()">Submit Leave</button><h4>My Cloud Leave History</h4><div class="muted" id="slvEmployeeLeaveHistory">Loading leave history...</div></details>
 </section>
+<section class="slv-shift-actions">
+<h4>⚡ Shift &amp; Lunch</h4>
+<button type="button" class="btn-green" id="shiftStartQuickBtn" onclick="ensureTodayAttendance();renderAttendancePanel()">▶ Shift Start</button>
+<button type="button" class="btn-orange" id="lunchStartBtn" onclick="startLunchBreak()">🍽 Lunch Start</button>
+<button type="button" class="btn-green hidden" id="resumeShiftBtn" onclick="resumeShift()">▶ Resume Shift</button>
+</section>
 </aside>
 <div class="slab-box slv-extra-employee" style="background:#e6f4ea;border-color:#34a853;margin-top:10px">
 <b id="drawerTitle">💵 Cash Drawer:</b>
@@ -1816,9 +1822,6 @@ body:has(#loginView:not(.hidden)) .main-header #headerSubtitle{display:none!impo
 <span>💵 Live Cash Wallet</span>
 <strong>₹<b id="employeeCashWalletBalance">0.00</b></strong>
 <small>Cash IN / OUT updated balance</small>
-</div>
-<div class="grid">
-<div class="tile" onclick="document.getElementById('slvLeaveDetails').open=true;document.getElementById('slvLeaveDetails').scrollIntoView({behavior:'smooth'})"><span>🌴</span>Apply Leave</div>
 </div>
 <button class="btn-orange shift-close-trigger" onclick="openShiftClose()">🔒 Shift Off / Cash Tally</button>
 <div class="shift-close-panel" id="shiftClosePanel" style="display:none"></div>
@@ -7722,6 +7725,26 @@ html body .slv-five-hub .slv-five-buttons > button[data-cat="print"]::before{
 #employeeView:not(.hidden){display:flex!important;flex-direction:column}
 .slv-shift-leave-box{width:100%;box-sizing:border-box}
 }
+</style>
+
+<style>
+/* Compact employee shift/leave widget */
+#employeeView>#slvShiftLeaveBox{width:100%;max-width:210px;padding:8px;gap:6px}
+#employeeView .slv-shift-leave-box .slv-shift-details,
+#employeeView .slv-shift-leave-box .slv-leave-management,
+#employeeView .slv-shift-leave-box .slv-shift-actions{padding:7px;margin:0}
+#employeeView .slv-shift-leave-box h4{font-size:11px;margin:0 0 5px}
+#employeeView .slv-shift-leave-box .attendance-stats{grid-template-columns:1fr 1fr;gap:4px}
+#employeeView .slv-shift-leave-box .attendance-stats>div{padding:5px 3px;border-radius:6px}
+#employeeView .slv-shift-leave-box .attendance-stats small{font-size:8px;line-height:1.2}
+#employeeView .slv-shift-leave-box .attendance-stats b{font-size:9px;margin-top:2px;overflow-wrap:anywhere}
+#employeeView .slv-leave-management details#slvLeaveDetails>summary{font-size:10px;padding:5px 0}
+#employeeView .slv-shift-actions button{display:block;width:100%;margin:4px 0 0;padding:6px 5px;font-size:10px;border-radius:6px}
+#employeeView .slv-leave-management details#slvLeaveDetails[open]{font-size:10px}
+#employeeView .slv-leave-management details#slvLeaveDetails label{font-size:9px}
+#employeeView .slv-leave-management details#slvLeaveDetails input,
+#employeeView .slv-leave-management details#slvLeaveDetails select{font-size:10px;padding:6px;margin:3px 0 6px}
+@media(max-width:899px){#employeeView>#slvShiftLeaveBox{width:210px;max-width:210px;align-self:flex-end;margin:0 0 8px auto}}
 </style>
 </body>
 </html>
