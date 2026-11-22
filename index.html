@@ -3683,11 +3683,20 @@ try {
     if(!services.length)status('Loading services…');
     // Service catalogue is read-only reference data. Do not block it behind shift/profile checks;
     // those checks remain mandatory in the transaction-save RPC path.
-    const db=window.slvSupabase;
-    if(!db)throw Error('Supabase connection is not ready. Please refresh once.');
+    // Wait for the Supabase client script to finish initializing before requesting data.
+    let db=window.slvSupabase;
+    const clientStarted=Date.now();
+    while(!db && Date.now()-clientStarted<12000){
+     await new Promise(resolve=>setTimeout(resolve,150));
+     db=window.slvSupabase;
+    }
+    if(!db)throw Error('Supabase client did not initialize. Reload the page and check internet.');
+    status('Connecting to services…');
     const query=db.from('services').select('id,service_name,customer_rate,internal_cost,is_active,category_key').eq('is_active',true).order('service_name');
-    const timeout=new Promise((_,reject)=>setTimeout(()=>reject(Error('Services request timed out. Check internet and Supabase connection.')),8000));
-    const r=await Promise.race([query,timeout]);
+    let timeoutId;
+    const timeout=new Promise((_,reject)=>{timeoutId=setTimeout(()=>reject(Error('Services server did not respond within 8 seconds.')),8000)});
+    let r;
+    try{r=await Promise.race([query,timeout])}finally{clearTimeout(timeoutId)}
     if(r.error)throw r.error;
     services=r.data||[];servicesFetchedAt=Date.now();
     const select=el('slvTxService');const selected=select.value;
@@ -5727,7 +5736,11 @@ let options=select?Array.from(select.options).filter(o=>o.value&&!o.disabled):[]
 const needsCategoryData=role==='employee'&&(!options.length||options.some(o=>!o.dataset.categoryKey));
 if(role==='employee'&&needsCategoryData&&typeof window.slvTxLoadServices==='function'){
  const p=document.createElement('p');p.textContent='Loading services…';out.append(p);
- try{await window.slvTxLoadServices(true)}catch(e){p.textContent='Services load కాలేదు. Internet / login చెక్ చేయండి.';return}
+ try{
+  const load=window.slvTxLoadServices(true);
+  let timer;
+  await Promise.race([load,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Services load 10 seconds దాటింది. Please retry.')),10000)})]).finally(()=>clearTimeout(timer));
+ }catch(e){p.textContent='Services load కాలేదు: '+(e.message||e);window.slvAnimateCategoryPanel(out,true);return}
  select=document.getElementById('slvTxService');options=select?Array.from(select.options).filter(o=>o.value&&!o.disabled):[];
 }
 if(!options.length){const p=document.createElement('p');p.textContent='Services are not available right now. Please refresh services.';out.append(p);window.slvAnimateCategoryPanel(out,true);return}
