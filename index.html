@@ -9228,4 +9228,34 @@ body.slv-xerox-selected #slvInlineBillingHost #slvXeroxPanel{display:block!impor
 }
 #employeeSideMenu .side-menu-head b,#adminSideMenu .side-menu-head b{color:#173454!important}
 
+
+/* Highest-specificity menu theme override: neutralize the global blue button rule */
+#employeeView #employeeSideMenu button.side-menu-link,
+#employeeView #employeeSideMenu a.side-menu-link,
+#adminView #adminSideMenu button.side-menu-link,
+#adminView #adminSideMenu a.side-menu-link{
+ background:#f3f6fa!important;background-color:#f3f6fa!important;background-image:none!important;
+ color:#173454!important;-webkit-text-fill-color:#173454!important;
+ border:1px solid #e1e8f0!important;border-radius:10px!important;
+ box-shadow:none!important;text-shadow:none!important;filter:none!important
+}
+#employeeView #employeeSideMenu button.side-menu-link *,
+#employeeView #employeeSideMenu a.side-menu-link *,
+#adminView #adminSideMenu button.side-menu-link *,
+#adminView #adminSideMenu a.side-menu-link *{
+ color:#173454!important;-webkit-text-fill-color:#173454!important
+}
+#employeeView #employeeSideMenu button.side-menu-link:active,
+#employeeView #employeeSideMenu button.side-menu-link:focus,
+#adminView #adminSideMenu button.side-menu-link:active,
+#adminView #adminSideMenu button.side-menu-link:focus{
+ background:#fff4d8!important;color:#8a641b!important;-webkit-text-fill-color:#8a641b!important;
+ border-color:#d6b15b!important
+}
+#employeeView #employeeSideMenu button.side-menu-link.side-logout,
+#adminView #adminSideMenu button.side-menu-link.side-logout{
+ background:#fff0ee!important;color:#a43e35!important;-webkit-text-fill-color:#a43e35!important;
+ border-color:#f0d6d2!important
+}
+
 </style>
