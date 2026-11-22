@@ -1560,7 +1560,16 @@ body:has(#loginView:not(.hidden)) .main-header #headerSubtitle{display:none!impo
 <select id="srvWallet"></select>
 <button class="btn-orange" onclick="saveService()">+ Save Service Rule</button>
 <p class="muted" id="slvNewPricingHelp">Manual: employee enters Main Amount + Service Charge. Slab: create service, then configure Universal Pricing below.</p>
-<div id="servicesAdminList"></div><div class="section-box" id="slvCatalogPanel" style="margin-top:18px"><h4>📚 SLV Service Catalog — Add to Cloud</h4><p class="muted">Add missing services only. New services are INACTIVE with ₹0 rates until Admin configures rates and cloud wallet mappings. Existing services are preserved.</p><div class="row"><button onclick="slvCatalogPreview()" type="button">Preview Missing Services</button><button class="btn-green" onclick="slvCatalogImport()" type="button">Add Missing Services</button></div><p class="muted" id="slvCatalogStatus"></p><div id="slvCatalogPreview"></div></div>
+<div id="servicesAdminList"></div><div class="section-box" id="slvWalletCostAdmin" style="margin-top:16px;border:1px solid #c99b35">
+<h4>⚙️ Advanced Service Billing & Wallet Costs</h4>
+<p class="muted">ప్రతి Serviceకి Admin ఇక్కడ customer price/profit mode మరియు unlimited processing wallet costs configure చేయవచ్చు (గరిష్ఠం 30 wallets).</p>
+<label>Existing Service</label><select id="slvCostService"><option value="">Select service</option></select>
+<div class="row"><div style="flex:1"><label>Internal Cost</label><select id="slvInternalCostEnabled"><option value="yes">Internal Cost — ON</option><option value="no">No Internal Cost — OFF</option></select></div><div style="flex:1"><label>Profit Mode</label><select id="slvProfitMode"><option value="cost_based">Cost Based</option><option value="profit_based">Profit Based</option></select></div></div>
+<div id="slvWalletCostRows"></div>
+<button type="button" class="btn-orange" id="slvAddWalletCost">+ Add Processing Wallet</button>
+<button type="button" class="btn-green" id="slvSaveWalletCosts">Save Wallet Costs</button>
+<p class="muted" id="slvWalletCostStatus"></p>
+</div><div class="section-box" id="slvCatalogPanel" style="margin-top:18px"><h4>📚 SLV Service Catalog — Add to Cloud</h4><p class="muted">Add missing services only. New services are INACTIVE with ₹0 rates until Admin configures rates and cloud wallet mappings. Existing services are preserved.</p><div class="row"><button onclick="slvCatalogPreview()" type="button">Preview Missing Services</button><button class="btn-green" onclick="slvCatalogImport()" type="button">Add Missing Services</button></div><p class="muted" id="slvCatalogStatus"></p><div id="slvCatalogPreview"></div></div>
 <div class="section-box" id="slvUniversalPricing" style="margin-top:18px;border:1px solid #b8d5f5"><h4>🧮 Universal Pricing — Cloud Rules</h4><p class="muted">Fixed / Percentage / Slab rules. Profit is always Customer Charge − Processing Cost. Xerox and Current Bill keep their separate rules.</p><label>Service</label><select id="upService" onchange="slvUPLoad()"><option value="">Load services</option></select><label>Pricing Target</label><select id="upTarget" onchange="slvUPLoad()"><option value="charge">Customer Charge</option><option value="cost">Processing Cost</option></select><label>Rule Type</label><select id="upType" onchange="slvUPFields()"><option value="fixed">Fixed per Unit</option><option value="percentage">Percentage</option><option value="slab">Slab</option></select><div id="upValueBox"><label>Rate ₹ / Percentage %</label><input id="upValue" min="0" step="0.01" type="number" value="0"/></div><div class="hidden" id="upBasisBox"><label>Percentage Basis</label><select id="upBasis"><option value="fixed_rate">Service Fixed Rate</option><option value="customer">Customer Amount</option></select></div><div class="hidden" id="upSlabBox"><div class="row"><div><label>Slab Method</label><select id="upMethod"><option value="flat">Flat / Matching Slab</option><option value="progressive">Progressive / Tiered</option></select></div><div><label>Slab Charge Type</label><select id="upUnit"><option value="per_unit">Per Unit Rate</option><option value="fixed_charge">Fixed Slab Charge</option></select></div></div><label>Slabs: from-to=rate (one per line, ascending, no overlaps)</label><textarea id="upSlabs" placeholder="1-10=2
 11-50=1.5"></textarea></div><div class="row"><button class="btn-green" onclick="slvUPSave()" type="button">Save Cloud Rule</button><button class="btn-secondary" onclick="slvUPDelete()" type="button">Remove Rule (use Service defaults)</button></div><p class="muted" id="upStatus" role="status"></p></div>
 <div class="section-box" id="xeroxAdminPricing" style="margin-top:18px;border:1px solid #d6e5fa">
@@ -9530,3 +9539,75 @@ body.slv-xerox-selected #slvInlineBillingHost #slvXeroxPanel{display:block!impor
 #slvCloudCheckout.slv-manual-mode #slvManualBilling .row{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important}
 @media(max-width:420px){#slvCloudCheckout.slv-manual-mode #slvManualBilling .row{gap:6px!important}#slvCloudCheckout.slv-manual-mode #slvManualBilling input{min-width:0!important;font-size:13px!important}}
 </style>
+<script>
+/* SLV Advanced service wallet cost editor — Admin only */
+(function(){
+ const $=id=>document.getElementById(id); let wallets=[];
+ async function adminDb(){
+  const db=window.slvSupabase;if(!db)throw Error('Cloud connection not ready.');
+  const u=await db.auth.getUser();if(u.error||!u.data?.user)throw Error('Login required.');
+  const p=await db.from('profiles').select('role,is_active').eq('id',u.data.user.id).single();
+  if(p.error||p.data?.role!=='admin'||p.data?.is_active!==true)throw Error('Active Admin required.');
+  return db;
+ }
+ function status(t){$('slvWalletCostStatus').textContent=t;}
+ function addRow(id='',cost='0'){
+  const wrap=$('slvWalletCostRows');if(wrap.children.length>=30)return alert('Maximum 30 processing wallets.');
+  const row=document.createElement('div');row.className='row';row.style.cssText='align-items:end;gap:8px;margin:8px 0';
+  const sel=document.createElement('select');sel.className='slv-cost-wallet';sel.style.flex='2';
+  const empty=document.createElement('option');empty.value='';empty.textContent='Select processing wallet';sel.append(empty);
+  wallets.forEach(w=>{const o=document.createElement('option');o.value=w.id;o.textContent=w.wallet_name;sel.append(o)});sel.value=id;
+  const inp=document.createElement('input');inp.type='number';inp.min='0';inp.step='.01';inp.value=cost;inp.placeholder='Cost ₹';inp.className='slv-cost-amount';inp.style.flex='1';
+  const del=document.createElement('button');del.type='button';del.textContent='×';del.className='btn-red';del.onclick=()=>row.remove();
+  row.append(sel,inp,del);wrap.append(row);
+ }
+ async function load(){
+  try{
+   const db=await adminDb();
+   const [sv,wa]=await Promise.all([
+    db.from('services').select('id,service_name').eq('is_active',true).order('service_name'),
+    db.from('wallets').select('id,wallet_name').eq('is_active',true).is('owner_user_id',null).order('wallet_name')
+   ]);
+   if(sv.error)throw sv.error;if(wa.error)throw wa.error;wallets=wa.data||[];
+   const select=$('slvCostService'),old=select.value;select.replaceChildren(new Option('Select service',''));
+   (sv.data||[]).forEach(x=>select.add(new Option(x.service_name,x.id)));
+   if(old)select.value=old;
+   if(select.value)await loadConfig();
+  }catch(e){status(e.message||String(e))}
+ }
+ async function loadConfig(){
+  const db=await adminDb(),id=$('slvCostService').value;if(!id)return;
+  const [cfg,svc]=await Promise.all([db.rpc('slv_admin_get_service_wallet_costs',{p_service_id:id}),db.from('services').select('settings').eq('id',id).single()]);
+  if(cfg.error)throw cfg.error;if(svc.error)throw svc.error;
+  $('slvWalletCostRows').replaceChildren();
+  (cfg.data||[]).forEach(x=>addRow(x.wallet_id,x.processing_cost));
+  const st=svc.data?.settings||{};$('slvInternalCostEnabled').value=st.slv_internal_cost_enabled===false?'no':'yes';
+  $('slvProfitMode').value=st.slv_profit_mode||'cost_based';
+ }
+ $('slvAddWalletCost').addEventListener('click',()=>addRow());
+ $('slvCostService').addEventListener('change',()=>loadConfig().catch(e=>status(e.message)));
+ $('slvSaveWalletCosts').addEventListener('click',async()=>{
+  try{
+   const id=$('slvCostService').value;if(!id)throw Error('Select a service.');
+   const ids=[],costs=[];
+   document.querySelectorAll('#slvWalletCostRows .row').forEach(r=>{
+    const wid=r.querySelector('.slv-cost-wallet').value,val=r.querySelector('.slv-cost-amount').value;
+    if(!wid||val==='')throw Error('Select every wallet and enter its processing cost.');
+    ids.push(wid);costs.push(Number(val));
+   });
+   if(ids.some((v,i)=>ids.indexOf(v)!==i))throw Error('Duplicate wallet selected.');
+   if(costs.some(v=>!Number.isFinite(v)||v<0||Math.round(v*100)!==v*100))throw Error('Enter valid costs (up to 2 decimals).');
+   const db=await adminDb();
+   const {error}=await db.rpc('slv_admin_save_service_wallet_costs',{
+    p_service_id:id,p_wallet_ids:ids,p_costs:costs,
+    p_internal_cost_enabled:$('slvInternalCostEnabled').value==='yes',
+    p_profit_mode:$('slvProfitMode').value
+   });
+   if(error)throw error;status('Saved. Wallet cost settings updated; no wallet balance or transaction was changed.');
+  }catch(e){status(e.message||String(e))}
+ });
+ const old=window.adminMenuGo;
+ if(typeof old==='function')window.adminMenuGo=function(section,...args){const r=old.call(this,section,...args);if(section==='adminServices')load();return r};
+ document.addEventListener('DOMContentLoaded',()=>{if($('slvWalletCostAdmin'))load()});
+})();
+</script>
