@@ -1371,7 +1371,20 @@ body:has(#loginView:not(.hidden)) .main-header #headerSubtitle{display:none!impo
  body:has(#loginView:not(.hidden)) .main-header:after{width:17%!important;height:2px!important}
 }
 </style>
-</head>
+
+<style>
+/* Keep one clear service editor; legacy editors remain in source for compatibility but are hidden. */
+#adminServices>p:first-of-type,#srvName,#srvCategory,#srvType,#srvValue,#srvProfitType,#srvProfit,#profitSlabFields,#srvWallet,
+#slvNewPricingHelp,#servicesAdminList,#slvWalletCostAdmin,#slvCatalogPanel,#slvUniversalPricing,
+#xeroxAdminPricing,#slvBillSlabAdmin,#slvUniversalWalletPanel{display:none!important}
+#slvUnifiedServiceForm input,#slvUnifiedServiceForm select,#slvUnifiedServiceForm textarea{width:100%;box-sizing:border-box}
+#slvUnifiedServiceForm .row{display:flex;gap:10px;flex-wrap:wrap}
+#slvUnifiedServiceForm .row>*{min-width:0;flex:1}
+#ufWalletRows .uf-wallet-row{display:flex;gap:8px;align-items:end;margin:8px 0}
+#ufWalletRows .uf-wallet-row select{flex:2}
+#ufWalletRows .uf-wallet-row input{flex:1}
+@media(max-width:600px){#slvUnifiedServiceForm .row{display:block}#slvUnifiedServiceForm .row>*{display:block;margin:7px 0}#ufWalletRows .uf-wallet-row{flex-wrap:wrap}#ufWalletRows .uf-wallet-row select{flex:1 1 58%}#ufWalletRows .uf-wallet-row input{flex:1 1 25%}}
+</style></head>
 <body>
 <div aria-label="Transaction successful" aria-live="polite" class="slv-tx-success" id="slvTxSuccess" role="status"><div class="slv-tx-success-card"><div class="slv-tx-success-check">✓</div><h3>Transaction Successful</h3><p>SLV Communications • Payment Recorded</p><div class="slv-tx-success-amount" id="slvTxSuccessAmount">₹0.00</div><p id="slvTxSuccessCount">Wallet balances updated</p><div class="slv-tx-success-line"></div></div></div>
 <div aria-label="SLV loading" aria-live="polite" id="slvLoadingOverlay">
@@ -1527,6 +1540,22 @@ body:has(#loginView:not(.hidden)) .main-header #headerSubtitle{display:none!impo
 </div>
 <div class="section-box admin-section" id="adminServices" style="border-left:4px solid #f9ab00">
 <h4>🛠️ Services Setup &amp; Wallet Mapping</h4>
+<div class="section-box" id="slvUnifiedServiceForm" style="border:2px solid #c99b35;margin:14px 0;background:#fff">
+<h3 style="margin:0 0 12px;color:#8a6415">🛠️ Unified Service Setup</h3>
+<p class="muted">ఒకే ఫారంలో Service, Customer Price, Internal Cost, Profit, Processing Wallets అన్నీ configure చేయండి.</p>
+<label>Existing Service / New Service</label>
+<select id="ufService"><option value="">＋ New Service</option></select>
+<div class="row"><div style="flex:1"><label>Service Name</label><input id="ufName" placeholder="Enter service name"/></div><div style="flex:1"><label>Category</label><select id="ufCategory"><option>Government Services</option><option>Banking Services</option><option>Bill Payments</option><option>Printing &amp; Digital Services</option><option>Ticket Bookings</option><option>Other Services</option></select></div></div>
+<div class="row"><div style="flex:1"><label>Customer Price Type</label><select id="ufChargeType"><option value="fixed">Fixed</option><option value="slab">Slab</option><option value="percentage">Percentage</option><option value="manual">Manual</option></select></div><div style="flex:1"><label id="ufChargeValueLabel">Customer Amount / Rate (₹)</label><input id="ufChargeValue" type="number" min="0" step=".01" value="0"/></div></div>
+<div id="ufChargeExtra" style="display:none"><div class="row"><div style="flex:1"><label>Percentage Basis</label><select id="ufChargeBasis"><option value="fixed_rate">Service Fixed Rate</option><option value="customer">Customer Amount</option></select></div><div style="flex:1"><label>Slab Method</label><select id="ufChargeMethod"><option value="flat">Matching Slab</option><option value="progressive">Progressive</option></select></div></div><label>Customer Price Slabs (from-to=rate)</label><textarea id="ufChargeSlabs" rows="3" placeholder="1-100=5&#10;101-500=10"></textarea></div>
+<div class="row"><div style="flex:1"><label>Internal Cost</label><select id="ufInternal"><option value="yes">ON — Track Processing Cost</option><option value="no">OFF — No Processing Cost</option></select></div><div style="flex:1"><label>Profit Mode</label><select id="ufProfitMode"><option value="cost_based">Cost Based</option><option value="profit_based">Profit Based</option></select></div></div>
+<div id="ufProfitBox"><div class="row"><div style="flex:1"><label>Profit Calculation</label><select id="ufProfitType"><option value="fixed">Fixed</option><option value="slab">Slab</option><option value="percentage">Percentage</option><option value="manual">Manual</option></select></div><div style="flex:1"><label id="ufProfitValueLabel">Profit Amount (₹)</label><input id="ufProfitValue" type="number" min="0" step=".01" value="0"/></div></div>
+<div id="ufProfitExtra" style="display:none"><div class="row"><div style="flex:1"><label>Percentage Basis</label><select id="ufProfitBasis"><option value="fixed_rate">Service Fixed Rate</option><option value="customer">Customer Amount</option></select></div><div style="flex:1"><label>Slab Method</label><select id="ufProfitMethod"><option value="flat">Matching Slab</option><option value="progressive">Progressive</option></select></div></div><label>Profit Slabs (from-to=profit)</label><textarea id="ufProfitSlabs" rows="3" placeholder="1-200=20&#10;201-500=35"></textarea></div></div>
+<div style="border-top:1px solid #e5e7eb;margin-top:12px;padding-top:10px"><b>Processing Wallets &amp; Individual Costs</b><p class="muted">ప్రతి walletకి దాని processing cost ఇవ్వండి. అవసరమైనన్ని wallets జోడించవచ్చు.</p><div id="ufWalletRows"></div><button type="button" class="btn-orange" id="ufAddWallet">＋ Add Processing Wallet</button></div>
+<div class="row" style="margin-top:14px"><button type="button" class="btn-green" id="ufSave">💾 Save Service Setup</button><button type="button" class="btn-secondary" id="ufClear">Clear / New Service</button></div>
+<p id="ufStatus" class="muted" role="status" aria-live="polite"></p>
+<div id="ufServiceList" style="margin-top:12px"></div>
+</div>
 <p class="muted">ముందుగా Wallet సృష్టించి, తర్వాత ప్రతి Serviceకు Wallet link చేయండి.</p>
 <input id="srvName" placeholder="Service Name"/>
 <label for="srvCategory">Service Category</label><select id="srvCategory"><option value="Government Services">Government Services</option><option value="Banking Services">Banking Services</option><option value="Bill Payments">Bill Payments</option><option value="Printing & Digital Services">Printing &amp; Digital Services</option><option value="Ticket Bookings">Ticket Bookings</option><option value="Other Services">Other Services</option></select>
@@ -8746,7 +8775,133 @@ body.slv-xerox-selected #slvInlineBillingHost #slvXeroxPanel{display:block!impor
 }
 </style>
 
-</body>
+
+<script>
+(function(){
+ const $=id=>document.getElementById(id), form=$('slvUnifiedServiceForm');
+ if(!form)return;
+ let wallets=[],services=[],busy=false;
+ const status=t=>{const e=$('ufStatus');if(e)e.textContent=t};
+ async function dbAdmin(){
+  const db=window.slvSupabase;if(!db)throw Error('Supabase connection not ready.');
+  const a=await db.auth.getUser();if(a.error||!a.data?.user)throw Error('Admin login required.');
+  const p=await db.from('profiles').select('role,is_active').eq('id',a.data.user.id).single();
+  if(p.error||String(p.data?.role).toLowerCase()!=='admin'||p.data?.is_active!==true)throw Error('Active Admin permission required.');
+  return db;
+ }
+ function parseSlabs(raw){
+  const lines=String(raw||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  const slabs=lines.map(line=>{const m=line.match(/^(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*=\s*(\d+(?:\.\d+)?)$/);if(!m)throw Error('Slab format: from-to=rate');const from=+m[1],to=+m[2],rate=+m[3];if(to<from)throw Error('Slab maximum must be greater than minimum.');return {from,to,rate}});
+  slabs.sort((a,b)=>a.from-b.from);for(let i=1;i<slabs.length;i++)if(slabs[i].from<=slabs[i-1].to)throw Error('Slab ranges overlap.');if(!slabs.length)throw Error('Enter at least one slab.');return slabs;
+ }
+ function makeRule(prefix,type){
+  const value=Number($(prefix+'Value').value)||0;
+  if(!Number.isFinite(value)||value<0)throw Error('Enter a valid non-negative rate.');
+  if(type==='slab')return {type:'slab',method:$(prefix+'Method').value,unit:'fixed_charge',slabs:parseSlabs($(prefix+'Slabs').value)};
+  if(type==='percentage')return {type:'percentage',value,basis:$(prefix+'Basis').value};
+  return {type,value};
+ }
+ function addWalletRow(id='',cost='0'){
+  const row=document.createElement('div');row.className='uf-wallet-row';
+  const sel=document.createElement('select');sel.className='uf-wallet';sel.add(new Option('Select processing wallet',''));
+  wallets.forEach(w=>sel.add(new Option(w.wallet_name,w.id)));sel.value=id;
+  const inp=document.createElement('input');inp.className='uf-cost';inp.type='number';inp.min='0';inp.step='.01';inp.value=cost;inp.placeholder='Cost ₹';
+  const del=document.createElement('button');del.type='button';del.className='btn-red';del.textContent='×';del.setAttribute('aria-label','Remove wallet');del.onclick=()=>row.remove();
+  row.append(sel,inp,del);$('ufWalletRows').append(row);
+ }
+ function toggleFields(){
+  const ct=$('ufChargeType').value,pt=$('ufProfitType').value;
+  $('ufChargeExtra').style.display=['slab','percentage'].includes(ct)?'block':'none';
+  $('ufChargeValueLabel').textContent=ct==='percentage'?'Percentage (%)':ct==='slab'?'Fallback Rate (₹)':'Customer Amount / Rate (₹)';
+  $('ufProfitExtra').style.display=['slab','percentage'].includes(pt)?'block':'none';
+  $('ufProfitValueLabel').textContent=pt==='percentage'?'Profit Percentage (%)':'Profit Amount (₹)';
+  $('ufProfitBox').style.display=$('ufProfitMode').value==='profit_based'?'block':'none';
+ }
+ function clearForm(){
+  $('ufService').value='';$('ufName').value='';$('ufCategory').selectedIndex=0;$('ufChargeType').value='fixed';$('ufChargeValue').value=0;
+  $('ufChargeSlabs').value='';$('ufProfitMode').value='cost_based';$('ufProfitType').value='fixed';$('ufProfitValue').value=0;
+  $('ufProfitSlabs').value='';$('ufInternal').value='yes';$('ufWalletRows').replaceChildren();addWalletRow();toggleFields();status('New service form ready.');
+ }
+ async function loadAll(){
+  try{
+   const db=await dbAdmin();
+   const [sv,wa]=await Promise.all([
+    db.from('services').select('id,service_name,category,customer_rate,internal_cost,is_active,settings,category_key,charge_type,charge_value,processing_type,processing_value,profit_mode,profit_value,wallet_mode').order('service_name'),
+    db.from('wallets').select('id,wallet_name').eq('is_active',true).is('owner_user_id',null).order('wallet_name')
+   ]);
+   if(sv.error)throw sv.error;if(wa.error)throw wa.error;services=sv.data||[];wallets=wa.data||[];
+   const sel=$('ufService'),keep=sel.value;sel.replaceChildren(new Option('＋ New Service',''));
+   services.forEach(x=>sel.add(new Option((x.is_active?'':'[Inactive] ')+x.service_name,x.id)));
+   if(keep&&services.some(x=>x.id===keep))sel.value=keep;
+   if(sel.value)await loadOne(sel.value);else{ $('ufWalletRows').replaceChildren();addWalletRow(); }
+   renderList();status('Services loaded from Supabase.');
+  }catch(e){status('Load failed: '+(e.message||String(e)))}
+ }
+ async function loadOne(id){
+  const db=await dbAdmin(),svc=services.find(x=>x.id===id);if(!svc)return;
+  $('ufName').value=svc.service_name||'';$('ufCategory').value=svc.category||'Other Services';
+  $('ufChargeType').value=svc.charge_type||'fixed';$('ufChargeValue').value=svc.charge_value??svc.customer_rate??0;
+  const settings=svc.settings||{};$('ufInternal').value=settings.slv_internal_cost_enabled===false?'no':'yes';
+  $('ufProfitMode').value=settings.slv_profit_mode||'cost_based';
+  const [cfg,charge,profit]=await Promise.all([
+   db.rpc('slv_admin_get_service_wallet_costs',{p_service_id:id}),
+   db.from('slv_pricing_rules').select('rule').eq('service_id',id).eq('target','charge').maybeSingle(),
+   db.from('slv_pricing_rules').select('rule').eq('service_id',id).eq('target','profit').maybeSingle()
+  ]);
+  if(cfg.error)throw cfg.error;if(charge.error)throw charge.error;if(profit.error)throw profit.error;
+  $('ufWalletRows').replaceChildren();(cfg.data||[]).forEach(x=>addWalletRow(x.wallet_id,x.processing_cost));if(!(cfg.data||[]).length)addWalletRow();
+  const cr=charge.data?.rule||{};$('ufChargeType').value=cr.type||svc.charge_type||'fixed';$('ufChargeValue').value=cr.value??svc.charge_value??svc.customer_rate??0;
+  $('ufChargeBasis').value=cr.basis||'fixed_rate';$('ufChargeMethod').value=cr.method||'flat';$('ufChargeSlabs').value=(cr.slabs||[]).map(x=>x.from+'-'+x.to+'='+x.rate).join('\n');
+  const pr=profit.data?.rule||{};$('ufProfitType').value=pr.type||'fixed';$('ufProfitValue').value=pr.value??0;
+  $('ufProfitBasis').value=pr.basis||'fixed_rate';$('ufProfitMethod').value=pr.method||'flat';$('ufProfitSlabs').value=(pr.slabs||[]).map(x=>x.from+'-'+x.to+'='+x.rate).join('\n');
+  toggleFields();status('Loaded '+svc.service_name+'.');
+ }
+ function renderList(){
+  const c=$('ufServiceList');c.replaceChildren();
+  services.filter(x=>x.is_active).forEach(x=>{const r=document.createElement('div');r.className='emp-row';const n=document.createElement('span');n.style.flex='1';n.textContent=x.service_name+' • '+(x.category||'');const b=document.createElement('button');b.type='button';b.className='btn-small';b.textContent='Edit';b.onclick=()=>{$('ufService').value=x.id;loadOne(x.id);form.scrollIntoView({behavior:'smooth',block:'start'})};r.append(n,b);c.append(r)});
+ }
+ async function save(){
+  if(busy)return;busy=true;$('ufSave').disabled=true;
+  try{
+   const db=await dbAdmin(),id=$('ufService').value,name=$('ufName').value.trim(),category=$('ufCategory').value;
+   if(!name)throw Error('Enter Service Name.');
+   const chargeType=$('ufChargeType').value,chargeValue=Number($('ufChargeValue').value)||0,profitMode=$('ufProfitMode').value,profitType=$('ufProfitType').value;
+   const chargeRule=makeRule('ufCharge',chargeType);
+   let profitRule=null;if(profitMode==='profit_based')profitRule=makeRule('ufProfit',profitType);
+   const rows=[...document.querySelectorAll('#ufWalletRows .uf-wallet-row')],ids=[],costs=[];
+   rows.forEach(r=>{const wid=r.querySelector('.uf-wallet').value,raw=r.querySelector('.uf-cost').value;if(!wid&&!raw)return;if(!wid||raw==='')throw Error('Select a wallet and enter its cost, or remove the empty row.');const v=Number(raw);if(!Number.isFinite(v)||v<0||Math.round(v*100)!==v*100)throw Error('Wallet cost must be valid (up to 2 decimals).');ids.push(wid);costs.push(v)});
+   if(new Set(ids).size!==ids.length)throw Error('A wallet cannot be selected twice.');
+   if($('ufInternal').value==='yes'&&profitMode==='cost_based'&&!ids.length&&chargeValue>0)throw Error('Add at least one processing wallet for Cost Based mode.');
+   const total=costs.reduce((a,b)=>a+b,0),base={
+    service_name:name,category,category_key:category.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,''),
+    customer_rate:chargeValue,charge_type:chargeType,charge_value:chargeValue,
+    internal_cost:$('ufInternal').value==='yes'?total:0,
+    is_active:true,settings:{slv_internal_cost_enabled:$('ufInternal').value==='yes',slv_profit_mode:profitMode},
+    profit_mode:profitMode,profit_value:profitMode==='profit_based'?(Number($('ufProfitValue').value)||0):0
+   };
+   let saved;
+   if(id){const q=await db.from('services').update(base).eq('id',id).select('id').single();if(q.error)throw q.error;saved=q.data.id}
+   else{const q=await db.from('services').insert(base).select('id').single();if(q.error)throw q.error;saved=q.data.id}
+   const walletSave=await db.rpc('slv_admin_save_service_wallet_costs',{p_service_id:saved,p_wallet_ids:ids,p_costs:costs,p_internal_cost_enabled:$('ufInternal').value==='yes',p_profit_mode:profitMode});
+   if(walletSave.error)throw walletSave.error;
+   const chargeSave=await db.from('slv_pricing_rules').upsert({service_id:saved,target:'charge',rule:chargeRule,updated_at:new Date().toISOString()},{onConflict:'service_id,target'});
+   if(chargeSave.error)throw chargeSave.error;
+   if(profitRule){const p=await db.from('slv_pricing_rules').upsert({service_id:saved,target:'profit',rule:profitRule,updated_at:new Date().toISOString()},{onConflict:'service_id,target'});if(p.error)throw p.error}
+   else{const p=await db.from('slv_pricing_rules').delete().eq('service_id',saved).eq('target','profit');if(p.error)throw p.error}
+   status('✓ Service settings saved to Supabase. Wallet balances and past transactions were not changed.');
+   await loadAll();$('ufService').value=saved;await loadOne(saved);
+  }catch(e){status('Save failed: '+(e.message||String(e)))}finally{busy=false;$('ufSave').disabled=false}
+ }
+ $('ufService').addEventListener('change',async()=>{if($('ufService').value)await loadOne($('ufService').value);else clearForm()});
+ ['ufChargeType','ufProfitType','ufProfitMode'].forEach(id=>$(id).addEventListener('change',toggleFields));
+ $('ufAddWallet').addEventListener('click',()=>addWalletRow());
+ $('ufSave').addEventListener('click',save);$('ufClear').addEventListener('click',clearForm);
+ const old=window.adminMenuGo;if(typeof old==='function')window.adminMenuGo=function(section,...args){const r=old.apply(this,args);if(section==='adminServices')loadAll();return r};
+ document.addEventListener('DOMContentLoaded',()=>loadAll());
+ if(document.readyState!=='loading')loadAll();
+ toggleFields();
+})();
+</script></body>
 </html>
 
 <style id="slv-employee-billing-search-visible">
