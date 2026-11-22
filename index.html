@@ -4178,7 +4178,7 @@ window.slvPaymentQuick = function(mode){
  const choices=()=>Array.from(select.options).filter(o=>o.value);
  function show(){
    const term=input.value.trim().toLocaleLowerCase();
-   const matches=choices().filter(o=>o.textContent.toLocaleLowerCase().includes(term));
+   const matches=choices().filter(o=>{const name=o.textContent.split(/[•·|]/)[0].trim().toLocaleLowerCase();return term.length===1?name.startsWith(term):name.includes(term)});
    list.replaceChildren();
    if(!matches.length){const empty=document.createElement('div');empty.className='muted';empty.style.padding='12px';empty.textContent=choices().length?'No matching services':'Load cloud services first';list.append(empty)}
    matches.forEach(o=>{
