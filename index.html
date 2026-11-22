@@ -1620,6 +1620,7 @@ body:has(#loginView:not(.hidden)) .main-header #headerSubtitle{display:none!impo
 <p class="muted" id="slvProcessingWalletCount">No processing wallets selected.</p>
 </div>
 </div>
+<div class="section-box" style="border:1px solid #d8c38a;background:#fffdf5;margin-top:12px"><h4>➕ Secondary Processing Cost (Optional)</h4><p class="muted">Example: NSDL ₹107 + SBI / IDFC / PhonePe Wallet ₹30. This is a fixed second debit per service unit and is processed automatically by the server.</p><label for="slvSecondCostWallet">Second Processing Wallet</label><select id="slvSecondCostWallet"><option value="">— No secondary debit —</option></select><label for="slvSecondCostAmount">Second Wallet Debit per Service (₹)</label><input id="slvSecondCostAmount" type="number" min="0" step="0.01" value="0"/><button class="btn-green" type="button" onclick="slvSecondCostSave()">Save Secondary Cost</button><p class="muted" id="slvSecondCostStatus" role="status">Choose service and wallet mapping first.</p></div>
 <p class="muted">Cost ₹0: choose No Processing Wallet Required. Customer fee should be credited to Todays Profit by the server transaction function; verify that server rule before live use. Changes apply to new completed transactions.</p>
 <button class="btn-green" onclick="slvMapSave()" type="button">Save Cloud Mapping</button>
 <p class="muted" id="slvMapStatus" role="status">Load cloud data to begin.</p>
@@ -3541,7 +3542,7 @@ try {
 /* Cloud service mapping: admin-only Supabase RPC, no local balance mutations. */
 (function(){
  const el=id=>document.getElementById(id);
- let busy=false, services=[], wallets=[], mappings=[], allowed=[];
+ let busy=false, services=[], wallets=[], mappings=[], allowed=[], secondCosts=[];
  const status=msg=>{if(el('slvMapStatus'))el('slvMapStatus').textContent=msg};
  async function admin(){
   const db=window.slvSupabase;
@@ -3582,28 +3583,30 @@ try {
   el('slvNoProcessingWalletHint').textContent=free?'No processing debit. Cash/UPI collection wallets still receive customer payments.':'This service has processing cost. Assign at least one processing wallet.';
   if(checkbox.checked)drawProcessingRows([]);
  };
- function apply(){const id=el('slvMapService').value;const m=mappings.find(x=>x.service_id===id)||{};
+ function apply(){const id=el('slvMapService').value;const m=mappings.find(x=>x.service_id===id)||{};const sc=secondCosts.find(x=>x.service_id===id)||{};el('slvSecondCostWallet').value=sc.second_cost_wallet_id||'';el('slvSecondCostAmount').value=sc.second_cost_amount??0;el('slvSecondCostStatus').textContent=sc.second_cost_wallet_id?'Saved secondary debit: ₹'+Number(sc.second_cost_amount).toFixed(2):'No secondary debit configured.';
   for(const [field,key] of [['slvMapCash','cash_wallet_id'],['slvMapUpi','upi_wallet_id'],['slvMapCost','cost_wallet_id']])el(field).value=m[key]||''; const selected=new Set(allowed.filter(x=>x.service_id===id).map(x=>x.wallet_id)); drawProcessingRows([...selected]); const svc=services.find(x=>x.id===id);el('slvNoProcessingWallet').checked=Number(svc?.internal_cost)===0&&selected.size===0;window.slvToggleNoProcessingWallet();
  }
  window.slvMapRefresh=()=>run(async()=>{
   const db=await admin();
-  const [s,w,m,aw]=await Promise.all([
+  const [s,w,m,aw,sc]=await Promise.all([
    db.from('services').select('id,service_name,customer_rate,internal_cost,is_active,category_key').eq('is_active',true).order('service_name'),
    db.from('wallets').select('id,wallet_name,balance,is_active').is('owner_user_id',null).eq('is_active',true).order('wallet_name'),
    db.from('slv_service_wallet_map').select('service_id,cash_wallet_id,upi_wallet_id,cost_wallet_id'),
-   db.from('slv_service_allowed_wallets').select('service_id,wallet_id')
+   db.from('slv_service_allowed_wallets').select('service_id,wallet_id'),
+   db.from('slv_service_second_cost').select('service_id,second_cost_wallet_id,second_cost_amount')
   ]);
-  for(const result of [s,w,m,aw])if(result.error)throw result.error;
-  services=s.data||[];wallets=w.data||[];mappings=m.data||[];allowed=aw.data||[];
+  for(const result of [s,w,m,aw,sc])if(result.error)throw result.error;
+  services=s.data||[];wallets=w.data||[];mappings=m.data||[];allowed=aw.data||[];secondCosts=sc.data||[];
   const requested=window.slvRequestedMapServiceId||el('slvMapService').value;
   fill('slvMapService',services.map(x=>({id:x.id,label:x.service_name+' • Rate ₹'+x.customer_rate+' / Cost ₹'+x.internal_cost})));
   const opts=wallets.map(x=>({id:x.id,label:x.wallet_name+' • ₹'+Number(x.balance||0).toFixed(2)}));
-  for(const id of ['slvMapCash','slvMapUpi','slvMapCost'])fill(id,opts); const multi=el('slvAllowedWallets');multi.replaceChildren();wallets.forEach(w=>multi.add(new Option(w.wallet_name,w.id)));
+  for(const id of ['slvMapCash','slvMapUpi','slvMapCost','slvSecondCostWallet'])fill(id,opts); const multi=el('slvAllowedWallets');multi.replaceChildren();wallets.forEach(w=>multi.add(new Option(w.wallet_name,w.id)));
   el('slvMapService').onchange=apply;
   if(services.length)el('slvMapService').value=services.some(x=>x.id===requested)?requested:services[0].id;
   window.slvRequestedMapServiceId=null;
   apply();status(services.length+' services, '+wallets.length+' active wallets loaded. Mapping changes only after Save.');
  });
+ window.slvSecondCostSave=()=>run(async()=>{const id=el('slvMapService').value;if(!id)throw Error('Select a service');const walletId=el('slvSecondCostWallet').value||null;const amount=Number(el('slvSecondCostAmount').value||0);if((!walletId&&amount!==0)||(walletId&&(!Number.isFinite(amount)||amount<=0)))throw Error('Select a wallet and positive debit amount, or clear both');const db=await admin();const q=await db.rpc('slv_admin_configure_service_second_cost',{p_service_id:id,p_second_cost_wallet_id:walletId,p_second_cost_amount:amount});if(q.error)throw q.error;secondCosts=secondCosts.filter(x=>x.service_id!==id);if(walletId)secondCosts.push({service_id:id,second_cost_wallet_id:walletId,second_cost_amount:amount});el('slvSecondCostStatus').textContent=walletId?'Saved ₹'+amount.toFixed(2)+' secondary debit.':'Secondary debit removed.';status('Secondary cost saved. New transactions will use this debit split.');});
  window.slvMapSave=()=>run(async()=>{
   const id=el('slvMapService').value;if(!id||!services.some(x=>x.id===id))throw Error('Select a cloud service');
   const ids=['slvMapCash','slvMapUpi','slvMapCost'].map(k=>el(k).value||null);
@@ -3805,7 +3808,7 @@ try {
   try{
    const db=await employeeDb();
    if(mode==='later')throw Error('Pending mode is temporarily disabled for the new wallet selection. Use Complete Now; existing pending records remain accessible.');
-   const response=unmapped?await db.rpc('slv_post_unmapped_service',{p_request_id:pendingRequest.id,p_service_id:a.service.id,p_customer_name:name,p_customer_mobile:mobile,p_quantity:a.qty,p_cash_amount:a.netCash,p_upi_amount:a.upi,p_upi_wallet_id:upiWallet}):await db.rpc('slv_post_selected_wallet',{p_request_id:pendingRequest.id,p_service_id:a.service.id,p_customer_name:name,p_customer_mobile:mobile,p_quantity:a.qty,p_cash_amount:a.netCash,p_upi_amount:a.upi,p_cost_wallet_id:selectedWallet});
+   const response=unmapped?await db.rpc('slv_post_unmapped_service',{p_request_id:pendingRequest.id,p_service_id:a.service.id,p_customer_name:name,p_customer_mobile:mobile,p_quantity:a.qty,p_cash_amount:a.netCash,p_upi_amount:a.upi,p_upi_wallet_id:upiWallet}):(walletMapping?.second_cost_wallet_id?await db.rpc('slv_post_auto_wallet',{p_request_id:pendingRequest.id,p_service_id:a.service.id,p_customer_name:name,p_customer_mobile:mobile,p_quantity:a.qty,p_cash_amount:a.netCash,p_upi_amount:a.upi}):await db.rpc('slv_post_selected_wallet',{p_request_id:pendingRequest.id,p_service_id:a.service.id,p_customer_name:name,p_customer_mobile:mobile,p_quantity:a.qty,p_cash_amount:a.netCash,p_upi_amount:a.upi,p_cost_wallet_id:selectedWallet}));
    if(response.error)throw response.error;
    pendingRequest=null;
    status((mode==='later'?'Pending Application Saved ✓':'Completed Transaction Saved ✓')+' ID: '+response.data);
