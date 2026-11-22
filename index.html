@@ -3681,8 +3681,13 @@ try {
   servicesInFlight=(async()=>{
    try{
     if(!services.length)status('Loading services…');
-    const db=await employeeDb();
-    const r=await db.from('services').select('id,service_name,customer_rate,internal_cost,is_active,category_key').eq('is_active',true).order('service_name');
+    // Service catalogue is read-only reference data. Do not block it behind shift/profile checks;
+    // those checks remain mandatory in the transaction-save RPC path.
+    const db=window.slvSupabase;
+    if(!db)throw Error('Supabase connection is not ready. Please refresh once.');
+    const query=db.from('services').select('id,service_name,customer_rate,internal_cost,is_active,category_key').eq('is_active',true).order('service_name');
+    const timeout=new Promise((_,reject)=>setTimeout(()=>reject(Error('Services request timed out. Check internet and Supabase connection.')),8000));
+    const r=await Promise.race([query,timeout]);
     if(r.error)throw r.error;
     services=r.data||[];servicesFetchedAt=Date.now();
     const select=el('slvTxService');const selected=select.value;
