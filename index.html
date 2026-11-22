@@ -5719,8 +5719,8 @@ if(categoryButton){
 
 let select=document.getElementById('slvTxService');
 let options=select?Array.from(select.options).filter(o=>o.value&&!o.disabled):[];
-const needsCategoryData=role==='employee'&&options.some(o=>!o.dataset.categoryKey);
-if(role==='employee'&&typeof window.slvTxLoadServices==='function'){
+const needsCategoryData=role==='employee'&&(!options.length||options.some(o=>!o.dataset.categoryKey));
+if(role==='employee'&&needsCategoryData&&typeof window.slvTxLoadServices==='function'){
  const p=document.createElement('p');p.textContent='Loading services…';out.append(p);
  try{await window.slvTxLoadServices(true)}catch(e){p.textContent='Services load కాలేదు. Internet / login చెక్ చేయండి.';return}
  select=document.getElementById('slvTxService');options=select?Array.from(select.options).filter(o=>o.value&&!o.disabled):[];
