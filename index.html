@@ -3703,7 +3703,7 @@ try {
     }
     if(!db)throw Error('Supabase client did not initialize. Reload the page and check internet.');
     status('Connecting to services…');
-    const query=db.from('services').select('id,service_name,customer_rate,internal_cost,is_active,category_key').eq('is_active',true).order('service_name');
+    const query=db.from('services').select('id,service_name,customer_rate,internal_cost,is_active,category_key,category').eq('is_active',true).order('service_name');
     let timeoutId;
     const timeout=new Promise((_,reject)=>{timeoutId=setTimeout(()=>reject(Error('Services server did not respond within 8 seconds.')),8000)});
     let r;
@@ -3712,7 +3712,8 @@ try {
     services=r.data||[];servicesFetchedAt=Date.now();
     const select=el('slvTxService');const selected=select.value;
     select.replaceChildren();select.add(new Option('— Select Service —',''));
-    services.forEach(s=>{const option=new Option(s.service_name+' • '+money(s.customer_rate),s.id);option.dataset.categoryKey=s.category_key||'';select.add(option);});
+    const serviceCategoryKey=s=>s.category_key||({'Government Services':'government','Banking Services':'banking','Banking & Payments':'banking','Bill Payments':'bill_payments','Printing & Digital Services':'printing','Printing & Documents':'printing','Ticket Bookings':'bookings','Bookings & Applications':'bookings','Card Downloads & Prints':'cards','Other Services':'other'}[String(s.category||'').trim()]||'');
+    services.forEach(s=>{const option=new Option(s.service_name+' • '+money(s.customer_rate),s.id);option.dataset.categoryKey=serviceCategoryKey(s);select.add(option);});
     if(services.some(s=>s.id===selected))select.value=selected;
     select.onchange=()=>{priceQuote=null;quoteKey='';quoteError='';loadAllowedWallets();window.slvTxUpdatePreview()};
     status(services.length+' cloud service(s) ready');if(select.value)loadAllowedWallets().catch(e=>console.warn('Wallet mapping load:',e));window.slvTxUpdatePreview();
@@ -5745,11 +5746,11 @@ if(categoryButton){
 let select=document.getElementById('slvTxService');
 let options=select?Array.from(select.options).filter(o=>o.value&&!o.disabled):[];
 const realServiceOptions=options.filter(o=>!o.dataset.financialService&&!String(o.value||'').startsWith('slv-fin-'));
-const needsCategoryData=role==='employee'&&(realServiceOptions.length<70||realServiceOptions.some(o=>!o.dataset.categoryKey));
+const needsCategoryData=role==='employee'&&(!realServiceOptions.length||realServiceOptions.some(o=>!o.dataset.categoryKey));
 if(role==='employee'&&needsCategoryData&&typeof window.slvTxLoadServices==='function'){
  const p=document.createElement('p');p.textContent='Loading services…';out.append(p);
  try{
-  const load=window.slvTxLoadServices(true);
+  const load=window.slvTxLoadServices();
   let timer;
   await Promise.race([load,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Services load 10 seconds దాటింది. Please retry.')),10000)})]).finally(()=>clearTimeout(timer));
  }catch(e){p.textContent='Services load కాలేదు: '+(e.message||e);window.slvAnimateCategoryPanel(out,true);return}
