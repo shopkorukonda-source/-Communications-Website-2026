@@ -1374,7 +1374,7 @@ body:has(#loginView:not(.hidden)) .main-header #headerSubtitle{display:none!impo
 
 <style>
 /* Keep one clear service editor; legacy editors remain in source for compatibility but are hidden. */
-#adminServices>p:first-of-type,#srvName,#srvCategory,#srvType,#srvValue,#srvProfitType,#srvProfit,#profitSlabFields,#srvWallet,
+#adminServices>p:first-of-type,#srvName,#srvCategory,#srvType,#srvValue,#srvProfitType,#srvProfit,#profitSlabFields,#srvWallet,label[for="srvCategory"],label[for="srvProfitType"],label[for="srvProfit"],label[for="srvWallet"],#adminServices>.row:has(#srvType),
 #slvNewPricingHelp,#servicesAdminList,#slvWalletCostAdmin,#slvCatalogPanel,#slvUniversalPricing,
 #xeroxAdminPricing,#slvBillSlabAdmin,#slvUniversalWalletPanel{display:none!important}
 #slvUnifiedServiceForm input,#slvUnifiedServiceForm select,#slvUnifiedServiceForm textarea{width:100%;box-sizing:border-box}
@@ -8896,7 +8896,7 @@ body.slv-xerox-selected #slvInlineBillingHost #slvXeroxPanel{display:block!impor
  ['ufChargeType','ufProfitType','ufProfitMode'].forEach(id=>$(id).addEventListener('change',toggleFields));
  $('ufAddWallet').addEventListener('click',()=>addWalletRow());
  $('ufSave').addEventListener('click',save);$('ufClear').addEventListener('click',clearForm);
- const old=window.adminMenuGo;if(typeof old==='function')window.adminMenuGo=function(section,...args){const r=old.apply(this,args);if(section==='adminServices')loadAll();return r};
+ const old=window.adminMenuGo;if(typeof old==='function')window.adminMenuGo=function(section,...args){const r=old.call(this,section,...args);if(section==='adminServices')loadAll();return r};
  document.addEventListener('DOMContentLoaded',()=>loadAll());
  if(document.readyState!=='loading')loadAll();
  toggleFields();
