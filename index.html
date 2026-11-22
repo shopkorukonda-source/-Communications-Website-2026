@@ -3817,7 +3817,18 @@ try {
   try{
    const db=await employeeDb();
    if(mode==='later')throw Error('Pending mode is temporarily disabled for the new wallet selection. Use Complete Now; existing pending records remain accessible.');
-   const response=unmapped?await db.rpc('slv_post_unmapped_service',{p_request_id:pendingRequest.id,p_service_id:a.service.id,p_customer_name:name,p_customer_mobile:mobile,p_quantity:a.qty,p_cash_amount:a.netCash,p_upi_amount:a.upi,p_upi_wallet_id:upiWallet}):(walletMapping?.second_cost_wallet_id?await db.rpc('slv_post_auto_wallet',{p_request_id:pendingRequest.id,p_service_id:a.service.id,p_customer_name:name,p_customer_mobile:mobile,p_quantity:a.qty,p_cash_amount:a.netCash,p_upi_amount:a.upi}):await db.rpc('slv_post_selected_wallet',{p_request_id:pendingRequest.id,p_service_id:a.service.id,p_customer_name:name,p_customer_mobile:mobile,p_quantity:a.qty,p_cash_amount:a.netCash,p_upi_amount:a.upi,p_cost_wallet_id:selectedWallet}));
+   let response;
+   if(unmapped){
+    response=await db.rpc('slv_post_unmapped_service',{p_request_id:pendingRequest.id,p_service_id:a.service.id,p_customer_name:name,p_customer_mobile:mobile,p_quantity:a.qty,p_cash_amount:a.netCash,p_upi_amount:a.upi,p_upi_wallet_id:upiWallet});
+   }else{
+    const configured=await db.from('slv_new_service_wallets').select('id').eq('service_id',a.service.id).eq('wallet_role','processing').eq('is_active',true).limit(1);
+    if(configured.error)throw configured.error;
+    if(configured.data?.length||walletMapping?.second_cost_wallet_id){
+     response=await db.rpc('slv_post_auto_wallet',{p_request_id:pendingRequest.id,p_service_id:a.service.id,p_customer_name:name,p_customer_mobile:mobile,p_quantity:a.qty,p_cash_amount:a.netCash,p_upi_amount:a.upi});
+    }else{
+     response=await db.rpc('slv_post_selected_wallet',{p_request_id:pendingRequest.id,p_service_id:a.service.id,p_customer_name:name,p_customer_mobile:mobile,p_quantity:a.qty,p_cash_amount:a.netCash,p_upi_amount:a.upi,p_cost_wallet_id:selectedWallet});
+    }
+   }
    if(response.error)throw response.error;
    pendingRequest=null;
    status((mode==='later'?'Pending Application Saved ✓':'Completed Transaction Saved ✓')+' ID: '+response.data);
