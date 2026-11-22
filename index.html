@@ -3572,7 +3572,7 @@ try {
  window.slvMapRefresh=()=>run(async()=>{
   const db=await admin();
   const [s,w,m,aw]=await Promise.all([
-   db.from('services').select('id,service_name,customer_rate,internal_cost,is_active').eq('is_active',true).order('service_name'),
+   db.from('services').select('id,service_name,customer_rate,internal_cost,is_active,category_key').eq('is_active',true).order('service_name'),
    db.from('wallets').select('id,wallet_name,balance,is_active').is('owner_user_id',null).eq('is_active',true).order('wallet_name'),
    db.from('slv_service_wallet_map').select('service_id,cash_wallet_id,upi_wallet_id,cost_wallet_id'),
    db.from('slv_service_allowed_wallets').select('service_id,wallet_id')
@@ -3674,7 +3674,7 @@ try {
     services=r.data||[];servicesFetchedAt=Date.now();
     const select=el('slvTxService');const selected=select.value;
     select.replaceChildren();select.add(new Option('— Select Service —',''));
-    services.forEach(s=>select.add(new Option(s.service_name+' • '+money(s.customer_rate),s.id)));
+    services.forEach(s=>{const option=new Option(s.service_name+' • '+money(s.customer_rate),s.id);option.dataset.categoryKey=s.category_key||'';select.add(option);});
     if(services.some(s=>s.id===selected))select.value=selected;
     select.onchange=()=>{priceQuote=null;quoteKey='';quoteError='';loadAllowedWallets();window.slvTxUpdatePreview()};
     status(services.length+' cloud service(s) ready');await loadAllowedWallets();window.slvTxUpdatePreview();
@@ -5712,7 +5712,7 @@ if(role==='employee'&&!options.length&&typeof window.slvTxLoadServices==='functi
  select=document.getElementById('slvTxService');options=select?Array.from(select.options).filter(o=>o.value&&!o.disabled):[];
 }
 if(!options.length){const p=document.createElement('p');p.textContent='Services are not available right now. Please refresh services.';out.append(p);window.slvAnimateCategoryPanel(out,true);return}
-const matches=options.filter(o=>groupFor(o.textContent||'')===cat);
+const categoryKeyMap={bank:'banking',bills:'bill_payments',gov:'government',print:'printing',booking:'bookings',other:'other',cards:'cards'};\nconst matches=options.filter(o=>(o.dataset.categoryKey||'')===categoryKeyMap[cat]);
 const serviceLabel=o=>(o.textContent||'').replace(/\s*(?:[•·|–—-]\s*)?(?:₹|Rs\.?\s*)[\d,]+(?:\.\d{1,2})?/gi,'').replace(/[\s•·|–—-]+$/,'').trim();
 if(!matches.length){const p=document.createElement('p');p.textContent='ఈ Categoryలో ప్రస్తుతం Active Services లేవు.';out.append(p);window.slvAnimateCategoryPanel(out,true);return}
 if(role==='employee'){
