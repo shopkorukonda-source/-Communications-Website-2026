@@ -3695,7 +3695,7 @@ try {
     services.forEach(s=>{const option=new Option(s.service_name+' • '+money(s.customer_rate),s.id);option.dataset.categoryKey=s.category_key||'';select.add(option);});
     if(services.some(s=>s.id===selected))select.value=selected;
     select.onchange=()=>{priceQuote=null;quoteKey='';quoteError='';loadAllowedWallets();window.slvTxUpdatePreview()};
-    status(services.length+' cloud service(s) ready');await loadAllowedWallets();window.slvTxUpdatePreview();
+    status(services.length+' cloud service(s) ready');if(select.value)loadAllowedWallets().catch(e=>console.warn('Wallet mapping load:',e));window.slvTxUpdatePreview();
    }catch(e){status(e.message||String(e),true)}
    finally{servicesInFlight=null}
   })();
