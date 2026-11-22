@@ -9456,7 +9456,7 @@ body.slv-xerox-selected #slvInlineBillingHost #slvXeroxPanel{display:block!impor
  function render(){
   const {input,select}=get();if(!input||!select)return;
   const p=ensure(),term=input.value.trim().toLocaleLowerCase();
-  const opts=Array.from(select.options).filter(o=>o.value&&!o.disabled);
+  const opts=Array.from(select.options).filter(o=>o.value&&!o.disabled&&!o.dataset.financialService&&!String(o.value).startsWith('slv-fin-'));
   const matches=opts.filter(o=>(o.textContent||'').split(/[•·|]/)[0].trim().toLocaleLowerCase().includes(term));
   p.replaceChildren();
   if(!matches.length){
@@ -9471,9 +9471,10 @@ body.slv-xerox-selected #slvInlineBillingHost #slvXeroxPanel{display:block!impor
  }
  async function open(){
   const {input,select}=get();if(!input||!select)return;
-  if(!Array.from(select.options).some(o=>o.value)&&typeof window.slvTxLoadServices==='function'){
+  const hasRealServices=Array.from(select.options).some(o=>o.value&&!o.disabled&&!o.dataset.financialService&&!String(o.value).startsWith('slv-fin-'));
+  if(!hasRealServices&&typeof window.slvTxLoadServices==='function'){
    const p=ensure();p.replaceChildren();const msg=document.createElement('div');msg.textContent='Loading services…';msg.style.cssText='padding:11px 12px;font-size:13px;color:#526579';p.append(msg);position();p.style.display='block';
-   try{await window.slvTxLoadServices()}catch(e){console.warn(e)}
+   try{await window.slvTxLoadServices(true)}catch(e){console.warn(e)}
   }
   render();
  }
