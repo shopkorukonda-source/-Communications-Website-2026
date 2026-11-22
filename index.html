@@ -8876,7 +8876,7 @@ body.slv-xerox-selected #slvInlineBillingHost #slvXeroxPanel{display:block!impor
     service_name:name,category,category_key:category.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,''),
     customer_rate:chargeValue,charge_type:chargeType,charge_value:chargeValue,
     internal_cost:$('ufInternal').value==='yes'?total:0,
-    is_active:true,settings:{slv_internal_cost_enabled:$('ufInternal').value==='yes',slv_profit_mode:profitMode},
+    is_active:id?(services.find(x=>x.id===id)?.is_active??true):true,settings:{slv_internal_cost_enabled:$('ufInternal').value==='yes',slv_profit_mode:profitMode},
     profit_mode:profitMode,profit_value:profitMode==='profit_based'?(Number($('ufProfitValue').value)||0):0
    };
    let saved;
