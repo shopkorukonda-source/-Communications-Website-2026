@@ -9078,4 +9078,72 @@ body.slv-xerox-selected #slvInlineBillingHost #slvXeroxPanel{display:block!impor
  background:transparent!important;border:0!important;border-radius:0!important;
  box-shadow:none!important;padding:0!important;margin:0!important;
 }
+
+/* SLV premium mobile side navigation refresh — visual-only */
+#adminView .admin-side-menu,#employeeView .employee-side-menu{
+  width:min(310px,86vw)!important;max-width:310px!important;
+  padding:18px 14px!important;gap:7px!important;
+  background:#fff!important;color:#102b4e!important;
+  border-right:1px solid #e5eaf1!important;
+  box-shadow:16px 0 42px rgba(9,31,61,.16)!important;
+  overflow-y:auto!important;overscroll-behavior:contain
+}
+#adminView .side-menu-head,#employeeView .side-menu-head{
+  color:#102b4e!important;border-bottom:1px solid #e8edf3!important;
+  padding:8px 5px 16px!important;font-weight:800!important
+}
+#adminView .side-menu-head button,#employeeView .side-menu-head button{
+  background:#f1f5f9!important;color:#183653!important;border-radius:9px!important
+}
+#adminView .side-menu-caption,#employeeView .side-menu-caption{
+  color:#8a6a24!important;font-size:10px!important;letter-spacing:1.15px!important;
+  margin:15px 8px 5px!important
+}
+#adminView .side-menu-link,#employeeView .side-menu-link{
+  display:flex!important;align-items:center!important;gap:12px!important;
+  min-height:43px!important;width:100%!important;margin:2px 0!important;
+  padding:10px 12px!important;border:1px solid transparent!important;
+  border-radius:10px!important;background:#f5f7fa!important;
+  color:#173454!important;text-align:left!important;font-size:13px!important;
+  font-weight:700!important;box-shadow:none!important;transition:background .16s,border-color .16s,color .16s!important
+}
+#adminView .side-menu-link:focus,#employeeView .side-menu-link:focus,
+#adminView .side-menu-link:focus-visible,#employeeView .side-menu-link:focus-visible{
+  outline:none!important;background:#fff8e8!important;color:#8b6417!important;
+  border-color:#d8b45b!important;box-shadow:inset 3px 0 #c99b35!important
+}
+#adminView .side-menu-link:active,#employeeView .side-menu-link:active{
+  background:#fff4d9!important;color:#8b6417!important
+}
+#adminView .side-menu-link:before,#employeeView .side-menu-link:before{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  flex:0 0 25px!important;width:25px!important;height:25px!important;
+  border-radius:8px!important;background:#e9eff6!important;color:#183c61!important;
+  font-size:14px!important;line-height:1!important
+}
+#adminView .side-menu-link[onclick*="adminSettings"]:before{content:"⚙"}
+#adminView .side-menu-link[onclick*="adminServices"]:before,#employeeView .side-menu-link[onclick*="servicesView"]:before{content:"▦"}
+#adminView .side-menu-link[onclick*="slvPanOpen"]:before,#employeeView .side-menu-link[onclick*="slvPanOpen"]:before{content:"▤"}
+#adminView .side-menu-link[onclick*="slvTrackingOpen"]:before,#employeeView .side-menu-link[onclick*="slvTrackingOpen"]:before{content:"⌕"}
+#adminView .side-menu-link[onclick*="slv93Open"]:before,#employeeView .side-menu-link[onclick*="slv93Open"]:before{content:"▣"}
+#adminView .side-menu-link[onclick*="adminWallets"]:before{content:"◉"}
+#adminView .side-menu-link[onclick*="adminReconcile"]:before{content:"⇄"}
+#adminView .side-menu-link[onclick*="adminTarget"]:before{content:"◎"}
+#adminView .side-menu-link[onclick*="adminEmployees"]:before{content:"♙"}
+#adminView .side-menu-link[onclick*="adminAttendance"]:before{content:"◷"}
+#adminView .side-menu-link[onclick*="adminLeaves"]:before{content:"▧"}
+#adminView .side-menu-link[onclick*="adminTransactions"]:before{content:"▥"}
+#adminView .side-menu-link[onclick*="adminServiceLinks"]:before,#employeeView .slv-service-link-menu:before{content:"↗"}
+#adminView .side-menu-link.side-logout:before,#employeeView .side-menu-link.side-logout:before{content:"⇥"}
+#adminView .side-menu-link.side-logout,#employeeView .side-menu-link.side-logout{
+  margin-top:auto!important;background:#fff3f1!important;color:#a53d35!important;border-color:#f4d9d5!important
+}
+#adminView .assigned-wallet-item,#employeeView .assigned-wallet-item{
+  background:#f8fafc!important;border-color:#e6ebf1!important;color:#173454!important
+}
+@media(max-width:480px){
+ #adminView .admin-side-menu,#employeeView .employee-side-menu{width:min(292px,88vw)!important;padding:15px 12px!important}
+ #adminView .side-menu-link,#employeeView .side-menu-link{min-height:41px!important;padding:9px 10px!important;font-size:12.5px!important}
+}
+
 </style>
