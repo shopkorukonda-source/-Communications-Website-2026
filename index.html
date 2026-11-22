@@ -2938,11 +2938,19 @@ function processCheckout(){
   },130));
 }
 (function init(){
-  toggleLoginInputs();
-  sessionStorage.removeItem(KEYS.user);
-  currentUser=null;
-  showView('loginView');
-  runSlvLoader('website','Loading SLV Communications...',550,()=>{});
+  try{
+    toggleLoginInputs();
+    sessionStorage.removeItem(KEYS.user);
+    currentUser=null;
+    showView('loginView');
+  }catch(error){
+    console.error('SLV initial screen error:',error);
+    const feedback=document.getElementById('slvLoginFeedback');
+    if(feedback){feedback.textContent='Website initialization error. Please reload and contact Admin if it continues.';feedback.style.display='block';}
+  }finally{
+    const overlay=document.getElementById('slvLoadingOverlay');
+    if(overlay)overlay.classList.remove('active');
+  }
 })();
 </script>
 <script>
