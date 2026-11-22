@@ -3986,9 +3986,9 @@ if(typeof original==='function')window.renderAdmin=function(){const result=origi
    };
    wrapped.__slvActionWrapped=true;window[name]=wrapped;
  }
- // Cloud refresh uses a guarded wrapper that may return immediately while its async operation continues;
- // avoid misleading completion visuals on that specific function.
- ['slvTxLoadServices','slvMapRefresh','slvMapSave','slvSaveShiftRules','slvLoadShiftRules','slvSetShopGps','slvVerifyShiftStart'].forEach(name=>wrapAsync(name,
+ // Service lists load in the background and must never trigger the full-screen blocking overlay.
+ // Keep the global action loader only for explicit map/settings actions.
+ ['slvMapRefresh','slvMapSave','slvSaveShiftRules','slvLoadShiftRules','slvSetShopGps','slvVerifyShiftStart'].forEach(name=>wrapAsync(name,
    /Map/.test(name)?'mapping':/Services/.test(name)?'services':/Gps/.test(name)?'gps':/ShiftStart/.test(name)?'shift':'settings'));
  // Cloud wallet and checkout already manage their own real-operation loaders.
  // Navigation gets a lightweight, nonblocking indicator rather than a blocking artificial delay.
