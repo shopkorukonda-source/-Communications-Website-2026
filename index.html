@@ -3654,20 +3654,31 @@ try {
  const el=id=>document.getElementById(id);
  let services=[],busy=false,pendingRequest=null,pendingBusy=false,allowedWallets=[],walletMapping=null,walletLoading=false;let priceQuote=null,quoteKey="",quotePending=false,quoteTimer=null,quoteError="",quoteErrorKey="";
  let servicesFetchedAt=0,servicesInFlight=null;const SERVICES_CACHE_MS=60000;
+ // Reuse the short-lived employee identity check across pricing and wallet reads.
+ let employeeDbCache=null,employeeDbCacheAt=0,employeeDbInFlight=null;
+ const EMPLOYEE_CHECK_CACHE_MS=30000;
  const money=n=>'₹'+Number(n||0).toFixed(2);
  const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const status=(message,error=false)=>{el('slvTxStatus').textContent=message;el('slvTxStatus').style.color=error?'#c5221f':'#137333';const hint=el('slvSaveFeedback');if(hint){hint.textContent=message;hint.style.color=error?'#b91c1c':'#137333';}};
  const decimal=v=>/^\d+(?:\.\d{1,2})?$/.test(String(v).trim());
  async function employeeDb(){
   const db=window.slvSupabase;if(!db)throw Error('Supabase connection unavailable');
-  const a=await db.auth.getUser();if(a.error||!a.data?.user)throw Error('Cloud employee login required');
-  const p=await db.from('profiles').select('role,is_active').eq('id',a.data.user.id).single();
-  if(p.error||p.data?.role!=='employee'||p.data?.is_active!==true)throw Error('Active cloud employee login required');
   if(!currentUser||currentUser.role!=='Employee')throw Error('Employee dashboard login required');
   const attendance=getTodayAttendance(),breaks=attendance?.lunchBreaks||[],last=breaks[breaks.length-1];
   if(attendance?.shiftCloseAt||currentUser.shiftClosed)throw Error('Shift is closed');
   if(last&&!last.endAt)throw Error('Resume from lunch break first');
-  return db;
+  if(employeeDbCache===db&&Date.now()-employeeDbCacheAt<EMPLOYEE_CHECK_CACHE_MS)return db;
+  if(employeeDbInFlight)return employeeDbInFlight;
+  employeeDbInFlight=(async()=>{
+   try{
+    const a=await db.auth.getUser();if(a.error||!a.data?.user)throw Error('Cloud employee login required');
+    const p=await db.from('profiles').select('role,is_active').eq('id',a.data.user.id).single();
+    if(p.error||p.data?.role!=='employee'||p.data?.is_active!==true)throw Error('Active cloud employee login required');
+    employeeDbCache=db;employeeDbCacheAt=Date.now();return db;
+   }catch(e){employeeDbCache=null;employeeDbCacheAt=0;throw e}
+   finally{employeeDbInFlight=null}
+  })();
+  return employeeDbInFlight;
  }
  // Prefetch after employee dashboard opens; reuse recent data when Services is clicked.
  // Authentication/shift checks remain mandatory for every transaction save.
