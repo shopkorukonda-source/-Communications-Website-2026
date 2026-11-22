@@ -3600,7 +3600,7 @@ try {
   const requested=window.slvRequestedMapServiceId||el('slvMapService').value;
   fill('slvMapService',services.map(x=>({id:x.id,label:x.service_name+' • Rate ₹'+x.customer_rate+' / Cost ₹'+x.internal_cost})));
   const opts=wallets.map(x=>({id:x.id,label:x.wallet_name+' • ₹'+Number(x.balance||0).toFixed(2)}));
-  for(const id of ['slvMapCash','slvMapUpi','slvMapCost','slvSecondCostWallet'])fill(id,opts); const multi=el('slvAllowedWallets');multi.replaceChildren();wallets.forEach(w=>multi.add(new Option(w.wallet_name,w.id)));
+  for(const id of ['slvMapCash','slvMapUpi','slvMapCost'])fill(id,opts);fill('slvSecondCostWallet',opts.filter(o=>['SBI','IDFC','PHONEPE_LITE'].includes(String(wallets.find(w=>w.id===o.id)?.wallet_name||'').toUpperCase()))); const multi=el('slvAllowedWallets');multi.replaceChildren();wallets.forEach(w=>multi.add(new Option(w.wallet_name,w.id)));
   el('slvMapService').onchange=apply;
   if(services.length)el('slvMapService').value=services.some(x=>x.id===requested)?requested:services[0].id;
   window.slvRequestedMapServiceId=null;
