@@ -3669,7 +3669,7 @@ try {
    try{
     if(!services.length)status('Loading services…');
     const db=await employeeDb();
-    const r=await db.from('services').select('id,service_name,customer_rate,internal_cost,is_active').eq('is_active',true).order('service_name');
+    const r=await db.from('services').select('id,service_name,customer_rate,internal_cost,is_active,category_key').eq('is_active',true).order('service_name');
     if(r.error)throw r.error;
     services=r.data||[];servicesFetchedAt=Date.now();
     const select=el('slvTxService');const selected=select.value;
@@ -5712,7 +5712,8 @@ if(role==='employee'&&!options.length&&typeof window.slvTxLoadServices==='functi
  select=document.getElementById('slvTxService');options=select?Array.from(select.options).filter(o=>o.value&&!o.disabled):[];
 }
 if(!options.length){const p=document.createElement('p');p.textContent='Services are not available right now. Please refresh services.';out.append(p);window.slvAnimateCategoryPanel(out,true);return}
-const categoryKeyMap={bank:'banking',bills:'bill_payments',gov:'government',print:'printing',booking:'bookings',other:'other',cards:'cards'};\nconst matches=options.filter(o=>(o.dataset.categoryKey||'')===categoryKeyMap[cat]);
+const categoryKeyMap={bank:'banking',bills:'bill_payments',gov:'government',print:'printing',booking:'bookings',other:'other',cards:'cards'};
+const matches=options.filter(o=>(o.dataset.categoryKey||'')===categoryKeyMap[cat]);
 const serviceLabel=o=>(o.textContent||'').replace(/\s*(?:[•·|–—-]\s*)?(?:₹|Rs\.?\s*)[\d,]+(?:\.\d{1,2})?/gi,'').replace(/[\s•·|–—-]+$/,'').trim();
 if(!matches.length){const p=document.createElement('p');p.textContent='ఈ Categoryలో ప్రస్తుతం Active Services లేవు.';out.append(p);window.slvAnimateCategoryPanel(out,true);return}
 if(role==='employee'){
