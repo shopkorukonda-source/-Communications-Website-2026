@@ -8717,6 +8717,32 @@ body.slv-xerox-selected #slvInlineBillingHost #slvXeroxPanel{display:block!impor
 
 </body>
 </html>
+
+<style id="slv-employee-billing-search-visible">
+/* Show direct service search in the employee inline billing form. */
+#employeeView #slvInlineBillingHost #slvCloudCheckout label[for="slvServiceSearch"]{
+ display:block!important;visibility:visible!important;margin:4px 0 3px!important;
+ font-size:11px!important;font-weight:800!important;color:#263b52!important;
+}
+#employeeView #slvInlineBillingHost #slvCloudCheckout .slv-service-picker{
+ display:block!important;visibility:visible!important;position:relative!important;
+ width:100%!important;margin:0 0 6px!important;z-index:30!important;
+}
+#employeeView #slvInlineBillingHost #slvCloudCheckout #slvServiceSearch{
+ display:block!important;visibility:visible!important;opacity:1!important;
+ width:100%!important;min-height:34px!important;height:34px!important;
+ box-sizing:border-box!important;padding:7px 10px!important;margin:0!important;
+ border:1px solid #9db4cc!important;border-radius:7px!important;
+ background:#fff!important;color:#172b43!important;font-size:12px!important;
+}
+#employeeView #slvInlineBillingHost #slvCloudCheckout #slvServiceSuggestions:not([hidden]){
+ display:block!important;visibility:visible!important;position:absolute!important;
+ top:calc(100% + 2px)!important;left:0!important;right:0!important;
+ z-index:2147483000!important;max-height:42vh!important;overflow-y:auto!important;
+ background:#fff!important;border:1px solid #a9bfd5!important;border-radius:8px!important;
+ box-shadow:0 8px 22px rgba(0,0,0,.18)!important;
+}
+</style>
 <!-- Quick Links available only from employee hamburger menu; dashboard and floating shortcut removed. -->
 <!-- SLV Quick Links: popup accessed from employee side menu; cloud read uses authenticated RLS. -->
 
