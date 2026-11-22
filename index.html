@@ -9364,3 +9364,68 @@ body.slv-xerox-selected #slvInlineBillingHost #slvXeroxPanel{display:block!impor
  padding:9px 12px!important;font-size:13px!important;
 }
 </style>
+
+
+<script id="slv-billing-search-live-binding-fix">
+/* Delegated billing search: resolve the live checkout nodes after they are mounted,
+   and load the catalogue on demand before rendering matching service names. */
+(function(){
+ if(window.__slvBillingSearchLiveFix)return;
+ window.__slvBillingSearchLiveFix=true;
+ const get=()=>({
+  input:document.getElementById('slvServiceSearch'),
+  list:document.getElementById('slvServiceSuggestions'),
+  select:document.getElementById('slvTxService')
+ });
+ const close=()=>{const {input,list}=get();if(list)list.hidden=true;if(input)input.setAttribute('aria-expanded','false')};
+ function render(){
+  const {input,list,select}=get();if(!input||!list||!select)return;
+  const term=input.value.trim().toLocaleLowerCase();
+  const options=Array.from(select.options).filter(o=>o.value&&!o.disabled);
+  list.replaceChildren();
+  const matches=options.filter(o=>{
+   const name=(o.textContent||'').split(/[•·|]/)[0].trim().toLocaleLowerCase();
+   return !term||name.includes(term);
+  });
+  if(!matches.length){
+   const empty=document.createElement('div');empty.style.cssText='padding:10px 12px;color:#526579;font-size:12px';
+   empty.textContent=options.length?'No matching services':'Loading services…';
+   list.append(empty);
+  }
+  matches.forEach(o=>{
+   const b=document.createElement('button');b.type='button';b.className='slv-service-option';b.dataset.serviceValue=o.value;b.textContent=o.textContent;
+   list.append(b);
+  });
+  list.hidden=false;input.setAttribute('aria-expanded','true');
+ }
+ async function refresh(){
+  const {select}=get();if(!select)return;
+  if(!Array.from(select.options).some(o=>o.value)&&typeof window.slvTxLoadServices==='function'){
+   try{await window.slvTxLoadServices()}catch(e){console.warn('Billing service search load:',e)}
+  }
+  render();
+ }
+ document.addEventListener('input',e=>{
+  if(e.target&&e.target.id==='slvServiceSearch'){
+   const {select}=get();if(select){select.value='';if(typeof window.slvTxUpdatePreview==='function')window.slvTxUpdatePreview()}
+   refresh();
+  }
+ },true);
+ document.addEventListener('focusin',e=>{
+  if(e.target&&e.target.id==='slvServiceSearch')refresh();
+ });
+ document.addEventListener('click',e=>{
+  const b=e.target&&e.target.closest('#slvServiceSuggestions [data-service-value]');
+  if(!b)return;
+  const {input,select}=get();if(!input||!select)return;
+  select.value=b.dataset.serviceValue;input.value=b.textContent;close();
+  select.dispatchEvent(new Event('change',{bubbles:true}));
+ });
+ document.addEventListener('keydown',e=>{
+  if(!e.target||e.target.id!=='slvServiceSearch')return;
+  const {list}=get();if(e.key==='Escape'){close();return}
+  if(e.key==='Enter'&&list&&!list.hidden){const b=list.querySelector('[data-service-value]');if(b){e.preventDefault();b.click()}}
+ });
+ document.addEventListener('pointerdown',e=>{if(!e.target.closest('.slv-service-picker'))close()});
+})();
+</script>
