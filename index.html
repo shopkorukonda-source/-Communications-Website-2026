@@ -1529,6 +1529,7 @@ body:has(#loginView:not(.hidden)) .main-header #headerSubtitle{display:none!impo
 <h4>🛠️ Services Setup &amp; Wallet Mapping</h4>
 <p class="muted">ముందుగా Wallet సృష్టించి, తర్వాత ప్రతి Serviceకు Wallet link చేయండి.</p>
 <input id="srvName" placeholder="Service Name"/>
+<label for="srvCategory">Service Category</label><select id="srvCategory"><option value="Government Services">Government Services</option><option value="Banking Services">Banking Services</option><option value="Bill Payments">Bill Payments</option><option value="Printing & Digital Services">Printing &amp; Digital Services</option><option value="Ticket Bookings">Ticket Bookings</option><option value="Other Services">Other Services</option></select>
 <div class="row">
 <select id="srvType">
 <option value="Fixed">Fixed Fee</option>
@@ -2377,6 +2378,7 @@ function editService(i){
 function cancelServiceEdit(){
   window.editingServiceIndex=null;
   ['srvName','srvValue','srvProfit','srvProfitSlabs'].forEach(id=>$(id).value='');
+   $('srvCategory').value='Government Services';
   $('srvProfitType').value='Fixed';toggleProfitRuleFields();
   const saveBtn=document.querySelector('[onclick="saveService()"]');
   if(saveBtn)saveBtn.textContent='Add Service';
@@ -4728,7 +4730,7 @@ window.slvChangeCloudAssignment=async function(mode){
  }
  async function refresh(){
    const db=await adminDb();
-   const r=await db.from('services').select('id,category,service_name,customer_rate,internal_cost,is_active,settings').order('service_name');
+   const r=await db.from('services').select('id,category,category_key,service_name,customer_rate,internal_cost,is_active,settings').order('service_name');
    if(r.error)throw r.error;rows=r.data||[];
    // Read cloud wallets for display only. Financial mapping is saved exclusively
    // through slvMapSave / slv_set_service_wallet_map (UUID based).
@@ -4759,6 +4761,7 @@ window.slvChangeCloudAssignment=async function(mode){
  window.editService=function(i){
    const s=rows[i];if(!s)return;editingId=s.id;
    $('srvName').value=s.service_name;
+   $('srvCategory').value=s.category_key||s.category||'Other Services';
    $('srvType').value='Fixed';$('srvValue').value=s.customer_rate;
    $('srvProfitType').value='Fixed';$('srvProfit').value=(Number(s.customer_rate)-Number(s.internal_cost)).toFixed(2);
    $('srvProfitSlabs').value='';window.toggleProfitRuleFields?.();
@@ -4787,9 +4790,9 @@ window.slvChangeCloudAssignment=async function(mode){
      let payload={service_name:name,customer_rate:Math.round(rate*100)/100,internal_cost:cost,is_active:true};
      if(editingId){
        const existing=rows.find(x=>x.id===editingId);if(!existing)throw Error('Selected service not found. Refresh list.');
-       payload={...payload,category:existing.category,settings:{...(existing.settings||{}),slv_fixed_profit:Math.round(profit*100)/100}};
+       payload={...payload,category:$('srvCategory').value,category_key:$('srvCategory').value,settings:{...(existing.settings||{}),slv_fixed_profit:Math.round(profit*100)/100}};
      }else{
-       payload={...payload,category:'Fixed',settings:{slv_fixed_profit:Math.round(profit*100)/100}};
+       payload={...payload,category:$('srvCategory').value,category_key:$('srvCategory').value,settings:{slv_fixed_profit:Math.round(profit*100)/100}};
      }
      const q=editingId?db.from('services').update(payload).eq('id',editingId):db.from('services').insert(payload);
      const r=await q.select('id');if(r.error)throw r.error;if(!r.data?.length)throw Error('Save not confirmed. Verify Admin INSERT/UPDATE RLS policy.');
