@@ -1858,6 +1858,7 @@ body:has(#loginView:not(.hidden)) .main-header #headerSubtitle{display:none!impo
 <section class="section-box" id="slvCloudCheckout" style="margin:12px 0">
 <h3>💳 Payment &amp; Save</h3>
 <label for="slvServiceSearch">🔎 Search Service</label><div class="slv-service-picker"><input aria-controls="slvServiceSuggestions" aria-expanded="false" autocomplete="off" id="slvServiceSearch" placeholder="Type service name (PAN, Xerox, Aadhaar...)" type="search"/><div class="slv-service-suggestions" hidden="" id="slvServiceSuggestions" role="listbox"></div></div><label class="slv-native-service-label" for="slvTxService">Selected Service</label><select aria-label="Selected Cloud Service" id="slvTxService"><option value="">Load services first</option></select>
+ <div id="slvBillingTypeRow" class="slv-billing-type-row"><span>Billing Type</span><strong id="slvBillingTypeValue">Select a service</strong></div>
 <button class="btn-secondary btn-small" onclick="slvTxLoadServices()" type="button">↻ Load Cloud Services</button>
 <section class="section-box hidden" id="slvFinancialBilling" style="border:1px solid #b8d5f5"><h3>🏦 AEPS / PhonePe Billing</h3><div class="grid"><div><label>Service</label><select id="finBillType" onchange="slvFinQuote();slvFinWallets()"><option value="aeps">AEPS Withdrawal</option><option value="cash_upi">Cash → UPI</option><option value="upi_cash">UPI → Cash</option></select></div><div><label>Amount ₹</label><input id="finBillAmount" min="1" oninput="slvFinQuote()" step="0.01" type="number"/></div><div><label>Wallet</label><select id="finBillWallet"><option value="">Choose wallet</option></select></div><div><label>Charge ₹ (Auto Slab)</label><input id="finBillCharge" readonly="" type="text"/></div><div><label>Charge Type</label><select id="finBillMode" onchange="slvFinQuote()"><option value="extra">Extra</option><option value="deduct">Deduct</option></select></div></div><p class="total" id="finBillResult">Enter amount</p><button class="btn-green" id="finBillSave" onclick="slvFinPost()" type="button">☁️ Save Billing</button><p class="muted" id="finBillStatus" role="status"></p><small>Provider transaction must already be completed. Wallet names only; balances hidden.</small></section>
 <section id="slvManualBilling" class="section-box hidden" style="border:2px solid #d7b96c;background:#fffcf3">
@@ -5957,7 +5958,11 @@ window.slvUWRefresh=init;
  window.slvManualPreview=function(){const m=cents('slvManualMain'),f=cents('slvManualFee'),c=cents('slvManualCash'),u=cents('slvManualUpi');$('slvManualTotal').textContent=Number.isFinite(m+f)?'Customer Total '+fmt(m+f):'Enter valid amounts';if(Number.isFinite(m+f+c+u))status(c+u===m+f?'✓ Payment matches customer total':'Cash + UPI must equal '+fmt(m+f),c+u!==m+f)};
  async function sync(){
   const seq=++serial,id=$('slvTxService')?.value;if(!id)return;
-  try{const db=window.slvSupabase;if(!db)return;const r=await db.from('services').select('id,settings,service_name').eq('id',id).single();if(r.error)throw r.error;if(seq!==serial)return;
+  try{const db=window.slvSupabase;if(!db)return;const r=await db.from('services').select('id,settings,service_name,charge_type,processing_type,profit_mode').eq('id',id).single();if(r.error)throw r.error;if(seq!==serial)return;
+   const serviceMode=String(r.data?.settings?.slv_billing_mode||r.data?.charge_type||'fixed').toLowerCase();
+   const billingLabels={fixed:'Fixed Price',percentage:'Percentage',percent:'Percentage',slab:'Slabs',slabs:'Slabs',manual:'Manual'};
+   const typeLabel=billingLabels[serviceMode]||serviceMode.replace(/[_-]/g,' ').replace(/\\b\\w/g,c=>c.toUpperCase());
+   const typeValue=$('slvBillingTypeValue');if(typeValue)typeValue.textContent=typeLabel;
    manualService=r.data?.settings?.slv_billing_mode==='manual'?r.data:null;
    $('slvCloudCheckout').classList.toggle('slv-manual-mode',!!manualService);$('slvManualBilling').classList.toggle('hidden',!manualService);
    if(!manualService)return;
@@ -9506,3 +9511,16 @@ body.slv-xerox-selected #slvInlineBillingHost #slvXeroxPanel{display:block!impor
  window.addEventListener('scroll',()=>{if(activeInput)position()},true);
 })();
 </script>
+
+
+<style id="slv-unified-billing-form">
+#slvCloudCheckout .slv-billing-type-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0 12px;padding:9px 11px;border:1px solid #d8e3ee;border-radius:8px;background:#f5f8fc;color:#34495e;font-size:12px}
+#slvCloudCheckout .slv-billing-type-row strong{color:#0b4d80;font-size:13px;font-weight:800;text-align:right}
+#slvCloudCheckout.slv-manual-mode #slvManualBilling{display:block!important;visibility:visible!important;border:0!important;border-top:1px solid #dce6ef!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;padding:12px 0 4px!important;margin:8px 0!important}
+#slvCloudCheckout.slv-manual-mode #slvManualBilling h3{margin:0 0 7px!important;font-size:14px!important;color:#173d61!important}
+#slvCloudCheckout.slv-manual-mode #slvManualBilling .muted{font-size:11px!important;line-height:1.45!important}
+#slvCloudCheckout.slv-manual-mode #slvUniversalCustomerBasis,#slvCloudCheckout.slv-manual-mode #slvTxQty,#slvCloudCheckout.slv-manual-mode label[for="slvTxQty"],#slvCloudCheckout.slv-manual-mode .slv-payment-shortcuts,#slvCloudCheckout.slv-manual-mode label[for="slvTxCash"],#slvCloudCheckout.slv-manual-mode #slvTxCash,#slvCloudCheckout.slv-manual-mode label[for="slvTxUpi"],#slvCloudCheckout.slv-manual-mode #slvTxUpi,#slvCloudCheckout.slv-manual-mode #slvUnmappedUpiBox,#slvCloudCheckout.slv-manual-mode #slvSelectedWalletBox,#slvCloudCheckout.slv-manual-mode label[for="slvTxMode"],#slvCloudCheckout.slv-manual-mode #slvTxMode,#slvCloudCheckout.slv-manual-mode #slvAdditionalTransactions,#slvCloudCheckout.slv-manual-mode #slvTxPreview,#slvCloudCheckout.slv-manual-mode #slvTxSave{display:none!important}
+#slvCloudCheckout.slv-manual-mode #slvManualSave{width:100%!important;min-height:42px!important;border-radius:8px!important}
+#slvCloudCheckout.slv-manual-mode #slvManualBilling .row{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important}
+@media(max-width:420px){#slvCloudCheckout.slv-manual-mode #slvManualBilling .row{gap:6px!important}#slvCloudCheckout.slv-manual-mode #slvManualBilling input{min-width:0!important;font-size:13px!important}}
+</style>
