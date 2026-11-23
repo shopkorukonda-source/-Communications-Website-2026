@@ -335,7 +335,7 @@ function calculateBillingRow(row){
     if(slab){charge=Number(slab.customer_charge||0);cost=slab.wallet_extra==null?Number(row.cost||0):Number(slab.wallet_extra);}
     else if(amount>1000){charge=10+Math.ceil((amount-1000)/100)*Number(cfg.above_1000?.extra_per_100||1);cost=Number(row.cost||0);}
   } else if(svc.code==="CREDIT_CARD_BANK"){
-    charge=amount*Number(svc.billing_config?.charge_percent||2)/100;
+    charge=Math.round((amount*Number(svc.billing_config?.charge_percent||2)/100)*100)/100;
     cost=Number(row.cost||0);
   } else if(svc.code==="AEPS_WITHDRAWAL"){
     const bank=(row.bank||"").toLowerCase();
@@ -454,7 +454,7 @@ async function loadRecentBills(){
   const {data,error}=await supabase.from("billing_transactions").select("id,bill_number,customer_name,customer_phone,payment_mode,customer_total,amount_received,cash_received,upi_received,created_at,created_by").order("created_at",{ascending:false}).limit(20);
   if(error){$("recent-bills").textContent="Unable to load bills.";return;}
   const rows=data||[];
-  const {data:reqs}=await supabase.from("billing_edit_requests").select("id,transaction_id,status,reason,created_at,review_note").order("created_at",{ascending:false}).limit(30);
+  const {data:reqs}=await supabase.from("billing_edit_requests").select("id,transaction_id,requested_by,status,reason,created_at,review_note").order("created_at",{ascending:false}).limit(30);
   $("recent-bills").innerHTML=rows.map(x=>{
     const mins=(Date.now()-new Date(x.created_at).getTime())/60000,own=x.created_by=== (awaitUserId),canEdit=currentProfile?.role==="admin"||(own&&mins<=60);
     const pending=(reqs||[]).find(r=>r.transaction_id===x.id&&r.status==="pending"&&r.requested_by===awaitUserId);
