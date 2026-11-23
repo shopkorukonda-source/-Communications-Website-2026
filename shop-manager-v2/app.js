@@ -120,9 +120,13 @@ document.querySelectorAll(".nav-item").forEach(btn=>btn.addEventListener("click"
   $("overview-view").classList.toggle("hidden",view!=="overview");
   $("other-view").classList.toggle("hidden",view==="overview");
   if(view==="overview"){ $("page-title").textContent="Overview"; return; }
-  $("other-title").textContent=btn.textContent.trim();
   $("page-title").textContent=btn.textContent.trim();
-  if(view==="services") await renderServiceManager();
+  if(view==="services") {
+    await renderServiceManager();
+  } else {
+    $("other-view").innerHTML='<div class="empty-panel"><div class="empty-icon">✦</div><h2 id="other-title"></h2><p>This module will be enabled after its complete workflow and safety checks are ready.</p></div>';
+    $("other-title").textContent=btn.textContent.trim();
+  }
 }));
 
 
