@@ -450,12 +450,77 @@ async function saveQuickBilling(){
   finally{btn.disabled=false;}
 }
 async function loadRecentBills(){
-  const {data,error}=await supabase.from("billing_transactions").select("id,bill_number,customer_total,created_at,created_by").order("created_at",{ascending:false}).limit(20);
+  const {data,error}=await supabase.from("billing_transactions").select("id,bill_number,customer_name,customer_phone,payment_mode,customer_total,amount_received,cash_received,upi_received,created_at,created_by").order("created_at",{ascending:false}).limit(20);
   if(error){$("recent-bills").textContent="Unable to load bills.";return;}
-  $("recent-bills").innerHTML=(data||[]).map(x=>{
-    const mins=(Date.now()-new Date(x.created_at).getTime())/60000,editable=mins<=60&&x.created_by;
-    return `<div class="admin-service-row"><div class="admin-service-main"><strong>Bill #${x.bill_number}</strong><small>${new Date(x.created_at).toLocaleString("en-IN")}</small></div><div class="admin-service-meta"><strong>₹${money(x.customer_total)}</strong><span>${editable?"Edit window open":"Admin approval required"}</span></div></div>`;
+  const rows=data||[];
+  const {data:reqs}=await supabase.from("billing_edit_requests").select("id,transaction_id,status,reason,created_at,review_note").order("created_at",{ascending:false}).limit(30);
+  $("recent-bills").innerHTML=rows.map(x=>{
+    const mins=(Date.now()-new Date(x.created_at).getTime())/60000,own=x.created_by=== (awaitUserId),canEdit=currentProfile?.role==="admin"||(own&&mins<=60);
+    const pending=(reqs||[]).find(r=>r.transaction_id===x.id&&r.status==="pending"&&r.requested_by===awaitUserId);
+    const approved=(reqs||[]).find(r=>r.transaction_id===x.id&&r.status==="approved"&&r.requested_by===awaitUserId);
+    return `<div class="admin-service-row"><div class="admin-service-main"><strong>Bill #${x.bill_number}</strong><small>${new Date(x.created_at).toLocaleString("en-IN")}</small></div><div class="admin-service-meta"><strong>₹${money(x.customer_total)}</strong><span>${mins<=60?"Within 1-hour edit window":"Approval required"}</span></div><div class="admin-service-actions">${canEdit?`<button data-bill-edit="${x.id}">Edit bill</button>`:pending?'<span>Request pending</span>':approved?`<button data-apply-approved="${approved.id}" data-bill="${x.id}">Apply approved</button>`:`<button data-bill-request="${x.id}">Request edit</button>`}</div></div>`;
   }).join("")||'<div class="empty-state">No bills yet.</div>';
+  document.querySelectorAll("[data-bill-edit]").forEach(b=>b.addEventListener("click",()=>openBillEditor(b.dataset.billEdit,false)));
+  document.querySelectorAll("[data-bill-request]").forEach(b=>b.addEventListener("click",()=>openBillEditor(b.dataset.billRequest,true)));
+  document.querySelectorAll("[data-apply-approved]").forEach(b=>b.addEventListener("click",()=>applyApprovedEdit(b.dataset.bill,b.dataset.applyApproved)));
+  if(currentProfile?.role==="admin") await renderEditApprovals(reqs||[]);
+}
+let awaitUserId=null;
+async function openBillEditor(id,requestOnly){
+  const {data:userData}=await supabase.auth.getUser();awaitUserId=userData.user.id;
+  const [{data:bill,error:bErr},{data:items,error:iErr}]=await Promise.all([
+    supabase.from("billing_transactions").select("id,customer_name,customer_phone,payment_mode,customer_total,amount_received,cash_received,upi_received,notes,created_at,created_by").eq("id",id).single(),
+    supabase.from("billing_items").select("service_id,quantity,customer_unit_price,processing_unit_cost,profit_amount,pricing_snapshot").eq("transaction_id",id)
+  ]);
+  if(bErr||iErr){alert((bErr||iErr).message);return;}
+  const payload={customer_name:bill.customer_name,customer_phone:bill.customer_phone,payment_mode:bill.payment_mode,customer_total:Number(bill.customer_total),amount_received:Number(bill.amount_received),cash_received:Number(bill.cash_received),upi_received:Number(bill.upi_received),notes:bill.notes,items:(items||[]).map(it=>({...it,wallet_debits:it.pricing_snapshot?.wallet_debits||[]}))};
+  const host=$("recent-bills");
+  const editor=document.createElement("div");editor.className="admin-editor";editor.id="bill-edit-editor";
+  editor.innerHTML=`<div class="admin-editor-head"><div><h3>${requestOnly?"Request bill edit":"Edit bill"} </h3><p>Review the bill data before saving. Wallet debits and profit are recalculated by the database function.</p></div><button type="button" class="text-btn" id="close-bill-editor">Close</button></div>
+  <label class="service-form">Bill data (JSON)<textarea id="bill-edit-json" rows="14" spellcheck="false"></textarea></label>
+  ${requestOnly?'<label class="service-form">Reason for edit<input id="bill-edit-reason" placeholder="Explain why this bill needs correction" required></label>':""}
+  <div id="bill-edit-message" class="message"></div><div class="admin-form-actions"><button class="primary-btn" id="submit-bill-edit">${requestOnly?"Send edit request":"Save bill changes"}</button></div>`;
+  host.prepend(editor);$("bill-edit-json").value=JSON.stringify(payload,null,2);
+  $("close-bill-editor").onclick=()=>editor.remove();
+  $("submit-bill-edit").onclick=async()=>{
+    const btn=$("submit-bill-edit"),msg=$("bill-edit-message");btn.disabled=true;
+    try{
+      const proposed=JSON.parse($("bill-edit-json").value);
+      if(!Array.isArray(proposed.items)||!proposed.items.length)throw new Error("Items array is required.");
+      let result;
+      if(requestOnly){
+        const reason=$("bill-edit-reason").value.trim();if(reason.length<3)throw new Error("Please enter an edit reason.");
+        result=await supabase.rpc("request_billing_edit",{p_transaction_id:id,p_reason:reason,p_proposed_payload:proposed});
+      }else{
+        result=await supabase.rpc("update_bill_with_approval",{p_transaction_id:id,p_payload:proposed,p_edit_request_id:null});
+      }
+      if(result.error)throw result.error;
+      msg.textContent=requestOnly?"Edit request sent to Admin.":"Bill updated successfully.";
+      await loadRecentBills();
+    }catch(e){msg.textContent=e.message||"Unable to process edit.";console.error(e);}
+    finally{btn.disabled=false;}
+  };
+}
+async function renderEditApprovals(reqs){
+  const host=$("recent-bills");if(!host)return;
+  const pending=(reqs||[]).filter(r=>r.status==="pending");
+  const wrap=document.createElement("div");wrap.className="admin-table-wrap";
+  wrap.innerHTML='<h3>Pending bill edit approvals</h3><div id="pending-edit-rows"></div><h3 style="margin-top:18px">Recent edit audit</h3><div id="billing-audit-rows"></div>';
+  host.append(wrap);
+  $("pending-edit-rows").innerHTML=pending.length?pending.map(r=>`<div class="admin-service-row"><div class="admin-service-main"><strong>Bill edit request</strong><small>${escapeHtml(r.reason)} · ${new Date(r.created_at).toLocaleString("en-IN")}</small></div><div class="admin-service-meta"><span>${r.transaction_id.slice(0,8)}</span></div><div class="admin-service-actions"><button data-review-edit="${r.id}" data-approve="true">Approve</button><button data-review-edit="${r.id}" data-approve="false">Reject</button></div></div>`).join(""):'<div class="empty-state">No pending requests.</div>';
+  document.querySelectorAll("[data-review-edit]").forEach(b=>b.addEventListener("click",async()=>{
+    const note=prompt(b.dataset.approve==="true"?"Optional approval note":"Reason for rejection")||null;
+    const {error}=await supabase.rpc("review_billing_edit",{p_request_id:b.dataset.reviewEdit,p_approve:b.dataset.approve==="true",p_note:note});
+    if(error)alert(error.message);else await loadRecentBills();
+  }));
+  const {data:audit,error}=await supabase.from("billing_audit_log").select("transaction_id,action,note,created_at").order("created_at",{ascending:false}).limit(15);
+  $("billing-audit-rows").innerHTML=error?'<div class="empty-state">Audit history unavailable.</div>':(audit||[]).map(a=>`<div class="admin-service-row"><div class="admin-service-main"><strong>${escapeHtml(a.action)}</strong><small>${escapeHtml(a.note||"")} · ${new Date(a.created_at).toLocaleString("en-IN")}</small></div><div class="admin-service-meta">${a.transaction_id.slice(0,8)}</div></div>`).join("")||'<div class="empty-state">No audit entries.</div>';
+}
+async function applyApprovedEdit(transactionId,requestId){
+  const {data,error}=await supabase.from("billing_edit_requests").select("proposed_payload").eq("id",requestId).single();
+  if(error){alert(error.message);return;}
+  const result=await supabase.rpc("update_bill_with_approval",{p_transaction_id:transactionId,p_payload:data.proposed_payload,p_edit_request_id:requestId});
+  if(result.error)alert(result.error.message);else{alert("Approved edit applied. Wallet and profit entries recalculated.");await loadRecentBills();}
 }
 
 const {data:{session}} = await supabase.auth.getSession();
