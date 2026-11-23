@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111111">
+  <title>SLV Shop Manager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main id="login-screen" class="login-shell">
+    <section class="login-brand">
+      <div class="brand-mark"><span class="brand-line"></span><span>SLV COMMUNICATIONS</span><span class="brand-line"></span></div>
+      <div class="brand-copy">
+        <div class="eyebrow">SHOP MANAGEMENT SYSTEM</div>
+        <h1>One workspace.<br><em>Every service.</em></h1>
+        <p>A calmer, faster way to manage billing, wallets and daily shop operations.</p>
+      </div>
+      <div class="brand-foot">BUILT FOR EVERYDAY BUSINESS</div>
+    </section>
+    <section class="login-panel">
+      <form id="login-form" class="login-card">
+        <div class="small-logo">SLV <span>MANAGER</span></div>
+        <div class="eyebrow">SECURE WORKSPACE</div>
+        <h2>Welcome back</h2>
+        <p class="muted">Sign in to continue to your shop dashboard.</p>
+        <label for="email">Email address</label>
+        <input id="email" type="email" autocomplete="username" placeholder="you@example.com" required>
+        <label for="password">Password</label>
+        <div class="password-wrap"><input id="password" type="password" autocomplete="current-password" placeholder="Enter your password" required><button type="button" id="toggle-password" aria-label="Show password">Show</button></div>
+        <button class="primary-btn" type="submit" id="login-btn">Sign in <span>→</span></button>
+        <div id="login-message" class="message" role="status"></div>
+        <div class="login-note">Your shop data is protected by secure account access.</div>
+      </form>
+    </section>
+  </main>
+
+  <main id="app-screen" class="app-shell hidden">
+    <aside class="sidebar">
+      <div class="sidebar-brand"><div class="brand-symbol">S</div><div><strong>SLV</strong><small>SHOP MANAGER</small></div></div>
+      <div class="nav-label">WORKSPACE</div>
+      <button class="nav-item active" data-view="overview"><span>⌂</span> Overview</button>
+      <button class="nav-item" data-view="billing"><span>▤</span> Quick Billing</button>
+      <button class="nav-item" data-view="services"><span>▦</span> Services</button>
+      <div class="nav-label nav-gap">MANAGEMENT</div>
+      <button class="nav-item admin-only" data-view="wallets"><span>◉</span> Wallets</button>
+      <button class="nav-item admin-only" data-view="employees"><span>♙</span> Employees</button>
+      <button class="nav-item admin-only" data-view="reports"><span>▥</span> Reports</button>
+      <div class="sidebar-bottom"><div class="secure-dot"></div><span>Secure workspace</span></div>
+    </aside>
+    <section class="main-area">
+      <header class="topbar">
+        <div><div class="eyebrow" id="greeting">GOOD DAY</div><h2 id="page-title">Overview</h2></div>
+        <div class="user-area"><div class="user-meta"><strong id="user-name">Team member</strong><small id="user-role">Employee</small></div><div class="avatar" id="avatar">S</div><button id="signout-btn" class="signout-btn">Sign out</button></div>
+      </header>
+      <section id="overview-view" class="view">
+        <div class="welcome-row"><div><h1>Your shop, <span>in control.</span></h1><p>Here’s a clear view of today’s operations.</p></div><div class="date-chip" id="today-date"></div></div>
+        <div class="stat-grid">
+          <article class="stat-card"><div class="stat-top"><span>Today’s bills</span><span class="stat-icon">▤</span></div><strong>—</strong><small>Billing activity will appear here</small></article>
+          <article class="stat-card"><div class="stat-top"><span>Cash position</span><span class="stat-icon">₹</span></div><strong>—</strong><small>Live drawer balance</small></article>
+          <article class="stat-card"><div class="stat-top"><span>Services active</span><span class="stat-icon">▦</span></div><strong id="service-count">0</strong><small>Available in your workspace</small></article>
+        </div>
+        <div class="section-heading"><div><h3>Service categories</h3><p>Choose a category to view its services.</p></div></div>
+        <div id="category-grid" class="category-grid"><div class="loading-card">Loading categories…</div></div>
+        <div class="section-heading service-heading"><div><h3>Services</h3><p id="service-subtitle">Select a category to get started.</p></div><input id="service-search" class="search-input" type="search" placeholder="Search services"></div>
+        <div id="service-list" class="service-list"><div class="empty-state">Choose a category above to view services.</div></div>
+      </section>
+      <section id="other-view" class="view hidden"><div class="empty-panel"><div class="empty-icon">✦</div><h2 id="other-title">Coming next</h2><p>This workspace is being built in focused modules. Your existing website remains untouched.</p></div></section>
+    </section>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
