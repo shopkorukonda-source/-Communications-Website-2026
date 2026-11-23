@@ -60,8 +60,8 @@ async function loadCatalog() {
   }
   categories = cats || [];
   services = (rows || []).filter(s => currentProfile?.role === "admin" || s.is_active);
-  if (currentProfile?.role === "admin") {
-    const {data: wallets, error: walletError} = await supabase.from("wallets").select("id,name,wallet_type,provider,current_balance,is_active").order("name");
+  {
+    const {data: wallets, error: walletError} = await supabase.from("wallets").select("id,name,wallet_type,provider,current_balance,is_active").eq("is_active",true).order("name");
     if (walletError) console.warn("Wallet list unavailable", walletError);
     walletOptions = wallets || [];
   }
@@ -367,6 +367,7 @@ async function renderQuickBilling(){
     <button id="save-billing" class="primary-btn admin-add-btn">Save all bills</button>
   </div>
   <div class="admin-table-wrap"><h3>Recent bills & edit window</h3><div id="recent-bills"></div></div>`;
+  $("save-billing").addEventListener("click",saveQuickBilling);
   const count=$("bill-count");
   count.addEventListener("change",()=>{let n=Math.max(1,Math.min(100,Number(count.value)||1));count.value=n;setBillingRows(n);});
   $("bill-mode").addEventListener("change",updatePaymentFields);
@@ -457,6 +458,5 @@ async function loadRecentBills(){
   }).join("")||'<div class="empty-state">No bills yet.</div>';
 }
 
-$("save-billing")?.addEventListener("click",saveQuickBilling);
 const {data:{session}} = await supabase.auth.getSession();
 if(session?.user) await showApp(session.user);
