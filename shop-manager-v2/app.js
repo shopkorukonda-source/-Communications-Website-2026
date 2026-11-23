@@ -450,6 +450,7 @@ async function saveQuickBilling(){
   finally{btn.disabled=false;}
 }
 async function loadRecentBills(){
+  const {data:userData}=await supabase.auth.getUser();awaitUserId=userData?.user?.id||null;
   const {data,error}=await supabase.from("billing_transactions").select("id,bill_number,customer_name,customer_phone,payment_mode,customer_total,amount_received,cash_received,upi_received,created_at,created_by").order("created_at",{ascending:false}).limit(20);
   if(error){$("recent-bills").textContent="Unable to load bills.";return;}
   const rows=data||[];
