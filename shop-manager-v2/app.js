@@ -121,7 +121,9 @@ document.querySelectorAll(".nav-item").forEach(btn=>btn.addEventListener("click"
   $("other-view").classList.toggle("hidden",view==="overview");
   if(view==="overview"){ $("page-title").textContent="Overview"; return; }
   $("page-title").textContent=btn.textContent.trim();
-  if(view==="services") {
+  if(view==="billing") {
+    await renderQuickBilling();
+  } else if(view==="services") {
     await renderServiceManager();
   } else if(view==="wallets") {
     await renderWalletManager();
@@ -318,5 +320,143 @@ async function createEmployee(e){
   if(error){msg.textContent=error.message;return;}msg.textContent="Employee record created. Login account can be linked separately.";await renderEmployeeManager();
 }
 
+
+let billingRows = [];
+let billingWalletRules = {};
+function money(n){return Number(n||0).toFixed(2);}
+function serviceByCode(code){return services.find(s=>s.code===code);}
+function calculateBillingRow(row){
+  const svc=services.find(s=>s.id===row.service_id), amount=Number(row.base||0);
+  if(!svc||!amount)return {charge:0,cost:0,profit:0,total:0};
+  let charge=0,cost=Number(row.cost||0),profit=0;
+  if(svc.code==="CURRENT_BILLS"){
+    const cfg=svc.billing_config||{}, slabs=cfg.slabs||[];
+    const slab=slabs.find(x=>amount>=Number(x.min)&&amount<=Number(x.max));
+    if(slab){charge=Number(slab.customer_charge||0);cost=slab.wallet_extra==null?Number(row.cost||0):Number(slab.wallet_extra);}
+    else if(amount>1000){charge=10+Math.ceil((amount-1000)/100)*Number(cfg.above_1000?.extra_per_100||1);cost=Number(row.cost||0);}
+  } else if(svc.code==="CREDIT_CARD_BANK"){
+    charge=amount*Number(svc.billing_config?.charge_percent||2)/100;
+    cost=Number(row.cost||0);
+  } else if(svc.code==="AEPS_WITHDRAWAL"){
+    const bank=(row.bank||"").toLowerCase();
+    charge=bank.includes("union")?0:Math.ceil(amount/1000)*Number(svc.billing_config?.charge_per_1000||10);
+    cost=Number(row.cost||0);
+  } else {
+    charge=Number(row.charge||0);
+    cost=Number(row.cost||0);
+  }
+  profit=charge-cost;
+  return {charge,cost,profit,total:amount+charge};
+}
+async function renderQuickBilling(){
+  const host=$("other-view");
+  host.innerHTML=`
+  <div class="admin-module-head"><div><div class="eyebrow">QUICK BILLING</div><h2>Multiple Bill Entry</h2><p>Enter all bills together and collect payment in one submission.</p></div></div>
+  <div class="admin-editor billing-editor">
+    <div class="billing-top"><label>Number of bills<input id="bill-count" type="number" min="1" max="100" value="1"></label><label>Customer name<input id="bill-customer" placeholder="Optional"></label><label>Customer mobile<input id="bill-phone" placeholder="Optional"></label></div>
+    <div id="billing-rows"></div>
+    <div class="billing-totals" id="billing-totals"></div>
+    <div class="billing-payment">
+      <label>Payment mode<select id="bill-mode"><option value="cash">Cash</option><option value="upi">UPI</option><option value="split">Cash + UPI</option></select></label>
+      <label>Amount received (₹)<input id="bill-received" type="number" min="0" step="0.01" value="0"></label>
+      <label id="cash-paid-wrap">Cash received (₹)<input id="bill-cash" type="number" min="0" step="0.01" value="0"></label>
+      <label id="upi-paid-wrap" class="hidden">UPI received (₹)<input id="bill-upi" type="number" min="0" step="0.01" value="0"></label>
+    </div>
+    <div class="billing-change" id="bill-change">Change: ₹0.00</div>
+    <div id="billing-message" class="message"></div>
+    <button id="save-billing" class="primary-btn admin-add-btn">Save all bills</button>
+  </div>
+  <div class="admin-table-wrap"><h3>Recent bills & edit window</h3><div id="recent-bills"></div></div>`;
+  const count=$("bill-count");
+  count.addEventListener("change",()=>{let n=Math.max(1,Math.min(100,Number(count.value)||1));count.value=n;setBillingRows(n);});
+  $("bill-mode").addEventListener("change",updatePaymentFields);
+  ["bill-received","bill-cash","bill-upi"].forEach(id=>$(id).addEventListener("input",updateBillingTotals));
+  setBillingRows(1);await loadRecentBills();
+}
+async function setBillingRows(n){
+  const {data:rules}=await supabase.from("service_wallet_rules").select("service_id,wallet_id,wallet_slot,debit_config").order("wallet_slot");
+  billingWalletRules={};(rules||[]).forEach(x=>(billingWalletRules[x.service_id]??=[]).push(x));
+  billingRows=Array.from({length:n},(_,i)=>billingRows[i]||({service_id:"",base:"",charge:"",cost:"",wallet_id:"",wallet_debit:"",bank:""}));
+  $("billing-rows").innerHTML=billingRows.map((r,i)=>`
+  <div class="billing-row" data-row="${i}">
+    <div class="billing-row-head"><strong>Bill ${i+1}</strong><span class="billing-row-total" id="row-total-${i}">₹0.00</span></div>
+    <div class="billing-row-fields">
+      <label>Service<select data-field="service_id" data-i="${i}"><option value="">Select service</option>${services.filter(s=>s.is_active).map(s=>`<option value="${s.id}" ${s.id===r.service_id?"selected":""}>${escapeHtml(s.name)}</option>`).join("")}</select></label>
+      <label>Bill / Transfer Amount (₹)<input data-field="base" data-i="${i}" type="number" min="0" step="0.01" value="${escapeHtml(r.base)}"></label>
+      <label class="bank-field">Bank (AEPS)<input data-field="bank" data-i="${i}" value="${escapeHtml(r.bank)}" placeholder="Bank name"></label>
+      <label>Extra processing cost (₹)<input data-field="cost" data-i="${i}" type="number" min="0" step="0.01" value="${escapeHtml(r.cost)}"></label>
+      <label>Wallet<select data-field="wallet_id" data-i="${i}"><option value="">No wallet debit</option>${(billingWalletRules[r.service_id]||[]).map(w=>{const wallet=walletOptions.find(x=>x.id===w.wallet_id);return wallet?`<option value="${wallet.id}" ${r.wallet_id===wallet.id?"selected":""}>${escapeHtml(wallet.name)}</option>`:"";}).join("")}</select></label>
+      <label>Wallet debit (₹)<input data-field="wallet_debit" data-i="${i}" type="number" min="0" step="0.01" value="${escapeHtml(r.wallet_debit)}"></label>
+    </div>
+    <div class="billing-row-result" id="row-result-${i}">Service Charge: ₹0.00 · Profit: ₹0.00</div>
+  </div>`).join("");
+  $("billing-rows").querySelectorAll("[data-field]").forEach(el=>el.addEventListener("input",onBillingRowChange));
+  $("billing-rows").querySelectorAll("[data-field]").forEach(el=>el.addEventListener("change",onBillingRowChange));
+  updateBillingTotals();
+}
+function onBillingRowChange(e){
+  const i=Number(e.target.dataset.i),field=e.target.dataset.field;
+  billingRows[i][field]=e.target.value;
+  if(field==="service_id"){billingRows[i].wallet_id="";billingRows[i].wallet_debit="";setBillingRows(billingRows.length);return;}
+  updateBillingTotals();
+}
+function updateBillingTotals(){
+  let base=0,charges=0,costs=0,total=0;
+  billingRows.forEach((r,i)=>{
+    const calc=calculateBillingRow(r);base+=Number(r.base||0);charges+=calc.charge;costs+=calc.cost;total+=calc.total;
+    const t=$("row-total-"+i),res=$("row-result-"+i);
+    if(t)t.textContent="₹"+money(calc.total);
+    if(res)res.textContent="Service Charge: ₹"+money(calc.charge)+" · Processing Cost: ₹"+money(calc.cost)+" · Profit: ₹"+money(calc.profit);
+  });
+  $("billing-totals").innerHTML=`<div><small>Total bill amount</small><strong>₹${money(base)}</strong></div><div><small>Total service charges</small><strong>₹${money(charges)}</strong></div><div><small>Customer total</small><strong>₹${money(total)}</strong></div>`;
+  const received=Number($("bill-received").value||0);
+  $("bill-change").textContent="Change: ₹"+money(Math.max(0,received-total));
+}
+function updatePaymentFields(){
+  const mode=$("bill-mode").value;
+  $("cash-paid-wrap").classList.toggle("hidden",mode==="upi");
+  $("upi-paid-wrap").classList.toggle("hidden",mode==="cash");
+}
+async function saveQuickBilling(){
+  const msg=$("billing-message"),btn=$("save-billing");btn.disabled=true;msg.textContent="";
+  try{
+    const items=[];let customerTotal=0,processingTotal=0,profitTotal=0;
+    for(const r of billingRows){
+      if(!r.service_id&&!Number(r.base||0))continue;
+      if(!r.service_id||Number(r.base||0)<=0)throw new Error("Every entered row needs a service and positive bill amount.");
+      const svc=services.find(s=>s.id===r.service_id),calc=calculateBillingRow(r);
+      if(svc.code==="CURRENT_BILLS"&&Number(r.base)<=200&&Number(r.base)>=10&&!r.wallet_id)throw new Error("Current Bills row needs its assigned wallet.");
+      const walletDebit=Number(r.wallet_debit||0)||(svc.code==="CURRENT_BILLS"&&Number(r.base)<=200?Number(r.base)+1.68:0);
+      const wallet_debits=walletDebit>0&&r.wallet_id?[{wallet_id:r.wallet_id,amount:walletDebit}]:[];
+      if(walletDebit>0&&!r.wallet_id)throw new Error("Select a wallet for the wallet debit on "+svc.name);
+      const price=calc.total;
+      items.push({service_id:r.service_id,quantity:1,customer_unit_price:price,processing_unit_cost:calc.cost,profit_amount:calc.profit,pricing_snapshot:{base_amount:Number(r.base),service_charge:calc.charge,bank:r.bank||null,wallet_debits},wallet_debits});
+      customerTotal+=price;processingTotal+=calc.cost;profitTotal+=calc.profit;
+    }
+    if(!items.length)throw new Error("Enter at least one bill.");
+    const mode=$("bill-mode").value,received=Number($("bill-received").value||0);
+    const cash=mode==="upi"?0:mode==="cash"?received:Number($("bill-cash").value||0);
+    const upi=mode==="cash"?0:mode==="upi"?received:Number($("bill-upi").value||0);
+    if(received<customerTotal)throw new Error("Amount received must be equal to or greater than customer total.");
+    if(mode==="split"&&Math.abs(cash+upi-received)>0.009)throw new Error("Cash + UPI must equal amount received.");
+    const payload={customer_name:$("bill-customer").value.trim()||null,customer_phone:$("bill-phone").value.trim()||null,payment_mode:mode,customer_total:customerTotal,amount_received:received,cash_received:cash,upi_received:upi,items};
+    const {data,error}=await supabase.rpc("create_bill",{payload});
+    if(error)throw error;
+    msg.textContent="Bills saved successfully. Transaction ID: "+data;
+    $("bill-received").value="0";$("bill-cash").value="0";$("bill-upi").value="0";
+    await setBillingRows(Number($("bill-count").value||1));await loadRecentBills();
+  }catch(e){msg.textContent=e.message||"Unable to save bills.";console.error(e);}
+  finally{btn.disabled=false;}
+}
+async function loadRecentBills(){
+  const {data,error}=await supabase.from("billing_transactions").select("id,bill_number,customer_total,created_at,created_by").order("created_at",{ascending:false}).limit(20);
+  if(error){$("recent-bills").textContent="Unable to load bills.";return;}
+  $("recent-bills").innerHTML=(data||[]).map(x=>{
+    const mins=(Date.now()-new Date(x.created_at).getTime())/60000,editable=mins<=60&&x.created_by;
+    return `<div class="admin-service-row"><div class="admin-service-main"><strong>Bill #${x.bill_number}</strong><small>${new Date(x.created_at).toLocaleString("en-IN")}</small></div><div class="admin-service-meta"><strong>₹${money(x.customer_total)}</strong><span>${editable?"Edit window open":"Admin approval required"}</span></div></div>`;
+  }).join("")||'<div class="empty-state">No bills yet.</div>';
+}
+
+$("save-billing")?.addEventListener("click",saveQuickBilling);
 const {data:{session}} = await supabase.auth.getSession();
 if(session?.user) await showApp(session.user);
