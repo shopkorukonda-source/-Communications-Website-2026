@@ -953,7 +953,7 @@ async function saveForm93LayoutSettings(){
  const {error}=await supabase.from("form93_layout_settings").upsert({id:"default",settings:form93LayoutSettings,updated_by:user?.id||null,updated_at:new Date().toISOString()},{onConflict:"id"});
  if(error)throw error;
 }
-function showForm93HtmlPreview(r){
+async function showForm93HtmlPreview(r){
   const previous=$("pan-preview-overlay");if(previous)previous.remove();
   const overlay=document.createElement("div");overlay.id="pan-preview-overlay";overlay.className="pan-preview-overlay";
   overlay.innerHTML='<section class="pan-preview-modal" role="dialog" aria-modal="true" aria-label="PAN Form 93 preview"><header class="pan-preview-header"><div><strong>Form 93 Preview · HTML overlay</strong><small>'+esc(r.name||"Applicant")+' · '+esc(r.temp_ack||"")+'</small></div><div class="pan-preview-actions"><button type="button" class="secondary-btn" id="pan-preview-print" disabled>Print</button><button type="button" class="danger-btn" id="pan-preview-close">Close</button></div></header><div class="pan-preview-pages" id="pan-preview-pages"><p class="pan-preview-loading">Loading official Form 93 background…</p></div></section>';
