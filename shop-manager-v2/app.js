@@ -953,8 +953,13 @@ function renderPanApplications(){
     chars.slice(0,columns).forEach((ch,i)=>{
      if(ch===" ")return;
      let fs=size;while(fs>4.2&&font.widthOfTextAtSize(ch,fs)>cellWidth-1)fs-=.2;
-     const centeredTop=top+FORM93_TEXT_Y_CORRECTION+(cellHeight-fs)/2;
-     page.drawText(ch,{x:x+i*cellWidth,y:page.getHeight()-centeredTop-fs,font,size:fs,color:rgb(.04,.04,.04),maxWidth:cellWidth-1});
+     // Center each glyph in the actual PDF cell, like CSS flex align-items/
+     // justify-content:center. Use the embedded font's measured glyph height,
+     // not the nominal font-size, to avoid the baseline drifting across rules.
+     const glyphHeight=font.heightAtSize(fs);
+     const cellTop=top+FORM93_TEXT_Y_CORRECTION;
+     const y=page.getHeight()-cellTop-(cellHeight+glyphHeight)/2;
+     page.drawText(ch,{x:x+i*cellWidth,y,font,size:fs,color:rgb(.04,.04,.04),maxWidth:cellWidth-1});
     });
    };
    const name=(pi,top,value)=>{
