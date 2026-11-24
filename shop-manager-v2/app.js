@@ -949,7 +949,7 @@ function renderPanApplications(){
    const correction=13.5,cellW=10.62,cellH=13.7;
    const put=(pi,x,top,w,h,content,cls="pan-html-text")=>{
     const m=pageModels[pi];if(!m||content===null||content===undefined||(String(content)===""&&cls!=="pan-html-photo"))return null;
-    const el=document.createElement("div");el.className=cls;el.style.left=(x/m.width*100)+"%";el.style.top=((top+correction)/m.height*100)+"%";el.style.width=(w/m.width*100)+"%";el.style.height=(h/m.height*100)+"%";el.textContent=String(content);m.layer.appendChild(el);return el;
+    const el=document.createElement("div");el.className=cls;el.style.left=(x*m.scale/m.width*100)+"%";el.style.top=((top+correction)*m.scale/m.height*100)+"%";el.style.width=(w*m.scale/m.width*100)+"%";el.style.height=(h*m.scale/m.height*100)+"%";el.textContent=String(content);m.layer.appendChild(el);return el;
    };
    const text=(pi,x,top,value,w=120,size=6)=>{const el=put(pi,x,top,w,12,value);if(el)el.style.fontSize=(size*mScale(pageModels[pi]))+"px"};
    const mScale=m=>m.width/(m.page.view[2]-m.page.view[0]);
