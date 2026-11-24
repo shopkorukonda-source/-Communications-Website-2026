@@ -339,9 +339,12 @@ async function loadReportsData(){
 }
 async function renderEmployeeManager(){
   const {data:profiles}=await supabase.from("profiles").select("id,display_name,phone,role").eq("is_active",true).eq("role","employee").order("display_name");
+  const {data:existingLinks}=await supabase.from("employees").select("profile_id");
+  const linkedProfileIds=new Set((existingLinks||[]).map(x=>x.profile_id).filter(Boolean));
+  const availableProfiles=(profiles||[]).filter(p=>!linkedProfileIds.has(p.id));
   const host=$("other-view");host.innerHTML=`
     <div class="admin-module-head"><div><div class="eyebrow">ADMINISTRATION</div><h2>Employees</h2><p>Maintain employee details and salary settings.</p></div></div>
-    <div class="admin-editor"><h3>Add employee record</h3><form id="employee-form" class="service-form"><div class="admin-form-grid"><label>Full name<input id="employee-name" required maxlength="120"></label><label>Mobile number<input id="employee-phone" maxlength="20"></label><label>Link login account<select id="employee-profile"><option value="">Not linked</option>${(profiles||[]).map(p=>`<option value="${p.id}">${escapeHtml(p.display_name||p.phone||p.id)}</option>`).join("")}</select></label><label>Monthly fixed salary (₹)<input id="employee-salary" type="number" min="0" step="0.01" value="0"></label></div><div id="employee-message" class="message"></div><button class="primary-btn admin-add-btn" type="submit">Add employee</button></form></div>
+    <div class="admin-editor"><h3>Add employee record</h3><form id="employee-form" class="service-form"><div class="admin-form-grid"><label>Full name<input id="employee-name" required maxlength="120"></label><label>Mobile number<input id="employee-phone" maxlength="20"></label><label>Link login account<select id="employee-profile"><option value="">Not linked</option>${availableProfiles.map(p=>`<option value="${p.id}">${escapeHtml(p.display_name||p.phone||p.id)}</option>`).join("")}</select></label><label>Monthly fixed salary (₹)<input id="employee-salary" type="number" min="0" step="0.01" value="0"></label></div><div id="employee-message" class="message"></div><button class="primary-btn admin-add-btn" type="submit">Add employee</button></form></div>
     <div class="admin-table-wrap"><h3>Employee records</h3><div id="employee-rows"></div></div>`;
   $("employee-form").addEventListener("submit",createEmployee);
   const {data,error}=await supabase.from("employees").select("id,employee_code,full_name,phone,monthly_salary,is_active,joined_on,profile_id").order("created_at",{ascending:false});
