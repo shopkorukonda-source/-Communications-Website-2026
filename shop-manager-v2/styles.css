@@ -13,3 +13,21 @@
 .denomination-grid input{width:84px;min-width:0;padding:8px;border:1px solid #d5d5d5;border-radius:6px}
 #op-close-editor .admin-editor,#drawer-close-editor .admin-editor{margin-top:16px}
 @media(max-width:640px){.denomination-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.denomination-grid label{font-size:13px}}
+
+
+.quick-link-editor{margin:18px 0;padding:20px}
+.quick-link-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;gap:12px;align-items:end}
+.quick-link-form label{display:flex;flex-direction:column;gap:7px;font-size:13px;font-weight:600}
+.quick-link-form input{width:100%;min-width:0;padding:11px 12px;border:1px solid #d8d8d8;border-radius:8px;background:#fff;color:#171717}
+.quick-link-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;margin-top:20px}
+.quick-link-card{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:17px;border:1px solid #dedede;border-radius:12px;background:#fff}
+.quick-link-mark{width:40px;height:40px;display:grid;place-items:center;border:1px solid #c9a34c;border-radius:10px;color:#9a772d;font-size:22px}
+.quick-link-info{display:flex;flex:1;min-width:120px;flex-direction:column;gap:4px}
+.quick-link-info strong{font-size:14px}.quick-link-info small,.quick-link-admin{color:#777;font-size:12px}
+.quick-link-open{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;padding:9px 13px;font-size:12px}
+.quick-link-admin{width:100%;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-top:10px;border-top:1px solid #eee}
+.quick-link-admin span{margin-right:auto}
+.quick-link-admin button{padding:6px 10px;border:1px solid #ccc;border-radius:7px;background:#fff;color:#222;font-size:12px}
+.quick-link-admin .danger-btn{border-color:#d7a5a2;color:#a33}
+.quick-link-note{margin-top:18px;padding:14px 16px;border:1px solid #e5e0d5;border-radius:10px;color:#666;font-size:13px;line-height:1.6}
+@media(max-width:760px){.quick-link-form{grid-template-columns:1fr}.quick-link-grid{grid-template-columns:1fr}}
