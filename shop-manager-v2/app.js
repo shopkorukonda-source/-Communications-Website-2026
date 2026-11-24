@@ -330,13 +330,14 @@ function money(n){return Number(n||0).toFixed(2);}
 function serviceByCode(code){return services.find(s=>s.code===code);}
 function calculateBillingRow(row){
   const svc=services.find(s=>s.id===row.service_id), amount=Number(row.base||0);
-  if(!svc||!amount)return {charge:0,cost:0,profit:0,total:0};
+  if(!svc||amount<0)return {charge:0,cost:0,profit:0,total:0};
   let charge=0,cost=Number(row.cost||0),profit=0;
   if(svc.code==="CURRENT_BILLS"){
     const cfg=svc.billing_config||{}, slabs=cfg.slabs||[];
     const slab=slabs.find(x=>amount>=Number(x.min)&&amount<=Number(x.max));
-    if(slab){charge=Number(slab.customer_charge||0);cost=slab.wallet_extra==null?Number(row.cost||0):Number(slab.wallet_extra);}
-    else if(amount>1000){charge=10+Math.ceil((amount-1000)/100)*Number(cfg.above_1000?.extra_per_100||1);cost=Number(row.cost||0);}
+    const debitTotal=(row.wallet_debits||[]).reduce((sum,x)=>sum+Number(x.amount||0),0);
+    if(slab){charge=Number(slab.customer_charge||0);cost=debitTotal>0?debitTotal-amount:(slab.wallet_extra==null?Number(row.cost||0):Number(slab.wallet_extra));}
+    else if(amount>1000){charge=10+Math.ceil((amount-1000)/100)*Number(cfg.above_1000?.extra_per_100||1);cost=debitTotal>0?debitTotal-amount:Number(row.cost||0);}
   } else if(svc.code==="CREDIT_CARD_BANK"){
     charge=Math.round((amount*Number(svc.billing_config?.charge_percent||2)/100)*100)/100;
     cost=Number(row.cost||0);
@@ -345,7 +346,7 @@ function calculateBillingRow(row){
     charge=bank.includes("union")?0:Math.ceil(amount/1000)*Number(svc.billing_config?.charge_per_1000||10);
     cost=Number(row.cost||0);
   } else {
-    charge=Number(row.charge||0);
+    charge=Number(row.charge||svc.billing_config?.customer_charge||0);
     cost=Number(row.cost||0);
   }
   profit=charge-cost;
@@ -387,7 +388,7 @@ async function setBillingRows(n){
       const wallet=walletOptions.find(x=>x.id===w.wallet_id),old=(r.wallet_debits||[]).find(x=>x.wallet_id===w.wallet_id);
       return wallet?'<label class="wallet-choice"><input type="checkbox" data-wallet-toggle="'+wallet.id+'" data-i="'+i+'" '+(old&&Number(old.amount)>0?"checked":"")+'><span>'+escapeHtml(wallet.name)+' <small>Balance ₹'+money(wallet.current_balance)+'</small><input type="number" min="0" step="0.01" data-wallet-amount="'+wallet.id+'" data-i="'+i+'" value="'+(old?escapeHtml(old.amount):"")+'" placeholder="Debit amount" '+(old&&Number(old.amount)>0?"":"disabled")+'></span></label>':"";
     }).join("")||"<small>No wallet assigned to this service.</small>";
-    return '<div class="billing-row" data-row="'+i+'"><div class="billing-row-head"><strong>Bill '+(i+1)+'</strong><span class="billing-row-total" id="row-total-'+i+'">₹0.00</span></div><div class="billing-row-fields"><label>Service<select data-field="service_id" data-i="'+i+'"><option value="">Select service</option>'+serviceOptions+'</select></label><label>Bill / Transfer Amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.base)+'"></label><label class="bank-field">Bank (AEPS)<input data-field="bank" data-i="'+i+'" value="'+escapeHtml(r.bank)+'" placeholder="Bank name"></label><label>Extra processing cost (₹)<input data-field="cost" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.cost)+'"></label></div><div class="wallet-map-box"><strong>Wallet debit allocation</strong><p>Select one or more assigned wallets and enter each debit amount.</p><div class="wallet-choice-grid">'+walletOptionsHtml+'</div></div><div class="billing-row-result" id="row-result-'+i+'">Service Charge: ₹0.00 · Profit: ₹0.00</div></div>';
+    return '<div class="billing-row" data-row="'+i+'"><div class="billing-row-head"><strong>Bill '+(i+1)+'</strong><span class="billing-row-total" id="row-total-'+i+'">₹0.00</span></div><div class="billing-row-fields"><label>Service<select data-field="service_id" data-i="'+i+'"><option value="">Select service</option>'+serviceOptions+'</select></label><label>Bill / Transfer Amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.base)+'"></label><label>Service charge (₹)<input data-field="charge" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.charge||"")+'"></label><label class="bank-field">Bank (AEPS)<input data-field="bank" data-i="'+i+'" value="'+escapeHtml(r.bank)+'" placeholder="Bank name"></label><label>Extra processing cost (₹)<input data-field="cost" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.cost)+'"></label></div><div class="wallet-map-box"><strong>Wallet debit allocation</strong><p>Select one or more assigned wallets and enter each debit amount.</p><div class="wallet-choice-grid">'+walletOptionsHtml+'</div></div><div class="billing-row-result" id="row-result-'+i+'">Service Charge: ₹0.00 · Profit: ₹0.00</div></div>';
   }).join("");
   $("billing-rows").querySelectorAll("[data-field]").forEach(el=>{el.addEventListener("input",onBillingRowChange);el.addEventListener("change",onBillingRowChange);});
   $("billing-rows").querySelectorAll("[data-wallet-toggle],[data-wallet-amount]").forEach(el=>{el.addEventListener("input",onBillingWalletChange);el.addEventListener("change",onBillingWalletChange);});
@@ -396,7 +397,7 @@ async function setBillingRows(n){
 function onBillingRowChange(e){
   const i=Number(e.target.dataset.i),field=e.target.dataset.field;
   billingRows[i][field]=e.target.value;
-  if(field==="service_id"){billingRows[i].wallet_debits=[];setBillingRows(billingRows.length);return;}
+  if(field==="service_id"){const svc=services.find(s=>s.id===e.target.value);billingRows[i].charge=svc?.billing_config?.customer_charge??"";billingRows[i].wallet_debits=[];setBillingRows(billingRows.length);return;}
   updateBillingTotals();
 }
 function onBillingWalletChange(e){
@@ -431,9 +432,9 @@ async function saveQuickBilling(){
     const items=[];let customerTotal=0,processingTotal=0,profitTotal=0;
     for(const r of billingRows){
       if(!r.service_id&&!Number(r.base||0))continue;
-      if(!r.service_id||Number(r.base||0)<=0)throw new Error("Every entered row needs a service and positive bill amount.");
+      if(!r.service_id||Number(r.base||0)<0)throw new Error("Every entered row needs a service and a valid bill amount.");
       const svc=services.find(s=>s.id===r.service_id),calc=calculateBillingRow(r);
-      if(svc.code==="CURRENT_BILLS"&&Number(r.base)<=200&&Number(r.base)>=10&&!r.wallet_id)throw new Error("Current Bills row needs its assigned wallet.");
+      if(svc.code==="CURRENT_BILLS"&&Number(r.base)>=10&&!((r.wallet_debits||[]).length)&&!(billingWalletRules[r.service_id]||[]).length)throw new Error("Assign at least one wallet to Current Bills.");
       let wallet_debits=(r.wallet_debits||[]).filter(x=>Number(x.amount)>0);
       if(svc.code==="CURRENT_BILLS"&&Number(r.base)>=10&&Number(r.base)<=200&&!wallet_debits.length){const first=(billingWalletRules[r.service_id]||[])[0];if(!first)throw new Error("Assign a wallet to Current Bills in Admin Services.");wallet_debits=[{wallet_id:first.wallet_id,amount:Number(r.base)+1.68}];}
       if((billingWalletRules[r.service_id]||[]).length&&!wallet_debits.length)throw new Error("Select and enter at least one wallet debit for "+svc.name);
