@@ -998,8 +998,7 @@ function renderPanApplications(){
     const frame=document.createElement("iframe");frame.style.cssText="position:fixed;width:0;height:0;border:0;right:0;bottom:0";document.body.appendChild(frame);
     const doc=frame.contentDocument;doc.open();doc.write('<!doctype html><html><head><title>Form 93</title><style>@page{size:A4;margin:0}html,body{margin:0;padding:0}img{display:block;width:210mm;height:297mm;object-fit:fill;page-break-after:always}img:last-child{page-break-after:auto}</style></head><body>');
     canvases.forEach(canvas=>doc.write('<img src="'+canvas.toDataURL("image/png")+'">'));doc.write('</body></html>');doc.close();
-    frame.onload=()=>{frame.contentWindow.focus();frame.contentWindow.print();setTimeout(()=>frame.remove(),1500)};
-    setTimeout(()=>{try{frame.contentWindow.focus();frame.contentWindow.print();setTimeout(()=>frame.remove(),1500)}catch(error){frame.remove();alert("Print could not start. Please try again.")}},400);
+    setTimeout(()=>{try{frame.contentWindow.focus();frame.contentWindow.print();setTimeout(()=>frame.remove(),1500)}catch(error){frame.remove();alert("Print could not start. Please try again.")}},500);
    });
   }catch(error){console.error(error);overlay.querySelector("#pan-preview-pages").innerHTML='<p class="pan-preview-loading">Unable to prepare preview: '+esc(error.message||"Please try again.")+'</p>'}
  }
