@@ -306,9 +306,10 @@ async function loadReportsData(){
   $("report-rows").innerHTML=rows.length?rows.map(x=>`<div class="admin-service-row"><div class="admin-service-main"><strong>Bill #${x.bill_number}</strong><small>${escapeHtml(x.customer_name||"Walk-in customer")} · ${new Date(x.created_at).toLocaleString("en-IN")}</small></div><div class="admin-service-meta"><strong>₹${Number(x.customer_total).toFixed(2)}</strong><span>Profit ₹${Number(x.profit_total).toFixed(2)}</span></div><div class="admin-service-meta"><span>${escapeHtml(x.payment_mode)}</span></div></div>`).join(""):'<div class="empty-state">No bills in this period.</div>';
 }
 async function renderEmployeeManager(){
+  const {data:profiles}=await supabase.from("profiles").select("id,display_name,phone,role").eq("is_active",true).eq("role","employee").order("display_name");
   const host=$("other-view");host.innerHTML=`
     <div class="admin-module-head"><div><div class="eyebrow">ADMINISTRATION</div><h2>Employees</h2><p>Maintain employee details and salary settings.</p></div></div>
-    <div class="admin-editor"><h3>Add employee record</h3><form id="employee-form" class="service-form"><div class="admin-form-grid"><label>Full name<input id="employee-name" required maxlength="120"></label><label>Mobile number<input id="employee-phone" maxlength="20"></label><label>Monthly fixed salary (₹)<input id="employee-salary" type="number" min="0" step="0.01" value="0"></label></div><div id="employee-message" class="message"></div><button class="primary-btn admin-add-btn" type="submit">Add employee</button></form></div>
+    <div class="admin-editor"><h3>Add employee record</h3><form id="employee-form" class="service-form"><div class="admin-form-grid"><label>Full name<input id="employee-name" required maxlength="120"></label><label>Mobile number<input id="employee-phone" maxlength="20"></label><label>Link login account<select id="employee-profile"><option value="">Not linked</option>${(profiles||[]).map(p=>`<option value="${p.id}">${escapeHtml(p.display_name||p.phone||p.id)}</option>`).join("")}</select></label><label>Monthly fixed salary (₹)<input id="employee-salary" type="number" min="0" step="0.01" value="0"></label></div><div id="employee-message" class="message"></div><button class="primary-btn admin-add-btn" type="submit">Add employee</button></form></div>
     <div class="admin-table-wrap"><h3>Employee records</h3><div id="employee-rows"></div></div>`;
   $("employee-form").addEventListener("submit",createEmployee);
   const {data,error}=await supabase.from("employees").select("id,employee_code,full_name,phone,monthly_salary,is_active,joined_on").order("created_at",{ascending:false});
@@ -318,7 +319,7 @@ async function renderEmployeeManager(){
 }
 async function createEmployee(e){
   e.preventDefault();const msg=$("employee-message");
-  const payload={full_name:$("employee-name").value.trim(),phone:$("employee-phone").value.trim()||null,monthly_salary:Number($("employee-salary").value)||0,is_active:true,joined_on:new Date().toISOString().slice(0,10)};
+  const payload={full_name:$("employee-name").value.trim(),phone:$("employee-phone").value.trim()||null,profile_id:$("employee-profile").value||null,monthly_salary:Number($("employee-salary").value)||0,is_active:true,joined_on:new Date().toISOString().slice(0,10)};
   const {error}=await supabase.from("employees").insert(payload);
   if(error){msg.textContent=error.message;return;}msg.textContent="Employee record created. Login account can be linked separately.";await renderEmployeeManager();
 }
