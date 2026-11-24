@@ -804,10 +804,29 @@ async function loadEmployeeAnnouncements(){
   .order("created_at",{ascending:false}).limit(12);
  if(error){host.innerHTML="";console.warn("Announcements unavailable",error);return}
  if(!data?.length){host.innerHTML="";return}
+
+ const festive=data.filter(a=>a.announcement_type==="festive");
+ if(festive.length)showFestiveLoginPopup(festive);
  host.innerHTML='<div class="announcement-heading"><div><div class="eyebrow">FROM SLV MANAGEMENT</div><h3>Updates & Announcements</h3></div></div><div class="announcement-list">'+data.map(a=>{
  const m=announcementMeta[a.announcement_type]||announcementMeta.important;
  return '<article class="announcement-card announcement-'+a.announcement_type+'"><div class="announcement-icon">'+m.icon+'</div><div class="announcement-copy"><div class="announcement-type">'+m.label+(a.event_date?' · '+new Date(a.event_date+"T00:00:00").toLocaleDateString("en-IN"):"")+'</div><strong>'+escapeHtml(a.title)+'</strong><p>'+escapeHtml(a.message).replace(/\n/g,"<br>")+'</p></div></article>'
  }).join("")+'</div>';
+}
+function showFestiveLoginPopup(items){
+ const previous=$("festive-login-overlay");if(previous)previous.remove();
+ const overlay=document.createElement("div");overlay.id="festive-login-overlay";overlay.className="festive-login-overlay";
+ const modal=document.createElement("section");modal.className="festive-login-modal";modal.setAttribute("role","dialog");modal.setAttribute("aria-modal","true");modal.setAttribute("aria-labelledby","festive-popup-title");
+ const closeButton=document.createElement("button");closeButton.type="button";closeButton.className="festive-popup-close";closeButton.setAttribute("aria-label","Close");closeButton.textContent="×";
+ const decoration=document.createElement("div");decoration.className="festive-popup-confetti";decoration.textContent="✦ ✧ ✦";
+ const eyebrow=document.createElement("div");eyebrow.className="festive-popup-eyebrow";eyebrow.textContent="A MESSAGE FROM SLV COMMUNICATIONS";
+ const title=document.createElement("h2");title.id="festive-popup-title";title.textContent="Festive Wishes";
+ const subtitle=document.createElement("p");subtitle.className="festive-popup-subtitle";subtitle.textContent="Wishing you and your family happiness, health and prosperity.";
+ const list=document.createElement("div");list.className="festive-popup-items";
+ items.forEach(a=>{const card=document.createElement("article");card.className="festive-popup-item";const date=document.createElement("div");date.className="festive-popup-date";date.textContent=a.event_date?new Date(a.event_date+"T00:00:00").toLocaleDateString("en-IN"):"";const heading=document.createElement("h3");heading.textContent=a.title||"Festive Wishes";const message=document.createElement("p");message.textContent=a.message||"";card.append(date,heading,message);list.appendChild(card)});
+ const ok=document.createElement("button");ok.type="button";ok.className="primary-btn festive-popup-ok";ok.textContent="Thank you";
+ modal.append(closeButton,decoration,eyebrow,title,subtitle,list,ok);overlay.appendChild(modal);document.body.appendChild(overlay);
+ const close=()=>overlay.remove();closeButton.addEventListener("click",close);ok.addEventListener("click",close);overlay.addEventListener("click",e=>{if(e.target===overlay)close()});
+ const onKey=e=>{if(e.key==="Escape"&&$("festive-login-overlay")){close();document.removeEventListener("keydown",onKey)}};document.addEventListener("keydown",onKey);ok.focus();
 }
 async function renderAnnouncementManager(){
  const host=$("other-view");if(currentProfile?.role!=="admin"){host.innerHTML='<div class="empty-panel"><h2>Announcements</h2><p>Only Admin can manage shop announcements.</p></div>';return}
