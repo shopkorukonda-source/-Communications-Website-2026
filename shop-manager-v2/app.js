@@ -389,8 +389,12 @@ function calculateBillingRow(row){
     }
   }
   const configuredWalletDebits=automaticWalletDebits(row,svc);
-  if(configuredWalletDebits.length)cost=configuredWalletDebits.reduce((sum,x)=>sum+Number(x.amount||0),0);
-  if(!["CURRENT_BILLS","MONEY_TRANSFER","PRIVATE_BUS_TICKET","APSRTC_TICKET","TTD_TICKET","CREDIT_CARD_BANK","AEPS_WITHDRAWAL"].includes(svc.code)) profit=svc.profit_mode==="manual"?charge-cost:profit;
+  if(configuredWalletDebits.length){
+    const totalDebit=configuredWalletDebits.reduce((sum,x)=>sum+Number(x.amount||0),0);
+    cost=svc.code==="CURRENT_BILLS"?Math.max(0,totalDebit-amount):totalDebit;
+  }
+  if(["CURRENT_BILLS","MONEY_TRANSFER","PRIVATE_BUS_TICKET","APSRTC_TICKET","TTD_TICKET","CREDIT_CARD_BANK","AEPS_WITHDRAWAL"].includes(svc.code))profit=charge-cost;
+  else if(svc.profit_mode==="manual")profit=charge-cost;
   const unitTotal=amount+charge;
   return {charge,cost,profit,unitTotal,total:unitTotal*qty};
 }
@@ -427,7 +431,8 @@ function automaticWalletDebits(row,svc){
   let target=Number(row.cost||svc?.processing_cost_config?.fixed_amount||0);
   if(svc?.code==="CURRENT_BILLS"){
     const cfg=svc.billing_config||{},slab=(cfg.slabs||[]).find(x=>amount>=Number(x.min||0)&&amount<=Number(x.max||0));
-    target=amount+(slab?Number(slab.wallet_extra??1.68):amount>1000?Number(cfg.above_1000?.wallet_extra??0):0);
+    const extra=slab?.wallet_extra;
+    target=amount+(extra!=null?Number(extra):Number(row.cost||0));
   }
   const fixed=rules.map(x=>Number(x.debit_config?.fixed_amount??x.debit_config?.amount??0));
   const fixedTotal=fixed.reduce((a,b)=>a+b,0);
@@ -447,7 +452,7 @@ async function setBillingRows(n){
       const wallet=walletOptions.find(x=>x.id===rule.wallet_id),debit=alloc.find(x=>x.wallet_id===rule.wallet_id);
       return wallet?'<div class="wallet-choice"><span>'+escapeHtml(wallet.name)+' <small>Balance ₹'+money(wallet.current_balance)+' · Auto debit ₹'+money(debit?.amount||0)+'</small></span></div>':"";
     }).join("")||"<small>No processing wallet configured for this service.</small>";
-    return '<div class="billing-row" data-row="'+i+'"><div class="billing-row-head"><strong>Bill '+(i+1)+'</strong><span class="billing-row-total" id="row-total-'+i+'">₹0.00</span></div><div class="billing-row-fields"><label>Service<select data-field="service_id" data-i="'+i+'"><option value="">Select service</option>'+serviceOptions+'</select></label><label>Bill / Transfer Amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.base)+'"></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label><label>Service charge (₹)<input data-field="charge" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.charge||"")+'"></label><label class="bank-field">Bank (AEPS)<input data-field="bank" data-i="'+i+'" value="'+escapeHtml(r.bank)+'" placeholder="Bank name"></label><label style="display:'+((svc?.processing_cost_config?.manual_entry||svc?.processing_cost_config?.mode==="admin_configurable_wallet_debit")?"":"none")+'">Manual processing cost (₹)<input data-field="cost" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.cost)+'"></label></div><div class="wallet-map-box"><strong>Processing wallet (automatic)</strong><p>Wallet and debit amount are taken from Admin service settings.</p><div class="wallet-choice-grid" id="wallet-auto-'+i+'">'+walletOptionsHtml+'</div></div><div class="billing-row-result" id="row-result-'+i+'">Service Charge: ₹0.00 · Profit: ₹0.00</div></div>';
+    return '<div class="billing-row" data-row="'+i+'"><div class="billing-row-head"><strong>Bill '+(i+1)+'</strong><span class="billing-row-total" id="row-total-'+i+'">₹0.00</span></div><div class="billing-row-fields"><label>Service<select data-field="service_id" data-i="'+i+'"><option value="">Select service</option>'+serviceOptions+'</select></label><label>Bill / Transfer Amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.base)+'"></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label><label>Service charge (₹)<input data-field="charge" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.charge||"")+'"></label><label class="bank-field">Bank (AEPS)<input data-field="bank" data-i="'+i+'" value="'+escapeHtml(r.bank)+'" placeholder="Bank name"></label><label style="display:'+((svc?.processing_cost_config?.manual_entry||svc?.processing_cost_config?.mode==="admin_configurable_wallet_debit"||(svc?.code==="CURRENT_BILLS"&&Number(r.base||0)>=10&&((svc.billing_config?.slabs||[]).find(x=>Number(r.base)>=Number(x.min||0)&&Number(r.base)<=Number(x.max||0))?.wallet_extra==null)))?"":"none")+'">Manual processing cost (₹)<input data-field="cost" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.cost)+'"></label></div><div class="wallet-map-box"><strong>Processing wallet (automatic)</strong><p>Wallet and debit amount are taken from Admin service settings.</p><div class="wallet-choice-grid" id="wallet-auto-'+i+'">'+walletOptionsHtml+'</div></div><div class="billing-row-result" id="row-result-'+i+'">Service Charge: ₹0.00 · Profit: ₹0.00</div></div>';
   }).join("");
   $("billing-rows").querySelectorAll("[data-field]").forEach(el=>{el.addEventListener("input",onBillingRowChange);el.addEventListener("change",onBillingRowChange);});
   updateBillingTotals();
