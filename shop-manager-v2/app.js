@@ -950,11 +950,11 @@ function renderPanApplications(){
    const correction=13.5,cellW=10.62,cellH=13.7;
    const put=(pi,x,top,w,h,content,cls="pan-html-text")=>{
     const m=pageModels[pi];if(!m||content===null||content===undefined||(String(content)===""&&cls!=="pan-html-photo"))return null;
-    const el=document.createElement("div");el.className=cls;el.style.left=(x*m.scale/m.width*100)+"%";el.style.top=((top+correction)*m.scale/m.height*100)+"%";el.style.width=(w*m.scale/m.width*100)+"%";el.style.height=(h*m.scale/m.height*100)+"%";el.textContent=String(content);m.layer.appendChild(el);return el;
+    const el=document.createElement("div");el.className=cls;el.style.left=(x*m.scale/m.width*100)+"%";el.style.top=((top+correction)*m.scale/m.height*100)+"%";el.style.width=(w*m.scale/m.width*100)+"%";el.style.height=(h*m.scale/m.height*100)+"%";el.textContent=String(content);el.style.fontWeight="700";m.layer.appendChild(el);return el;
    };
-   const text=(pi,x,top,value,w=120,size=6)=>{const el=put(pi,x,top,w,12,value);if(el)el.style.fontSize=(size*mScale(pageModels[pi]))+"px"};
+   const text=(pi,x,top,value,w=120,size=6)=>{const el=put(pi,x,top,w,12,value);if(el)el.style.fontSize=((size*1.12)*mScale(pageModels[pi]))+"px"};
    const mScale=m=>m.width/(m.page.view[2]-m.page.view[0]);
-   const aadhaarNameGrid=(value)=>{const parts=String(value||"").trim().toUpperCase().split(/\s+/).filter(Boolean);let pos=0;parts.forEach((part,idx)=>{if(idx>0)pos+=1;[...part].forEach(ch=>{if(pos<25){if(ch!==" "){const el=put(0,180+pos*nameCellW,238.3,nameCellW,cellH,ch,"pan-html-char");if(el)el.style.fontSize=(5.2*mScale(pageModels[0]))+"px"}pos++}})})};
+   const aadhaarNameGrid=(value)=>{const parts=String(value||"").trim().toUpperCase().split(/\s+/).filter(Boolean);let pos=0;parts.forEach((part,idx)=>{if(idx>0)pos+=1;[...part].forEach(ch=>{if(pos<25){if(ch!==" "){const el=put(0,180+pos*nameCellW,238.3,nameCellW,cellH,ch,"pan-html-char");if(el)el.style.fontSize=(5.9*mScale(pageModels[0]))+"px"}pos++}})})};
    const grid=(pi,x,top,value,cols=36,cw=cellW,size=5.4)=>{
     [...String(value??"").trim().toUpperCase()].slice(0,cols).forEach((ch,i)=>{if(ch===" ")return;const el=put(pi,x+i*cw,top,cw,cellH,ch,"pan-html-char");if(el)el.style.fontSize=(size*mScale(pageModels[pi]))+"px"});
    };
@@ -964,7 +964,7 @@ function renderPanApplications(){
    // Page 1: applicant identity and contact.
    name(0,183.5,r.name);aadhaarNameGrid(r.name_as_aadhaar||r.name);
    mark(0,({Male:183,Female:229,Transgender:290})[r.gender]||183,280.5);
-   if(r.dob){const [yy,mm,dd]=r.dob.split("-");[dd,mm,yy].forEach((part,i)=>grid(0,185+[0,40,80][i],294,part,4,15,5.8))}
+   if(r.dob){const [yy,mm,dd]=r.dob.split("-");[dd,mm,yy].forEach((part,i)=>grid(0,181+[0,40,80][i],294,part,4,15,6.5))}
    grid(0,185,307,r.aadhaar,12,10.62,5.8);addr(0,"res",342);if(r.office_flat||r.office_road||r.office_pin)addr(0,"office",435);
    mark(0,({Resident:213,"Non-resident":275,"Resident but not ordinarily resident":352})[r.residential_status]||213,523);
    text(0,345,547,r.passport,160,5.8);text(0,345,563,r.tin,180,5.8);
