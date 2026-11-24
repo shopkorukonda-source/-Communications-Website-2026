@@ -344,3 +344,20 @@ body{background:radial-gradient(ellipse at 8% 0%,#fbf8f0 0,transparent 36%),var(
 
 /* Form 93 touch-friendly calibration */
 .pan-calibration-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 14px;background:#fff;border-bottom:1px solid #ddd}.pan-calibration-toolbar button{width:auto;margin:0;padding:8px 12px}.pan-calibration-toolbar small{font-size:11px;color:#666;flex:1 1 100%}.pan-calibration-handle{position:absolute;z-index:20;border:1.5px dashed #1677ff;background:#1677ff12;touch-action:none;cursor:move;pointer-events:auto;min-width:8px;min-height:8px}.pan-calibrating .pan-html-overlay{pointer-events:none}.pan-calibrating .pan-calibration-handle{pointer-events:auto}.pan-preview-modal{max-height:96vh;overflow:auto}.pan-preview-pages{overflow:auto;touch-action:pan-x pan-y}
+
+/* Mobile login layout: also covers Android webviews using a desktop-sized CSS viewport */
+@media (max-width: 900px), (pointer: coarse) and (orientation: portrait) {
+  .login-shell{min-height:100svh;grid-template-columns:1fr}
+  .login-brand{min-height:0;height:auto;padding:22px 24px;background:#141414}
+  .brand-copy,.brand-foot{display:none}
+  .brand-mark{max-width:100%;font-size:10px;letter-spacing:2px;gap:10px}
+  .brand-line{max-width:54px}
+  .login-panel{min-height:calc(100svh - 64px);padding:34px 22px;display:grid;place-items:center;background:#f7f7f5}
+  .login-card{width:min(100%,420px);padding:28px 24px;background:#fff;border:1px solid #ece9e1;border-radius:18px;box-shadow:0 12px 36px #1717170d}
+  .small-logo{margin-bottom:34px}
+}
+@media (max-width:380px){
+  .login-panel{padding:22px 14px}
+  .login-card{padding:24px 18px}
+  .login-card h2{font-size:28px}
+}
