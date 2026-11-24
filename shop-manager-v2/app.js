@@ -953,7 +953,7 @@ function renderPanApplications(){
     chars.slice(0,columns).forEach((ch,i)=>{
      if(ch===" ")return;
      let fs=size;while(fs>4.2&&font.widthOfTextAtSize(ch,fs)>cellWidth-1)fs-=.2;
-     const centeredTop=top+(cellHeight-fs)/2;
+     const centeredTop=top+FORM93_TEXT_Y_CORRECTION+(cellHeight-fs)/2;
      page.drawText(ch,{x:x+i*cellWidth,y:page.getHeight()-centeredTop-fs,font,size:fs,color:rgb(.04,.04,.04),maxWidth:cellWidth-1});
     });
    };
