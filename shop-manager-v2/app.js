@@ -68,9 +68,24 @@ async function loadCatalog() {
   }
   $("service-count").textContent = services.length;
   renderCategories();
+  await loadOverviewStats();
 }
 
 const icons = ["▣","◉","↗","▤","◇","✦"];
+async function loadOverviewStats(){
+  const start=new Date();start.setHours(0,0,0,0);
+  const [{count,error},sessionResult]=await Promise.all([
+    supabase.from("billing_transactions").select("id",{count:"exact",head:true}).gte("created_at",start.toISOString()),
+    supabase.from("drawer_sessions").select("id,opening_cash,opened_at,drawer_id").eq("status","open").order("opened_at",{ascending:false}).limit(1)
+  ]);
+  $("today-bill-count").textContent=error?"—":String(count||0);
+  $("today-bill-caption").textContent=error?"Unable to load today's bills":"Bills recorded today";
+  const cash=walletOptions.filter(w=>w.wallet_type==="cash").reduce((sum,w)=>sum+Number(w.current_balance||0),0);
+  $("cash-position").textContent="₹"+money(cash);
+  const open=sessionResult.data?.[0];
+  $("cash-position-caption").textContent=open?"Live Shop Cash · Shift open":"Shop Cash wallet balance";
+}
+
 function renderCategories() {
   $("category-grid").innerHTML = categories.map((cat,i) => `
     <button class="category-card ${selectedCategory===cat.id?"selected":""}" data-category="${cat.id}">
