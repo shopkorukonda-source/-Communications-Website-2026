@@ -959,7 +959,7 @@ function renderPanApplications(){
    };
    const name=(pi,top,value)=>{const words=String(value||"").trim().replace(/\s+/g," ").split(" ").filter(Boolean);[words[0]||"",words[1]||"",words.slice(2).join(" ")].forEach((v,i)=>grid(pi,180,top+i*13.7,v,36,cellW,5.2))};
    const addr=(pi,p,top)=>{["flat","road","post","area","district"].forEach((k,i)=>grid(pi,180,top+i*13.7,r[p+"_"+k],36,cellW,5.4));grid(pi,132,top+5*13.7,r[p+"_state"],8,cellW,5.2);grid(pi,285,top+5*13.7,r[p+"_country"]||"India",12,cellW,5.2);grid(pi,455,top+5*13.7,r[p+"_pin"],10,cellW,5.2)};
-   const mark=(pi,x,top)=>put(pi,x,top,10,12,"X","pan-html-mark");
+   const mark=(pi,x,top)=>{const el=put(pi,x,top,10,12,"✓","pan-html-mark");if(el)el.style.fontSize=(8*mScale(pageModels[pi]))+"px";return el};
    // Page 1: applicant identity and contact.
    name(0,183.5,r.name);grid(0,180,239.5,r.name_as_aadhaar||r.name);
    mark(0,({Male:183,Female:229,Transgender:290})[r.gender]||183,282);
