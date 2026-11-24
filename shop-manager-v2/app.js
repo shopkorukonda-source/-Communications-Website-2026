@@ -987,33 +987,22 @@ function renderPanApplications(){
   finally{if(btn){btn.disabled=false;btn.textContent=original||"Save Details & Preview Form"}}
  }
  async function showPanPreview(url,r){
-  const previous=$("pan-preview-overlay");if(previous){previous.remove();if(previous.dataset.objectUrl)URL.revokeObjectURL(previous.dataset.objectUrl)}
-  const overlay=document.createElement("div");overlay.id="pan-preview-overlay";overlay.className="pan-preview-overlay";overlay.dataset.objectUrl=url;
-  overlay.innerHTML='<section class="pan-preview-modal" role="dialog" aria-modal="true" aria-label="PAN Form 93 preview"><header class="pan-preview-header"><div><strong>Form 93 Preview</strong><small>'+esc(r.name||"Applicant")+' · '+esc(r.temp_ack||"")+'</small></div><div class="pan-preview-actions"><button type="button" class="secondary-btn" id="pan-preview-print" disabled>Print</button><button type="button" class="danger-btn" id="pan-preview-close">Close</button></div></header><div class="pan-preview-pages" id="pan-preview-pages"><p class="pan-preview-loading">Preparing preview…</p></div></section>';
+  const previous=$("pan-preview-overlay");
+  if(previous){previous.remove();if(previous.dataset.objectUrl)URL.revokeObjectURL(previous.dataset.objectUrl)}
+  const overlay=document.createElement("div");
+  overlay.id="pan-preview-overlay";overlay.className="pan-preview-overlay";overlay.dataset.objectUrl=url;
+  overlay.innerHTML='<section class="pan-preview-modal" role="dialog" aria-modal="true" aria-label="PAN Form 93 preview"><header class="pan-preview-header"><div><strong>Form 93 Preview</strong><small>'+esc(r.name||"Applicant")+' · '+esc(r.temp_ack||"")+'</small></div><div class="pan-preview-actions"><button type="button" class="secondary-btn" id="pan-preview-print">Print</button><button type="button" class="danger-btn" id="pan-preview-close">Close</button></div></header><iframe class="pan-preview-frame" id="pan-preview-pdf" title="Form 93 PDF preview"></iframe></section>';
   document.body.appendChild(overlay);
+  const frame=overlay.querySelector("#pan-preview-pdf");frame.src=url;
   const close=()=>{overlay.remove();URL.revokeObjectURL(url)};
   overlay.querySelector("#pan-preview-close").addEventListener("click",close);
   overlay.addEventListener("click",e=>{if(e.target===overlay)close()});
+  overlay.querySelector("#pan-preview-print").addEventListener("click",()=>{
+   try{frame.contentWindow.focus();frame.contentWindow.print()}
+   catch(error){alert("Print could not start. Use the PDF viewer's print option.")}
+  });
   const onKey=e=>{if(e.key==="Escape"&&$("pan-preview-overlay")){close();document.removeEventListener("keydown",onKey)}};
   document.addEventListener("keydown",onKey);
-  try{
-   if(!window.pdfjsLib)await new Promise((resolve,reject)=>{const sc=document.createElement("script");sc.src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js";sc.onload=resolve;sc.onerror=()=>reject(new Error("Preview engine could not load."));document.head.appendChild(sc)});
-   window.pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
-   const doc=await window.pdfjsLib.getDocument(url).promise,pages=overlay.querySelector("#pan-preview-pages");pages.innerHTML="";
-   const canvases=[];
-   for(let n=1;n<=doc.numPages;n++){
-    const page=await doc.getPage(n),viewport=page.getViewport({scale:1.35}),canvas=document.createElement("canvas"),ctx=canvas.getContext("2d");
-    canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);canvas.className="pan-preview-page";
-    await page.render({canvasContext:ctx,viewport}).promise;pages.appendChild(canvas);canvases.push(canvas);
-   }
-   const printButton=overlay.querySelector("#pan-preview-print");printButton.disabled=false;
-   printButton.addEventListener("click",()=>{
-    const frame=document.createElement("iframe");frame.style.cssText="position:fixed;width:0;height:0;border:0;right:0;bottom:0";document.body.appendChild(frame);
-    const doc=frame.contentDocument;doc.open();doc.write('<!doctype html><html><head><title>Form 93</title><style>@page{size:A4;margin:0}html,body{margin:0;padding:0}img{display:block;width:210mm;height:297mm;object-fit:fill;page-break-after:always}img:last-child{page-break-after:auto}</style></head><body>');
-    canvases.forEach(canvas=>doc.write('<img src="'+canvas.toDataURL("image/png")+'">'));doc.write('</body></html>');doc.close();
-    setTimeout(()=>{try{frame.contentWindow.focus();frame.contentWindow.print();setTimeout(()=>frame.remove(),1500)}catch(error){frame.remove();alert("Print could not start. Please try again.")}},500);
-   });
-  }catch(error){console.error(error);overlay.querySelector("#pan-preview-pages").innerHTML='<p class="pan-preview-loading">Unable to prepare preview: '+esc(error.message||"Please try again.")+'</p>'}
  }
  function form(mode){
   const newMode=mode==="new";
