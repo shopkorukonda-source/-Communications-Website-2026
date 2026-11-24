@@ -367,7 +367,8 @@ async function transferWallet(e){
   finally{btn.disabled=false;}
 }
 
-const financePeriodLabels={day:"Daily",week:"Weekly",fortnight:"Fortnightly",month:"Monthly",year:"Yearly"};\nconst financeDbPeriod={day:"daily",week:"weekly",fortnight:"fortnightly",month:"monthly",year:"yearly"};
+const financePeriodLabels={day:"Daily",week:"Weekly",fortnight:"Fortnightly",month:"Monthly",year:"Yearly"};
+const financeDbPeriod={day:"daily",week:"weekly",fortnight:"fortnightly",month:"monthly",year:"yearly"};
 function financeYmd(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
 function financeRange(period){
  const now=new Date(),start=new Date(now.getFullYear(),now.getMonth(),now.getDate()),end=new Date(start);
