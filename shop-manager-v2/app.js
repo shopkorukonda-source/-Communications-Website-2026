@@ -938,7 +938,7 @@ function renderPanApplications(){
    const parts=v=>{const a=String(v||"").trim().split(/\s+/);return [a[0]||"",a.length>2?a.slice(1,-1).join(" "):"",a.length>1?a[a.length-1]:""]};
    const name=(pi,top,v)=>parts(v).forEach((x,i)=>draw(pi,180,top+i*13.4,x,390,6));
    const aadhaarNameGrid=(value)=>{
-    const text=String(value||"").trim().toUpperCase().replace(/\\s+/g," ");
+    const text=String(value||"").trim().toUpperCase().replace(/\s+/g," ");
     const cell=13.72,startX=180,startTop=254,rowGap=13.7,columns=28;
     [...text].forEach((ch,i)=>{if(ch===" ")return;const row=Math.floor(i/columns),col=i%columns;if(row<3)draw(0,startX+col*cell,startTop+row*rowGap,ch,cell-1,6)});
    };
