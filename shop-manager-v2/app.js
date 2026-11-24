@@ -1078,12 +1078,13 @@ function renderPanApplications(){
    if(!/^\d{12}$/.test((r.aadhaar||"").trim()))return alert("Aadhaar number must contain exactly 12 digits. Form cannot be saved without all 12 digits.");
    if(!/^\d{10}$/.test((r.mobile||"").trim()))return alert("Mobile number must contain exactly 10 digits (without +91). Form cannot be saved without all 10 digits.");
    r.father=[r.father_first,r.father_middle,r.father_last].filter(Boolean).join(" ");r.mother=[r.mother_first,r.mother_middle,r.mother_last].filter(Boolean).join(" ");
+   const applicantAge=age(r.dob),isMinor=applicantAge!==null&&applicantAge<18;
+   if(!isMinor){["ra_name","ra_pan","ra_aadhaar","ra_relation","ra_mobile","ra_email","ra_landline","ra_address","ra_post","ra_area","ra_district","ra_state","ra_country","ra_pin"].forEach(k=>r[k]="");}
+
    if(r.res_pin&&!/^\d{6}$/.test(r.res_pin))return alert("Residence PIN must contain 6 digits.");
    if(r.office_pin&&!/^\d{6}$/.test(r.office_pin))return alert("Office PIN must contain 6 digits.");
    if(r.ra_aadhaar&&!/^\d{12}$/.test(r.ra_aadhaar.replace(/\s/g,"")))return alert("RA Aadhaar must contain 12 digits.");
    if(r.ra_pan&&!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(r.ra_pan.toUpperCase()))return alert("Enter a valid RA PAN.");
-   const applicantAge=age(r.dob),isMinor=applicantAge!==null&&applicantAge<18;
-   if(!isMinor){["ra_name","ra_pan","ra_aadhaar","ra_relation","ra_mobile","ra_email","ra_landline","ra_address","ra_post","ra_area","ra_district","ra_state","ra_country","ra_pin"].forEach(k=>r[k]="");}
    if(isMinor&&(!r.ra_name||!r.ra_relation||!r.ra_mobile||!r.ra_email||!r.ra_address||!r.ra_state||!r.ra_pin))return alert("Minor applicant: complete all Representative Assessee details.");
    if(isMinor&&!r.ra_pan&&!r.ra_aadhaar)return alert("Minor applicant: enter RA PAN or RA Aadhaar.");
    if(mode==="correction"&&!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test((r.pan||"").toUpperCase()))return alert("Enter a valid existing PAN.");
