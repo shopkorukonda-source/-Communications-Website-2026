@@ -968,10 +968,23 @@ function renderPanApplications(){
    // Both photo boxes are 4.5 x 3.5 cm; left photo carries the applicant signature across it.
    await image(r.photo,0,47,24,112,87);await image(r.photo,0,440,24,112,87);
    if(r.signature){await image(r.signature,0,47,70,112,35);await image(r.signature,1,326,650,200,62);}
-   const out=await pdf.save(),url=URL.createObjectURL(new Blob([out],{type:"application/pdf"})),link=document.createElement("a");
-   link.href=url;link.download="SLV-Form-93-"+(r.name||"Applicant").replace(/[^a-z0-9-]/gi,"-")+".pdf";document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+   const out=await pdf.save(),url=URL.createObjectURL(new Blob([out],{type:"application/pdf"}));
+   showPanPreview(url,r);
   }catch(error){console.error(error);alert("PDF generation failed: "+(error.message||"Please try again."))}
-  finally{if(btn){btn.disabled=false;btn.textContent=original||"Save Details & Generate Form Print"}}
+  finally{if(btn){btn.disabled=false;btn.textContent=original||"Save Details & Preview Form"}}
+ }
+ function showPanPreview(url,r){
+  const previous=$("pan-preview-overlay");if(previous){previous.remove();if(previous.dataset.objectUrl)URL.revokeObjectURL(previous.dataset.objectUrl)}
+  const overlay=document.createElement("div");overlay.id="pan-preview-overlay";overlay.className="pan-preview-overlay";overlay.dataset.objectUrl=url;
+  overlay.innerHTML='<section class="pan-preview-modal" role="dialog" aria-modal="true" aria-label="PAN Form 93 preview"><header class="pan-preview-header"><div><strong>Form 93 Preview</strong><small>'+esc(r.name||"Applicant")+' · '+esc(r.temp_ack||"")+'</small></div><div class="pan-preview-actions"><button type="button" class="secondary-btn" id="pan-preview-print">Print</button><button type="button" class="danger-btn" id="pan-preview-close">Close</button></div></header><iframe class="pan-preview-frame" title="PAN Form 93 preview"></iframe></section>';
+  document.body.appendChild(overlay);
+  const frame=overlay.querySelector("iframe");frame.src=url;
+  const close=()=>{overlay.remove();URL.revokeObjectURL(url)};
+  overlay.querySelector("#pan-preview-close").addEventListener("click",close);
+  overlay.addEventListener("click",e=>{if(e.target===overlay)close()});
+  overlay.querySelector("#pan-preview-print").addEventListener("click",()=>{try{frame.contentWindow.focus();frame.contentWindow.print()}catch(error){alert("Print preview is not ready. Please wait a moment and try again.")}});
+  const onKey=e=>{if(e.key==="Escape"&&$("pan-preview-overlay")){close();document.removeEventListener("keydown",onKey)}};
+  document.addEventListener("keydown",onKey);
  }
  function form(mode){
   const newMode=mode==="new";
@@ -1044,7 +1057,7 @@ function renderPanApplications(){
    const n=Number(localStorage.getItem("slv_pan_seq")||0)+1;localStorage.setItem("slv_pan_seq",String(n));
    r.temp_ack="SLV-PAN-"+new Date().getFullYear()+"-"+String(n).padStart(6,"0");r.actual_ack="";r.status="Details Saved";
    try{const a=read();a.unshift(r);write(a)}catch{return alert("Browser storage full. Use a smaller photo image.")}
-   $("pan-message").textContent="Saved locally · "+r.temp_ack+" · Not yet submitted to PAN provider";print(r);
+   $("pan-message").textContent="Saved locally · "+r.temp_ack+" · Preview only; not submitted to PAN provider";print(r);
   };
  }
  function search(){
