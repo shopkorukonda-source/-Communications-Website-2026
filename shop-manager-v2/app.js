@@ -1047,7 +1047,7 @@ function renderPanApplications(){
    let lastLookup="";
    const lookup=async()=>{
     const code=pin.value.trim();
-    if(!/^\\d{6}$/.test(code)){lastLookup="";note.textContent="Enter 6-digit PIN to auto-fill district and state.";return}
+    if(!/^\d{6}$/.test(code)){lastLookup="";note.textContent="Enter 6-digit PIN to auto-fill district and state.";return}
     if(lastLookup===code)return;lastLookup=code;note.textContent="Looking up PIN…";
     try{
      const response=await fetch("https://api.postalpincode.in/pincode/"+encodeURIComponent(code));
