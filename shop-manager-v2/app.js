@@ -462,7 +462,7 @@ async function renderQuickBilling(){
   host.innerHTML=`
   <div class="admin-module-head"><div><div class="eyebrow">QUICK BILLING</div><h2>Single Customer · Multiple Services</h2><p>Add any number of services under one customer. Enter customer details and collect payment only once for the complete bill.</p></div></div>
   <div class="admin-editor billing-editor">
-    <div class="billing-top"><label>Number of services<input id="bill-count" type="number" min="1" max="100" value="1"></label><label>Customer name<input id="bill-customer" placeholder="Optional"></label><label>Customer mobile<input id="bill-phone" type="tel" inputmode="numeric" maxlength="15" placeholder="Mobile number (once)"></label></div>
+    <div class="billing-top"><label>Number of services<input id="bill-count" type="number" min="1" max="100" value="1"></label><label>Customer name (Optional)<input id="bill-customer" placeholder="Enter customer name"></label><label>Customer mobile (Optional)<input id="bill-phone" type="tel" inputmode="numeric" maxlength="15" placeholder="Enter mobile number"></label></div>
     <div id="billing-rows"></div>
     <div class="billing-totals" id="billing-totals"></div>
     <div class="billing-payment">
