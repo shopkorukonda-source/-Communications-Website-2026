@@ -461,9 +461,22 @@ let billingRows = [];
 let billingWalletRules = {};
 function money(n){return Number(n||0).toFixed(2);}
 function serviceByCode(code){return services.find(s=>s.code===code);}
+function isPaperPageService(svc){return !!svc&&(svc.code==="PRINTOUT"||svc.code?.startsWith("XEROX_"));}
+function paperPageUnit(svc){return svc?.code==="PRINTOUT"?"page":"paper";}
+function paperPageRate(row,svc,count){
+  const cfg=svc?.billing_config||{};
+  const slab=(cfg.quantity_slabs||[]).find(x=>count>=Number(x.min_quantity||x.min||0)&&(x.max_quantity==null&&x.max==null||count<=Number(x.max_quantity??x.max)));
+  return Number(slab?.rate??slab?.customer_charge??cfg.customer_charge??0);
+}
 function calculateBillingRow(row){
   const svc=services.find(s=>s.id===row.service_id), amount=Number(row.base||0),qty=Math.max(1,Number(row.quantity||1));
   if(!svc||amount<0)return {charge:0,cost:0,profit:0,unitTotal:0,total:0};
+  if(isPaperPageService(svc)){
+    const count=Math.max(0,Number(row.unit_count||0))*Math.max(1,Number(row.sets||1));
+    const rate=paperPageRate(row,svc,count),gross=count*rate,discount=Math.min(gross,Math.max(0,Number(row.discount||0)));
+    const cost=Number(row.cost||svc.processing_cost_config?.fixed_amount||0);
+    return {charge:gross,cost,profit:gross-discount-cost,unitTotal:gross-discount,total:gross-discount,gross,discount,count,rate,quantity:1};
+  }
   let charge=0,cost=Number(row.cost||0),profit=0;
   if(svc.code==="CURRENT_BILLS"){
     const cfg=svc.billing_config||{}, slabs=cfg.slabs||[];
@@ -561,26 +574,34 @@ function automaticWalletDebits(row,svc){
 async function setBillingRows(n){
   const {data:rules}=await supabase.from("service_wallet_rules").select("service_id,wallet_id,wallet_slot,debit_config").order("wallet_slot");
   billingWalletRules={};(rules||[]).forEach(x=>(billingWalletRules[x.service_id]??=[]).push(x));
-  billingRows=Array.from({length:n},(_,i)=>billingRows[i]||({service_id:"",base:"",charge:"",cost:"",bank:"",quantity:1,wallet_debits:[]}));
+  billingRows=Array.from({length:n},(_,i)=>billingRows[i]||({service_id:"",base:"",charge:"",cost:"",bank:"",quantity:1,unit_count:"",sets:1,item_label:"",discount:0,wallet_debits:[]}));
   $("billing-rows").innerHTML=billingRows.map((r,i)=>{
     const serviceOptions=services.filter(s=>s.is_active).map(s=>'<option value="'+s.id+'" '+(s.id===r.service_id?"selected":"")+'>'+escapeHtml(s.name)+'</option>').join("");
-    const svc=services.find(s=>s.id===r.service_id),alloc=automaticWalletDebits(r,svc);
-    const allowedPrintRates=(svc?.code==="PRINTOUT"?(svc.billing_config?.allowed_charges||[2,5]).map(Number):[]);
-    const chargeField=svc?.code==="PRINTOUT"?'<label>Rate per print<select data-field="charge" data-i="'+i+'">'+allowedPrintRates.map(rate=>'<option value="'+rate+'" '+(Number(r.charge||svc.billing_config?.customer_charge||allowedPrintRates[0])===rate?"selected":"")+'">₹'+rate+' / print</option>').join("")+'</select></label>':svc?.code?.startsWith("XEROX_")?'<label>Rate per copy<input type="text" value="₹'+money(svc.billing_config?.customer_charge||0)+' / copy" readonly></label>':'<label>Service charge (₹)<input data-field="charge" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.charge||"")+'"></label>';
+    const svc=services.find(s=>s.id===r.service_id),special=isPaperPageService(svc),alloc=automaticWalletDebits(r,svc);
+    const count=Number(r.unit_count||0)*Math.max(1,Number(r.sets||1)),rate=paperPageRate(r,svc,count);
     const walletOptionsHtml=(billingWalletRules[r.service_id]||[]).map(rule=>{
       const wallet=walletOptions.find(x=>x.id===rule.wallet_id),debit=alloc.find(x=>x.wallet_id===rule.wallet_id);
       return wallet?'<div class="wallet-choice"><span>'+escapeHtml(wallet.name)+' <small>Balance ₹'+money(wallet.current_balance)+' · Auto debit ₹'+money(debit?.amount||0)+'</small></span></div>':"";
     }).join("")||"<small>No processing wallet configured for this service.</small>";
-    return '<div class="billing-row" data-row="'+i+'"><div class="billing-row-head"><strong>Service '+(i+1)+'</strong><span class="billing-row-total" id="row-total-'+i+'">₹0.00</span></div><div class="billing-row-fields"><label>Service<select data-field="service_id" data-i="'+i+'"><option value="">Select service</option>'+serviceOptions+'</select></label><label style="display:'+((svc?.code==="PRINTOUT"||svc?.code?.startsWith("XEROX_"))?"none":"grid")+'">Bill / Transfer Amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.base)+'"></label><label>'+(svc?.code==="PRINTOUT"||svc?.code?.startsWith("XEROX_")?"Prints / Copies":"Quantity")+'<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label>'+chargeField+'<label class="bank-field">Bank (AEPS)<input data-field="bank" data-i="'+i+'" value="'+escapeHtml(r.bank)+'" placeholder="Bank name"></label><label style="display:'+((svc?.processing_cost_config?.manual_entry||svc?.processing_cost_config?.mode==="admin_configurable_wallet_debit"||(svc?.code==="CURRENT_BILLS"&&Number(r.base||0)>=10&&((svc.billing_config?.slabs||[]).find(x=>Number(r.base)>=Number(x.min||0)&&Number(r.base)<=Number(x.max||0))?.wallet_extra==null)))?"":"none")+'">Manual processing cost (₹)<input data-field="cost" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.cost)+'"></label></div><div class="wallet-map-box"><strong>Processing wallet (automatic)</strong><p>Wallet and debit amount are taken from Admin service settings.</p><div class="wallet-choice-grid" id="wallet-auto-'+i+'">'+walletOptionsHtml+'</div></div><div class="billing-row-result" id="row-result-'+i+'">Service Charge: ₹0.00 · Profit: ₹0.00</div></div>';
+    const serviceFields=special
+      ? '<label>Book / PDF name (optional)<input data-field="item_label" data-i="'+i+'" value="'+escapeHtml(r.item_label||"")+'" placeholder="Book 1 / PDF 1"></label><label>'+(svc.code==="PRINTOUT"?"PDF pages":"Xerox papers")+'<input data-field="unit_count" data-i="'+i+'" type="number" min="1" step="1" value="'+escapeHtml(r.unit_count||"")+'" placeholder="Enter count"></label><label>Number of sets<input data-field="sets" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.sets||1)+'"></label><label>Admin fixed rate (automatic)<input type="text" readonly value="₹'+money(rate)+' / '+(svc.code==="PRINTOUT"?"page":"paper")+'"></label><label>Discount (₹)<input data-field="discount" data-i="'+i+'" type="number" min="0" step="0.01" value="'+Number(r.discount||0)+'" placeholder="Optional"></label>'
+      : '<label>Bill / Transfer Amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.base)+'"></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label><label>Service charge (₹)<input data-field="charge" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.charge||"")+'"></label><label class="bank-field">Bank (AEPS)<input data-field="bank" data-i="'+i+'" value="'+escapeHtml(r.bank)+'" placeholder="Bank name"></label><label>Manual processing cost (₹)<input data-field="cost" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.cost)+'"></label>';
+    return '<div class="billing-row" data-row="'+i+'"><div class="billing-row-head"><strong>Item '+(i+1)+'</strong><span class="billing-row-total" id="row-total-'+i+'">₹0.00</span></div><div class="billing-row-fields"><label>Service<select data-field="service_id" data-i="'+i+'"><option value="">Select service</option>'+serviceOptions+'</select></label>'+serviceFields+'</div><div class="wallet-map-box"><strong>Processing wallet (automatic)</strong><p>Wallet and debit amount are taken from Admin service settings.</p><div class="wallet-choice-grid" id="wallet-auto-'+i+'">'+walletOptionsHtml+'</div></div><div class="billing-row-result" id="row-result-'+i+'">Service Charge: ₹0.00</div></div>';
   }).join("");
   $("billing-rows").querySelectorAll("[data-field]").forEach(el=>{el.addEventListener("input",onBillingRowChange);el.addEventListener("change",onBillingRowChange);});
   updateBillingTotals();
 }
-
 function onBillingRowChange(e){
   const i=Number(e.target.dataset.i),field=e.target.dataset.field;
   billingRows[i][field]=e.target.value;
-  if(field==="service_id"){const svc=services.find(s=>s.id===e.target.value);billingRows[i].base=svc?.billing_config?.base_amount??"";billingRows[i].charge=svc?.billing_config?.customer_charge??"";billingRows[i].cost=svc?.processing_cost_config?.fixed_amount??"";billingRows[i].quantity=1;billingRows[i].wallet_debits=[];setBillingRows(billingRows.length);return;}
+  if(field==="service_id"){
+    const svc=services.find(s=>s.id===e.target.value);
+    billingRows[i].base=svc?.billing_config?.base_amount??"";
+    billingRows[i].charge=svc?.billing_config?.customer_charge??"";
+    billingRows[i].cost=svc?.processing_cost_config?.fixed_amount??"";
+    billingRows[i].quantity=1;billingRows[i].unit_count="";billingRows[i].sets=1;billingRows[i].item_label="";billingRows[i].discount=0;billingRows[i].wallet_debits=[];
+    setBillingRows(billingRows.length);return;
+  }
   updateBillingTotals();
 }
 function onBillingWalletChange(){}
@@ -588,13 +609,13 @@ function onBillingWalletChange(){}
 function updateBillingTotals(){
   let base=0,charges=0,costs=0,total=0;
   billingRows.forEach((r,i)=>{
-    const calc=calculateBillingRow(r);base+=Number(r.base||0);charges+=calc.charge;costs+=calc.cost;total+=calc.total;
-    const t=$("row-total-"+i),res=$("row-result-"+i),svc=services.find(s=>s.id===r.service_id),alloc=automaticWalletDebits(r,svc),walletBox=$("wallet-auto-"+i);
+    const calc=calculateBillingRow(r),svc=services.find(s=>s.id===r.service_id),special=isPaperPageService(svc),alloc=automaticWalletDebits(r,svc),t=$("row-total-"+i),res=$("row-result-"+i),walletBox=$("wallet-auto-"+i);
+    base+=Number(r.base||0);charges+=calc.charge;costs+=calc.cost;total+=calc.total;
     if(t)t.textContent="₹"+money(calc.total);
     if(walletBox)walletBox.innerHTML=(billingWalletRules[r.service_id]||[]).map(rule=>{const wallet=walletOptions.find(x=>x.id===rule.wallet_id),debit=alloc.find(x=>x.wallet_id===rule.wallet_id);return wallet?'<div class="wallet-choice"><span>'+escapeHtml(wallet.name)+' <small>Balance ₹'+money(wallet.current_balance)+' · Auto debit ₹'+money(debit?.amount||0)+'</small></span></div>':"";}).join("")||"<small>No processing wallet configured for this service.</small>";
-    if(res)res.textContent=currentProfile?.role==="admin"?"Service Charge: ₹"+money(calc.charge)+" · Processing Cost: ₹"+money(calc.cost)+" · Profit: ₹"+money(calc.profit)+" · Wallet debit: ₹"+money(alloc.reduce((a,x)=>a+x.amount,0)):"Service Charge: ₹"+money(calc.charge);
+    if(res)res.textContent=currentProfile?.role==="admin"?"Gross: ₹"+money(calc.gross??calc.charge)+" · Discount: ₹"+money(calc.discount||0)+" · Processing Cost: ₹"+money(calc.cost)+" · Profit: ₹"+money(calc.profit)+" · Wallet debit: ₹"+money(alloc.reduce((a,x)=>a+x.amount,0)):"Amount: ₹"+money(calc.total)+(special?" · "+calc.count+" "+(svc.code==="PRINTOUT"?"pages":"papers"):"");
   });
-  $("billing-totals").innerHTML=`<div><small>Total bill amount</small><strong>₹${money(base)}</strong></div><div><small>Total service charges</small><strong>₹${money(charges)}</strong></div><div><small>Customer total</small><strong>₹${money(total)}</strong></div>`;
+  $("billing-totals").innerHTML='<div><small>Gross / base</small><strong>₹'+money(base+charges)+'</strong></div><div><small>Service charges</small><strong>₹'+money(charges)+'</strong></div><div><small>Customer total</small><strong>₹'+money(total)+'</strong></div>';
   const received=Number($("bill-received").value||0);
   $("bill-change").textContent="Change: ₹"+money(Math.max(0,received-total));
 }
@@ -608,17 +629,22 @@ async function saveQuickBilling(){
   try{
     const items=[];let customerTotal=0,processingTotal=0,profitTotal=0;
     for(const r of billingRows){
-      if(!r.service_id&&!Number(r.base||0))continue;
-      if(!r.service_id||Number(r.base||0)<0)throw new Error("Every entered row needs a service and a valid bill amount.");
-      const svc=services.find(s=>s.id===r.service_id);
+      if(!r.service_id&&!Number(r.base||0)&&!Number(r.unit_count||0))continue;
+      if(!r.service_id||Number(r.base||0)<0)throw new Error("Every entered row needs a service and valid count or bill amount.");
+      const svc=services.find(s=>s.id===r.service_id),special=isPaperPageService(svc);
       const wallet_debits=automaticWalletDebits(r,svc);
       if(svc.code==="CURRENT_BILLS"&&Number(r.base)>=10&&!(billingWalletRules[r.service_id]||[]).length)throw new Error("Admin must assign a processing wallet to Current Bills.");
       if((billingWalletRules[r.service_id]||[]).length&&!wallet_debits.length)throw new Error("Set processing wallet debit amounts in Admin Services for "+svc.name);
       if(wallet_debits.some(x=>!Number.isFinite(Number(x.amount))||Number(x.amount)<=0))throw new Error("Invalid automatic wallet debit amount.");
       r.wallet_debits=wallet_debits;
       const calc=calculateBillingRow(r);
-      const quantity=Math.max(1,Number(r.quantity||1)),price=calc.unitTotal;
-      const itemPayload={service_id:r.service_id,quantity,customer_unit_price:price,processing_unit_cost:calc.cost,pricing_snapshot:{base_amount:Number(r.base),service_charge:calc.charge,bank:r.bank||null,wallet_debits},wallet_debits};
+      if(special&&(!Number(r.unit_count)||Number(r.unit_count)<1||!Number(r.sets)||Number(r.sets)<1))throw new Error("Enter a valid paper/page count and number of sets for "+svc.name+".");
+      if(special&&Number(r.discount||0)>calc.gross)throw new Error("Discount cannot exceed the fixed-price amount.");
+      const quantity=special?1:Math.max(1,Number(r.quantity||1)),price=calc.unitTotal;
+      const snapshot=special
+        ? {base_amount:0,service_charge:calc.gross,count_unit:svc.code==="PRINTOUT"?"pages":"papers",unit_count:Number(r.unit_count),sets:Number(r.sets),total_count:calc.count,item_label:r.item_label||null,unit_rate:calc.rate,discount_amount:calc.discount,wallet_debits}
+        : {base_amount:Number(r.base),service_charge:calc.charge,bank:r.bank||null,wallet_debits};
+      const itemPayload={service_id:r.service_id,quantity,customer_unit_price:price,processing_unit_cost:calc.cost,pricing_snapshot:snapshot,wallet_debits};
       if(currentProfile?.role==="admin")itemPayload.profit_amount=calc.profit;
       items.push(itemPayload);
       customerTotal+=price*quantity;processingTotal+=calc.cost*quantity;profitTotal+=calc.profit*quantity;
