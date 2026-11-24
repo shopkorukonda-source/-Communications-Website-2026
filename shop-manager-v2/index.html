@@ -99,6 +99,26 @@
       <button class="primary-btn" type="submit" id="password-save-btn">Update password</button>
     </form>
   </section>
+  <script>
+    window.__slvModuleErrors = [];
+    window.addEventListener("error", function(e) {
+      window.__slvModuleErrors.push(e.message || "Script loading error");
+      var box = document.getElementById("login-message");
+      if (box) { box.textContent = "Website script error: " + (e.message || "Unable to load app.js") + ". Refresh the page."; box.style.color = "#b33b34"; }
+    });
+    window.addEventListener("unhandledrejection", function(e) {
+      var reason = e.reason && e.reason.message ? e.reason.message : String(e.reason || "Unknown error");
+      window.__slvModuleErrors.push(reason);
+      var box = document.getElementById("login-message");
+      if (box) { box.textContent = "Website startup error: " + reason; box.style.color = "#b33b34"; }
+    });
+    window.setTimeout(function() {
+      if (!window.__slvAppReady) {
+        var box = document.getElementById("login-message");
+        if (box && !box.textContent) { box.textContent = "Website app did not start. Please refresh; if it repeats, send this screen to support."; box.style.color = "#b33b34"; }
+      }
+    }, 5000);
+  </script>
   <script type="module" src="./app.js"></script>
 </body>
 </html>
