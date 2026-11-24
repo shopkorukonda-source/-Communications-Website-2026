@@ -1341,3 +1341,4 @@ async function renderAnnouncementManager(){
  host.querySelectorAll("[data-ann-toggle]").forEach(btn=>btn.onclick=async()=>{const {error:e}=await supabase.from("shop_announcements").update({is_published:btn.dataset.published!=="true"}).eq("id",btn.dataset.annToggle);if(e)alert(e.message);else await renderAnnouncementManager()});
  host.querySelectorAll("[data-ann-delete]").forEach(btn=>btn.onclick=async()=>{if(!confirm("Delete this announcement?"))return;const {error:e}=await supabase.from("shop_announcements").delete().eq("id",btn.dataset.annDelete);if(e)alert(e.message);else await renderAnnouncementManager()});
 }
+window.__slvAppReady = true;
