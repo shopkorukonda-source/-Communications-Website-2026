@@ -935,42 +935,42 @@ function renderPanApplications(){
     let fs=size;while(fs>4.5&&font.widthOfTextAtSize(value,fs)>max)fs-=.25;
     const page=pages[pi];page.drawText(value,{x,y:page.getHeight()-top-fs,font,size:fs,color:rgb(.04,.04,.04),maxWidth:max});
    };
-   const parts=v=>{const a=String(v||"").trim().split(/\s+/);return [a[0]||"",a.length>2?a.slice(1,-1).join(" "):"",a.length>1?a[a.length-1]:""]};
-   const name=(pi,top,v)=>parts(v).forEach((x,i)=>draw(pi,180,top+i*13.4,x,390,6));
-   const aadhaarNameGrid=(value)=>{
-    const text=String(value||"").trim().toUpperCase().replace(/\s+/g," ");
-    const cell=13.72,startX=180,startTop=254,rowGap=13.7,columns=28;
-    [...text].forEach((ch,i)=>{if(ch===" ")return;const row=Math.floor(i/columns),col=i%columns;if(row<3)draw(0,startX+col*cell,startTop+row*rowGap,ch,cell-1,6)});
+   // Form 93 character boxes: one character per cell, retaining blank cells between words.
+   const cell=10.62,boxColumns=36;
+   const grid=(pi,x,top,value,columns=boxColumns,cellWidth=cell,size=5.6)=>{
+    const chars=[...String(value??"").trim().toUpperCase()];
+    chars.slice(0,columns).forEach((ch,i)=>{if(ch!==" ")draw(pi,x+i*cellWidth,top,ch,cellWidth-1,size)});
    };
-   // Address fields are printed one character per official form box, not as a continuous string.
-   const grid=(pi,x,top,value,columns,cell=13.72,size=5.8)=>{
-    const text=String(value??"").trim().toUpperCase();
-    [...text].slice(0,columns).forEach((ch,i)=>{if(ch!==" ")draw(pi,x+i*cell,top,ch,cell-1,size)});
+   const name=(pi,top,value)=>{
+    const words=String(value||"").trim().replace(/\s+/g," ").split(" ").filter(Boolean);
+    [words[0]||"",words[1]||"",words.slice(2).join(" ")].forEach((line,i)=>grid(pi,180,top+i*13.7,line,boxColumns,cell,5.6));
    };
+   const aadhaarNameGrid=value=>grid(0,180,239.5,value,boxColumns,cell,5.6);
+   // Address fields use the same character-cell spacing as the printed Form 93.
    const addr=(pi,prefix,top)=>{
-    ["flat","road","post","area","district"].forEach((k,i)=>grid(pi,180,top+i*13.4,r[prefix+"_"+k],28,13.72,5.6));
-    grid(pi,132,top+5*13.4,r[prefix+"_state"],6,13.72,5.3);
-    grid(pi,285,top+5*13.4,r[prefix+"_country"]||"India",7,13.72,5.3);
-    grid(pi,455,top+5*13.4,r[prefix+"_pin"],8,13.72,5.3);
+    ["flat","road","post","area","district"].forEach((k,i)=>grid(pi,180,top+i*13.7,r[prefix+"_"+k],boxColumns,cell,5.4));
+    grid(pi,132,top+5*13.7,r[prefix+"_state"],8,cell,5.2);
+    grid(pi,285,top+5*13.7,r[prefix+"_country"]||"India",12,cell,5.2);
+    grid(pi,455,top+5*13.7,r[prefix+"_pin"],10,cell,5.2);
    };
    // Page 1: coordinates matched to the printed Form 93 rows.
-   name(0,196,r.name);aadhaarNameGrid(r.name_as_aadhaar||r.name);
-   const genderX={Male:183,Female:229,Transgender:290};draw(0,genderX[r.gender]||183,294,"X",10,6.5);
-   if(r.dob){const [yy,mm,dd]=r.dob.split("-");draw(0,185,307,dd+mm+yy,80,5.8)}
-   draw(0,185,321,r.aadhaar,170,5.8);
-   addr(0,"res",351);
-   if(r.office_flat||r.office_road||r.office_pin)addr(0,"office",449);
-   const sx={"Resident":213,"Non-resident":275,"Resident but not ordinarily resident":352};draw(0,sx[r.residential_status]||213,533,"X",10,6.5);
-   draw(0,345,553,r.passport,160,5.8);draw(0,345,573,r.tin,180,5.8);
-   draw(0,240,603,"91",22,5.5);draw(0,375,603,r.mobile,145,5.8);draw(0,150,617,r.email,380,5.8);draw(0,240,630,r.landline,170,5.8);
-   const income={"Salary":[181,670],"Income from Business / Profession":[258,670],"Income from House Property":[397,670],"Capital Gains":[181,687],"Income from Other Sources":[258,687],"No Income":[397,687]};
+   name(0,183.5,r.name);aadhaarNameGrid(r.name_as_aadhaar||r.name);
+   const genderX={Male:183,Female:229,Transgender:290};draw(0,genderX[r.gender]||183,282,"X",10,6.5);
+   if(r.dob){const [yy,mm,dd]=r.dob.split("-");draw(0,185,294,dd+mm+yy,80,5.8)}
+   draw(0,185,307,r.aadhaar,170,5.8);
+   addr(0,"res",331);
+   if(r.office_flat||r.office_road||r.office_pin)addr(0,"office",472);
+   const sx={"Resident":213,"Non-resident":275,"Resident but not ordinarily resident":352};draw(0,sx[r.residential_status]||213,523,"X",10,6.5);
+   draw(0,345,547,r.passport,160,5.8);draw(0,345,563,r.tin,180,5.8);
+   draw(0,240,598,"91",22,5.5);draw(0,375,598,r.mobile,145,5.8);draw(0,150,610,r.email,380,5.8);draw(0,240,624,r.landline,170,5.8);
+   const income={"Salary":[181,637],"Income from Business / Profession":[258,637],"Income from House Property":[397,637],"Capital Gains":[181,652],"Income from Other Sources":[258,652],"No Income":[397,652]};
    (r.income_sources||[]).forEach(v=>{if(income[v])draw(0,income[v][0],income[v][1],"X",10,6.5)});
-   draw(0,r.single_parent==="Yes"?243:304,725,"X",10,6.5);name(0,740,[r.father_first,r.father_middle,r.father_last].filter(Boolean).join(" "));
+   draw(0,r.single_parent==="Yes"?243:304,675,"X",10,6.5);name(0,698,[r.father_first,r.father_middle,r.father_last].filter(Boolean).join(" "));
    // Page 2: mother, AO, RA, communication and declaration.
    name(1,23,[r.mother_first,r.mother_middle,r.mother_last].filter(Boolean).join(" "));draw(1,r.parent==="Father"?335:397,67,"X",10,6.5);
    draw(1,235,107,r.ao_area,45,5.8);draw(1,395,107,r.ao_type,32,5.8);draw(1,235,121,r.ao_range,45,5.8);draw(1,395,121,r.ao_number,32,5.8);
-   name(1,164,r.ra_name);draw(1,180,207,r.ra_pan,160,5.8);draw(1,280,223,r.ra_aadhaar,175,5.8);
-   addr(1,"ra",254);
+   name(1,155,r.ra_name);draw(1,180,196,r.ra_pan,160,5.8);draw(1,280,211,r.ra_aadhaar,175,5.8);
+   addr(1,"ra",228);
    draw(1,240,353,"91",22,5.5);draw(1,355,353,r.ra_mobile,150,5.8);draw(1,240,367,r.ra_email,350,5.8);draw(1,240,381,r.ra_landline,170,5.8);
    const comm={"Residence":216,"Representative Assessee Address":302,"Office":448};draw(1,comm[r.communication_address]||367,416,"X",10,6.5);
    const proofX=[70,169,270,70,169];["proof_identity","proof_address","proof_dob","ra_proof_identity","ra_proof_address"].forEach((k,i)=>{if(r[k])draw(1,proofX[i],474+(i>=3?37:0),"X",10,6.5)});
@@ -980,7 +980,7 @@ function renderPanApplications(){
    const image=async(data,pi,x,top,w,h)=>{if(!data)return;const raw=data.split(",")[1];if(!raw)return;const bin=atob(raw),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);const img=data.startsWith("data:image/png")?await pdf.embedPng(u):await pdf.embedJpg(u);pages[pi].drawImage(img,{x,y:pages[pi].getHeight()-top-h,width:w,height:h});};
    // Both photo boxes are 4.5 x 3.5 cm; left photo carries the applicant signature across it.
    await image(r.photo,0,46,23,100,128);await image(r.photo,0,443,23,100,128);
-   if(r.signature){await image(r.signature,0,49,108,94,30);await image(r.signature,1,329,654,200,62);}
+   if(r.signature){await image(r.signature,0,49,108,94,30);await image(r.signature,1,329,620,200,65);}
    const out=await pdf.save(),url=URL.createObjectURL(new Blob([out],{type:"application/pdf"}));
    showPanPreview(url,r);
   }catch(error){console.error(error);alert("PDF generation failed: "+(error.message||"Please try again."))}
