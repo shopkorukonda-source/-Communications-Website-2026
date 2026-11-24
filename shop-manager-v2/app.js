@@ -1042,7 +1042,7 @@ function renderPanApplications(){
    const pin=f.elements.namedItem(prefix+"_pin");
    if(!pin)return;
    pin.maxLength=6;pin.inputMode="numeric";pin.pattern="[0-9]{6}";
-   const district=f.elements.namedItem(prefix+"_district"),state=f.elements.namedItem(prefix+"_state"),post=f.elements.namedItem(prefix+"_post");
+   const district=f.elements.namedItem(prefix+"_district"),state=f.elements.namedItem(prefix+"_state");
    const note=document.createElement("small");note.className="pan-pin-status";note.setAttribute("aria-live","polite");pin.closest("label")?.appendChild(note);
    let lastLookup="";
    const lookup=async()=>{
@@ -1054,12 +1054,10 @@ function renderPanApplications(){
      if(!response.ok)throw new Error("PIN lookup service unavailable");
      const result=await response.json(),entry=result?.[0];
      if(!entry||entry.Status!=="Success"||!entry.PostOffice?.length)throw new Error("PIN not found");
-     const offices=entry.PostOffice;
-     const first=offices[0];
+     const first=entry.PostOffice[0];
      if(district)district.value=first.District||"";
      if(state)state.value=first.State||"";
-     if(post)post.value=offices.length===1?first.Name:(post.value&&offices.some(x=>x.Name.toLowerCase()===post.value.toLowerCase())?post.value:first.Name);
-     note.textContent=offices.length>1?"District & State filled · Post Office: "+first.Name+" (multiple offices for this PIN)":"District, State & Post Office filled";
+     note.textContent="District and State filled automatically.";
     }catch(error){lastLookup="";note.textContent=error.message==="PIN not found"?"PIN not found. Check the 6 digits.":"Could not look up PIN. Enter district and state manually."}
    };
    pin.addEventListener("change",lookup);pin.addEventListener("blur",lookup);
