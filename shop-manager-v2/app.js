@@ -12,6 +12,7 @@ let categories = [];
 let services = [];
 let selectedCategory = null;
 let currentProfile = null;
+let currentEmployee = null;
 let walletOptions = [];
 let editingServiceId = null;
 
@@ -35,6 +36,11 @@ async function showApp(user) {
     return;
   }
   currentProfile = profile;
+  currentEmployee = null;
+  if (profile.role === "employee") {
+    const {data: employeeLink} = await supabase.from("employees").select("id,full_name,employee_code").eq("profile_id",user.id).maybeSingle();
+    currentEmployee = employeeLink || null;
+  }
   loginScreen.classList.add("hidden");
   appScreen.classList.remove("hidden");
   appScreen.classList.toggle("admin-mode", profile.role === "admin");
@@ -44,6 +50,20 @@ async function showApp(user) {
   const hour = new Date().getHours();
   $("greeting").textContent = hour < 12 ? "GOOD MORNING" : hour < 17 ? "GOOD AFTERNOON" : "GOOD EVENING";
   $("today-date").textContent = new Intl.DateTimeFormat("en-IN",{weekday:"short",day:"numeric",month:"short",year:"numeric"}).format(new Date());
+  if (profile.role === "employee") {
+    $("page-title").textContent = "My Dashboard";
+    document.querySelector(".welcome-row h1").innerHTML = "Your work, <span>in control.</span>";
+    document.querySelector(".welcome-row p").textContent = "Your daily billing, collections and shift activity.";
+    document.querySelector(".stat-card:nth-child(2) .stat-top span:first-child").textContent = "My collections";
+    document.querySelector(".stat-card:nth-child(2) .stat-icon").textContent = "₹";
+    document.querySelector(".stat-card:nth-child(2) small").textContent = "Customer collections from your bills";
+    $("today-bill-caption").textContent = currentEmployee ? "Bills you recorded today" : "Ask Admin to link your employee record";
+  } else {
+    document.querySelector(".welcome-row h1").innerHTML = "Your shop, <span>in control.</span>";
+    document.querySelector(".welcome-row p").textContent = "Here’s a clear view of today’s operations.";
+    document.querySelector(".stat-card:nth-child(2) .stat-top span:first-child").textContent = "Cash position";
+    document.querySelector(".stat-card:nth-child(2) small").textContent = "Shop Cash wallet balance";
+  }
   await loadCatalog();
 }
 
@@ -75,6 +95,25 @@ async function loadCatalog() {
 const icons = ["▣","◉","↗","▤","◇","✦"];
 async function loadOverviewStats(){
   const start=new Date();start.setHours(0,0,0,0);
+  if(currentProfile?.role==="employee"){
+    if(!currentEmployee){
+      $("today-bill-count").textContent="—";
+      $("cash-position").textContent="—";
+      $("cash-position-caption").textContent="Employee login is not linked yet";
+      $("today-bill-caption").textContent="Ask Admin to link your employee record";
+      return;
+    }
+    const [{data:ownBills,count,error},sessionResult]=await Promise.all([
+      supabase.from("billing_transactions").select("id,customer_total",{count:"exact"}).eq("employee_id",currentEmployee.id).gte("created_at",start.toISOString()),
+      supabase.from("drawer_sessions").select("id,status,opened_at").eq("employee_id",currentEmployee.id).eq("status","open").order("opened_at",{ascending:false}).limit(1)
+    ]);
+    $("today-bill-count").textContent=error?"—":String(count||0);
+    $("today-bill-caption").textContent=error?"Unable to load your bills":"Bills you recorded today";
+    const collections=(ownBills||[]).reduce((sum,b)=>sum+Number(b.customer_total||0),0);
+    $("cash-position").textContent=error?"—":"₹"+money(collections);
+    $("cash-position-caption").textContent=sessionResult.data?.[0]?"Your collections today · Shift open":"Your collections today";
+    return;
+  }
   const [{count,error},sessionResult]=await Promise.all([
     supabase.from("billing_transactions").select("id",{count:"exact",head:true}).gte("created_at",start.toISOString()),
     supabase.from("drawer_sessions").select("id,opening_cash,opened_at,drawer_id").eq("status","open").order("opened_at",{ascending:false}).limit(1)
@@ -136,7 +175,7 @@ document.querySelectorAll(".nav-item").forEach(btn=>btn.addEventListener("click"
   const view = btn.dataset.view;
   $("overview-view").classList.toggle("hidden",view!=="overview");
   $("other-view").classList.toggle("hidden",view==="overview");
-  if(view==="overview"){ $("page-title").textContent="Overview"; return; }
+  if(view==="overview"){ $("page-title").textContent=currentProfile?.role==="employee"?"My Dashboard":"Overview"; return; }
   $("page-title").textContent=btn.textContent.trim();
   if(view==="billing") {
     await renderQuickBilling();
