@@ -181,6 +181,8 @@ document.querySelectorAll(".nav-item").forEach(btn=>btn.addEventListener("click"
     await renderQuickBilling();
   } else if(view==="quicklinks") {
     await renderQuickLinks();
+  } else if(view==="panforms") {
+    renderPanApplications();
   } else if(view==="services") {
     await renderServiceManager();
   } else if(view==="wallets") {
@@ -718,4 +720,36 @@ async function renderQuickLinks() {
       if(deleteError){alert("Could not delete website.");return;} await renderQuickLinks();
     }));
   }
+}
+
+function renderPanApplications(){
+ const host=$("other-view"),key="slv_pan_local_v1";
+ const read=()=>{try{return JSON.parse(localStorage.getItem(key)||"[]")}catch{return []}};
+ const write=a=>localStorage.setItem(key,JSON.stringify(a));
+ const esc=v=>String(v||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+ const age=d=>{if(!d)return null;const b=new Date(d+"T00:00:00"),n=new Date();let a=n.getFullYear()-b.getFullYear();if(n.getMonth()<b.getMonth()||(n.getMonth()===b.getMonth()&&n.getDate()<b.getDate()))a--;return a};
+ host.innerHTML='<h2>PAN Applications</h2><p>New PAN Form 93 · Correction CR-01 · Minor RA details · Local device records</p><div class="pan-tabs"><button id="pan-new">New PAN</button><button id="pan-corr">Correction</button><button id="pan-search">Search / Link Ack</button></div><div id="pan-work"></div>';
+ const root=$("pan-work");
+ function print(r){
+  const w=window.open("","_blank");if(!w)return alert("Allow pop-ups to print.");
+  const rows=Object.entries(r).filter(([k,v])=>v&&!["photo","signature"].includes(k)).map(([k,v])=>"<p><b>"+esc(k.replace(/_/g," "))+":</b> "+esc(v)+"</p>").join("");
+  w.document.write('<html><head><title>'+esc(r.temp_ack)+'</title><style>@page{size:A4;margin:15mm}body{font:12px Arial}.page{min-height:265mm;page-break-after:always}h2{text-align:center}.photos{display:flex;gap:18px;justify-content:flex-end}.photos img{width:35mm;height:45mm;object-fit:contain;border:1px solid #888}</style></head><body><section class="page"><h2>SLV COMMUNICATIONS<br>'+(r.mode==="new"?"FORM 93 – NEW PAN":"PAN CR-01 – CORRECTION")+'<br><small>Prepared draft – verify against official form</small></h2><h3>Temporary Ack: '+esc(r.temp_ack)+'</h3><div class="photos">'+(r.photo?'<img src="'+r.photo+'">':"Photo blank")+(r.signature?'<img src="'+r.signature+'">':"Signature blank")+'</div>'+rows+'</section><section class="page"><h2>REPRESENTATIVE ASSESSEE & DECLARATION</h2><h3>Temporary Ack: '+esc(r.temp_ack)+'</h3>'+(r.kind==="Minor"?["ra_name","ra_relation","ra_pan","ra_aadhaar","ra_mobile","ra_email","ra_address","ra_city","ra_state","ra_pin"].map(k=>"<p><b>"+k.replace(/_/g," ")+":</b> "+esc(r[k])+"</p>").join(""):"Adult applicant – RA not applicable")+'<p>I declare that the above details are true and correct. This is an internal shop draft, not an official acknowledgement.</p><p>Place: __________ Date: __________</p><div style="height:30mm;width:55mm;border:1px solid #888;margin-left:auto"></div><p style="text-align:right">Applicant / RA Signature</p><p>Official Ack: '+esc(r.actual_ack||"Not linked")+'</p></section><script>onload=function(){print()}<\/script></body></html>');
+  w.document.close();
+ }
+ function form(mode){
+  const fields=[["name","Applicant full name *","required"],["dob","Date of birth *",'type="date" required'],["mobile","Mobile *","required"],["email","Email *",'type="email" required'],["aadhaar","Applicant Aadhaar",'maxlength="12"'],["father","Father name",""],["mother","Mother name",""],["address","Full address",""],["city","City",""],["state","State",'value="Andhra Pradesh"'],["pin","PIN code",'maxlength="6"']];
+  root.innerHTML='<form id="pan-form"><h3>'+(mode==="new"?"New PAN – Form 93":"PAN Correction – CR-01")+'</h3><div class="pan-grid">'+fields.map(([n,l,a])=>'<label>'+l+'<input name="'+n+'" '+a+'></label>').join("")+'<label>Gender<select name="gender"><option value="">Select</option><option>Male</option><option>Female</option><option>Transgender</option></select></label><label>Parent name to print<select name="parent"><option value="">Select</option><option>Father</option><option>Mother</option></select></label>'+(mode==="correction"?'<label>Existing PAN *<input name="pan" required maxlength="10"></label><label>Correction requested<input name="correction"></label>':"")+'</div><label>Applicant type<select name="kind" id="pan-kind"><option>Auto detect from DOB</option><option>Adult</option><option>Minor</option></select></label><div id="pan-ra" class="pan-section hidden"><h3>Representative Assessee – Minor</h3><p>RA PAN or RA Aadhaar is required. Mobile, email and address are required.</p><div class="pan-grid">'+[["ra_name","RA full name","required"],["ra_relation","Relationship (Father / Mother / Guardian)","required"],["ra_pan","RA PAN",""],["ra_aadhaar","RA Aadhaar",'maxlength="12"'],["ra_mobile","RA mobile","required"],["ra_email","RA email",'type="email" required'],["ra_address","RA address","required"],["ra_city","RA city","required"],["ra_state","RA state","required"],["ra_pin","RA PIN","required"]].map(([n,l,a])=>'<label>'+l+'<input name="'+n+'" '+a+'></label>').join("")+'</div></div><div class="pan-grid"><label>Applicant photo (optional)<input id="pan-photo" type="file" accept="image/*"></label><label>Applicant signature (optional)<input id="pan-sign" type="file" accept="image/*"></label></div><button class="primary-btn" type="submit">Save & Generate Temporary Ack</button><p id="pan-message"></p></form>';
+  const f=$("pan-form"),kind=f.elements.kind,dob=f.elements.dob,ra=$("pan-ra");let photo="",signature="";
+  const update=()=>{const a=age(dob.value),m=kind.value==="Minor"||(kind.value==="Auto detect from DOB"&&a!==null&&a<18);ra.classList.toggle("hidden",!m);["ra_name","ra_relation","ra_mobile","ra_email","ra_address","ra_city","ra_state","ra_pin"].forEach(n=>f.elements[n].required=m)};
+  kind.onchange=dob.onchange=update;update();
+  const load=(file,cb)=>{if(!file)return;const rd=new FileReader();rd.onload=()=>cb(rd.result);rd.readAsDataURL(file)};
+  $("pan-photo").onchange=e=>load(e.target.files[0],v=>photo=v);$("pan-sign").onchange=e=>load(e.target.files[0],v=>signature=v);
+  f.onsubmit=e=>{e.preventDefault();const r=Object.fromEntries(new FormData(f).entries()),minor=r.kind==="Minor"||(r.kind==="Auto detect from DOB"&&age(r.dob)<18);if(minor&&!r.ra_pan&&!r.ra_aadhaar)return alert("Minor applicant: enter RA PAN or RA Aadhaar.");if(r.aadhaar&&r.aadhaar.replace(/\D/g,"").length!==12)return alert("Applicant Aadhaar must be 12 digits.");if(r.ra_aadhaar&&r.ra_aadhaar.replace(/\D/g,"").length!==12)return alert("RA Aadhaar must be 12 digits.");if(mode==="correction"&&!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test((r.pan||"").toUpperCase()))return alert("Enter valid PAN.");r.kind=minor?"Minor":"Adult";r.mode=mode;r.photo=photo;r.signature=signature;const n=Number(localStorage.getItem("slv_pan_seq")||0)+1;localStorage.setItem("slv_pan_seq",String(n));r.temp_ack="SLV-PAN-"+new Date().getFullYear()+"-"+String(n).padStart(6,"0");r.actual_ack="";r.status="Details Saved";try{const a=read();a.unshift(r);write(a)}catch{return alert("Browser storage full. Use smaller images.")}$("pan-message").textContent="Saved locally · "+r.temp_ack;print(r)};
+ }
+ function search(){
+  root.innerHTML='<div class="pan-search-row"><input id="pan-q" placeholder="Search name / mobile / Temporary Ack"><button id="pan-find">Search</button></div><div id="pan-results"></div>';
+  const run=()=>{const q=$("pan-q").value.toLowerCase(),a=read().filter(r=>!q||[r.name,r.mobile,r.temp_ack,r.actual_ack].some(v=>String(v||"").toLowerCase().includes(q)));$("pan-results").innerHTML=a.map(r=>'<p><b>'+esc(r.name)+'</b> · '+esc(r.mobile)+' · '+esc(r.temp_ack)+' · '+esc(r.actual_ack)+' <button data-link="'+r.temp_ack+'">Link Ack</button> <button data-print="'+r.temp_ack+'">Print</button></p>').join("")||"No records";root.querySelectorAll("[data-link]").forEach(b=>b.onclick=()=>{const r=read().find(x=>x.temp_ack===b.dataset.link),v=prompt("Enter official acknowledgement number",r.actual_ack||"");if(v===null)return;r.actual_ack=v.trim();r.status="Actual Ack Linked";write(read().map(x=>x.temp_ack===r.temp_ack?r:x));run()});root.querySelectorAll("[data-print]").forEach(b=>b.onclick=()=>print(read().find(x=>x.temp_ack===b.dataset.print)))};
+  $("pan-find").onclick=run;run();
+ }
+ $("pan-new").onclick=()=>form("new");$("pan-corr").onclick=()=>form("correction");$("pan-search").onclick=search;form("new");
 }
