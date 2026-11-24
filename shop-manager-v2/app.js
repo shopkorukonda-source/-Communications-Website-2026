@@ -937,9 +937,14 @@ function renderPanApplications(){
    };
    const parts=v=>{const a=String(v||"").trim().split(/\s+/);return [a[0]||"",a.length>2?a.slice(1,-1).join(" "):"",a.length>1?a[a.length-1]:""]};
    const name=(pi,top,v)=>parts(v).forEach((x,i)=>draw(pi,180,top+i*13.4,x,390,6));
+   const aadhaarNameGrid=(value)=>{
+    const text=String(value||"").trim().toUpperCase().replace(/\\s+/g," ");
+    const cell=13.72,startX=180,startTop=254,rowGap=13.7,columns=28;
+    [...text].forEach((ch,i)=>{if(ch===" ")return;const row=Math.floor(i/columns),col=i%columns;if(row<3)draw(0,startX+col*cell,startTop+row*rowGap,ch,cell-1,6)});
+   };
    const addr=(pi,prefix,top)=>{["flat","road","post","area","district"].forEach((k,i)=>draw(pi,180,top+i*13.4,r[prefix+"_"+k],390,5.8));draw(pi,132,top+5*13.4,r[prefix+"_state"],95,5.5);draw(pi,290,top+5*13.4,r[prefix+"_country"]||"India",90,5.5);draw(pi,455,top+5*13.4,r[prefix+"_pin"],65,5.5)};
    // Page 1: coordinates matched to the printed Form 93 rows.
-   name(0,196,r.name);draw(0,180,239,r.name_as_aadhaar||r.name,390,5.8);
+   name(0,196,r.name);aadhaarNameGrid(r.name_as_aadhaar||r.name);
    const genderX={Male:183,Female:229,Transgender:290};draw(0,genderX[r.gender]||183,294,"X",10,6.5);
    if(r.dob){const [yy,mm,dd]=r.dob.split("-");draw(0,185,307,dd+mm+yy,80,5.8)}
    draw(0,185,321,r.aadhaar,170,5.8);
@@ -961,13 +966,13 @@ function renderPanApplications(){
    draw(1,240,353,"91",22,5.5);draw(1,355,353,r.ra_mobile,150,5.8);draw(1,240,367,r.ra_email,350,5.8);draw(1,240,381,r.ra_landline,170,5.8);
    const comm={"Residence":216,"Representative Assessee Address":302,"Office":448};draw(1,comm[r.communication_address]||367,416,"X",10,6.5);
    const proofX=[70,169,270,70,169];["proof_identity","proof_address","proof_dob","ra_proof_identity","ra_proof_address"].forEach((k,i)=>{if(r[k])draw(1,proofX[i],474+(i>=3?37:0),"X",10,6.5)});
-   draw(1,110,561,r.declarant_name,220,6);draw(1,365,561,r.declarant_capacity,130,6);
+   draw(1,110,561,r.declarant_name,220,6);
    draw(1,110,622,r.place,140,6);draw(1,110,637,r.declaration_date,140,6);
-   draw(1,365,766,r.declarant_name,150,6);draw(1,365,793,r.declarant_designation,150,6);
+   draw(1,390,766,r.declarant_name,125,6);draw(1,410,793,r.declarant_designation,105,6);
    const image=async(data,pi,x,top,w,h)=>{if(!data)return;const raw=data.split(",")[1];if(!raw)return;const bin=atob(raw),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);const img=data.startsWith("data:image/png")?await pdf.embedPng(u):await pdf.embedJpg(u);pages[pi].drawImage(img,{x,y:pages[pi].getHeight()-top-h,width:w,height:h});};
    // Both photo boxes are 4.5 x 3.5 cm; left photo carries the applicant signature across it.
-   await image(r.photo,0,47,24,112,87);await image(r.photo,0,440,24,112,87);
-   if(r.signature){await image(r.signature,0,47,70,112,35);await image(r.signature,1,326,650,200,62);}
+   await image(r.photo,0,46,23,100,128);await image(r.photo,0,443,23,100,128);
+   if(r.signature){await image(r.signature,0,49,108,94,30);await image(r.signature,1,329,654,200,62);}
    const out=await pdf.save(),url=URL.createObjectURL(new Blob([out],{type:"application/pdf"}));
    showPanPreview(url,r);
   }catch(error){console.error(error);alert("PDF generation failed: "+(error.message||"Please try again."))}
@@ -1004,7 +1009,7 @@ function renderPanApplications(){
  }
  function form(mode){
   const newMode=mode==="new";
-  const personal=field("name","Full name (First, Middle, Last)","text",true,"No initials / abbreviations")+select("gender","Gender",["Male","Female","Transgender"],true)+field("dob","Date of birth","date",true)+field("aadhaar","Aadhaar number (12 digits)","text",true,"12-digit number");
+  const personal=field("name","Full name (First, Middle, Last)","text",true,"No initials / abbreviations")+field("name_as_aadhaar","Name exactly as per Aadhaar","text",true,"Enter exactly as printed on Aadhaar")+select("gender","Gender",["Male","Female","Transgender"],true)+field("dob","Date of birth","date",true)+field("aadhaar","Aadhaar number (12 digits)","text",true,"12-digit number");
   const contact=field("mobile","Mobile number (10 digits)","tel",true,"Enter all 10 digits")+field("email","Email ID","email",true)+field("landline","Landline with STD code");
   const residence=addr("res","Residence Address");
   const office=addr("office","Office Address (if applicable)");
