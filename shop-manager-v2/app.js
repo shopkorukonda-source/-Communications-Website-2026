@@ -250,7 +250,7 @@ async function openServiceEditor(id=null){
         <label>Profit mode<select id="svc-profit"><option value="manual">Manual</option><option value="slabs">Slabs</option><option value="fixed">Fixed</option><option value="percentage">Percentage</option></select></label>
       </div>
       <div class="admin-form-grid">
-        <label>Billing config (JSON)<textarea id="svc-billing-config" rows="3">${escapeHtml(JSON.stringify(s?.billing_config||{},null,2))}</textarea></label>
+        <label>Billing config (JSON)<textarea id="svc-billing-config" rows="4">${escapeHtml(JSON.stringify(s?.billing_config||{},null,2))}</textarea><small class="muted">Xerox / Printing: customer_charge is the fixed rate per paper/page. Optional quantity_slabs use [{"min_quantity":1,"max_quantity":50,"rate":2},{"min_quantity":51,"max_quantity":null,"rate":1.5}]. Employees cannot edit rates; only discounts are entered at billing.</small></label>
         <label>Processing cost config (JSON)<textarea id="svc-cost-config" rows="3">${escapeHtml(JSON.stringify(s?.processing_cost_config||{},null,2))}</textarea></label>
         <label>Profit config (JSON)<textarea id="svc-profit-config" rows="3">${escapeHtml(JSON.stringify(s?.profit_config||{},null,2))}</textarea></label>
       </div>
