@@ -56,6 +56,12 @@ declare
   v_deleted_bills bigint := 0;
   v_deleted_attendance bigint := 0;
   v_deleted_expenses bigint := 0;
+  v_deleted_leaves bigint := 0;
+  v_deleted_drawer_sessions bigint := 0;
+  v_deleted_payroll bigint := 0;
+  v_deleted_incentives bigint := 0;
+  v_deleted_settlements bigint := 0;
+  v_deleted_announcements bigint := 0;
   v_absent_marked bigint := 0;
   v_run_id bigint;
   v_work_date date := (timezone('Asia/Kolkata', now())::date - 1);
@@ -141,9 +147,30 @@ begin
   delete from public.expenses where expense_date<current_date-interval '1 year';
   get diagnostics v_deleted_expenses=row_count;
 
+  -- Other operational history is retained for one year; master/configuration data is untouched.
+  delete from public.leave_requests where end_date<current_date-interval '1 year';
+  get diagnostics v_deleted_leaves=row_count;
+  delete from public.drawer_sessions where status='closed' and closed_at<now()-interval '1 year';
+  get diagnostics v_deleted_drawer_sessions=row_count;
+  delete from public.payroll_entries where pay_month<date_trunc('month',current_date-interval '1 year')::date;
+  get diagnostics v_deleted_payroll=row_count;
+  delete from public.employee_incentives where incentive_date<current_date-interval '1 year';
+  get diagnostics v_deleted_incentives=row_count;
+  delete from public.night_settlements where settlement_date<current_date-interval '1 year';
+  get diagnostics v_deleted_settlements=row_count;
+  delete from public.shop_announcements
+    where created_at<now()-interval '1 year' and (expires_on is null or expires_on<current_date);
+  get diagnostics v_deleted_announcements=row_count;
+
   insert into public.retention_run_log(deleted_billing_transactions,deleted_attendance_rows,deleted_expense_rows,status,details)
   values(v_deleted_bills,v_deleted_attendance,v_deleted_expenses,'completed',
-    jsonb_build_object('billing_retention_months',4,'attendance_retention_years',1,'expense_retention_years',1,'auto_absent_marked',v_absent_marked))
+    jsonb_build_object('billing_retention_months',4,'attendance_retention_years',1,'expense_retention_years',1,
+      'leave_requests_retention_years',1,'drawer_sessions_retention_years',1,'payroll_retention_years',1,
+      'incentives_retention_years',1,'night_settlements_retention_years',1,'announcements_retention_years',1,
+      'auto_absent_marked',v_absent_marked,'deleted_leave_requests',v_deleted_leaves,
+      'deleted_drawer_sessions',v_deleted_drawer_sessions,'deleted_payroll_entries',v_deleted_payroll,
+      'deleted_employee_incentives',v_deleted_incentives,'deleted_night_settlements',v_deleted_settlements,
+      'deleted_announcements',v_deleted_announcements))
   returning id into v_run_id;
   return jsonb_build_object('run_id',v_run_id,'auto_absent_marked',v_absent_marked,
     'deleted_billing_transactions',v_deleted_bills,'deleted_attendance_rows',v_deleted_attendance,
