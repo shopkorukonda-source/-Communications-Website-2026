@@ -1049,13 +1049,19 @@ function renderPanApplications(){
   const aadhaarInput=f.elements.namedItem("aadhaar"),mobileInput=f.elements.namedItem("mobile");
   aadhaarInput.maxLength=12;aadhaarInput.inputMode="numeric";aadhaarInput.pattern="[0-9]{12}";aadhaarInput.title="Enter exactly 12 digits";
   mobileInput.maxLength=10;mobileInput.inputMode="numeric";mobileInput.pattern="[0-9]{10}";mobileInput.title="Enter exactly 10 digits (without +91)";
-  // Keep RA section out of the way for adult applicants; show it only when selected or applicant is a minor.
-  const raWrap=$("pan-ra-wrap");
-  const raToggle=document.createElement("label");raToggle.className="pan-ra-toggle";
-  raToggle.innerHTML='<input type="checkbox" id="pan-ra-required"> Representative Assessee details are required';
-  raWrap.prepend(raToggle);const raBody=raWrap.querySelector(".pan-section");raBody.hidden=true;
-  const syncRa=()=>{const d=f.elements.namedItem("dob").value;const ageNow=age(d);const show=raToggle.querySelector("input").checked||(ageNow!==null&&ageNow<18);raBody.hidden=!show;if(show)raToggle.querySelector("input").checked=true};
-  raToggle.querySelector("input").addEventListener("change",syncRa);f.elements.namedItem("dob").addEventListener("change",syncRa);
+  // Representative Assessee is shown automatically only when DOB indicates the applicant is under 18.
+  const raBody=raWrap.querySelector(".pan-section");
+  const raProofFields=["ra_proof_identity","ra_proof_address"].map(n=>f.elements.namedItem(n)?.closest("label")).filter(Boolean);
+  const syncRa=()=>{
+   const ageNow=age(f.elements.namedItem("dob").value);
+   const show=ageNow!==null&&ageNow<18;
+   raBody.hidden=!show;
+   raProofFields.forEach(el=>{el.hidden=!show});
+   raBody.querySelectorAll("input,select").forEach(el=>{el.required=show&&["ra_name","ra_relation","ra_mobile","ra_email","ra_address","ra_pin"].includes(el.name)});
+  };
+  f.elements.namedItem("dob").addEventListener("change",syncRa);
+  f.elements.namedItem("dob").addEventListener("input",syncRa);
+  syncRa();
   // Passport/TIN only displayed for non-resident applicants.
   const passport=f.elements.namedItem("passport"),tin=f.elements.namedItem("tin"),status=f.elements.namedItem("residential_status");
   const nriWrap=document.createElement("div");nriWrap.id="pan-nri-fields";passport.closest("label").before(nriWrap);nriWrap.append(passport.closest("label"),tin.closest("label"));
@@ -1075,8 +1081,10 @@ function renderPanApplications(){
    if(r.office_pin&&!/^\d{6}$/.test(r.office_pin))return alert("Office PIN must contain 6 digits.");
    if(r.ra_aadhaar&&!/^\d{12}$/.test(r.ra_aadhaar.replace(/\s/g,"")))return alert("RA Aadhaar must contain 12 digits.");
    if(r.ra_pan&&!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(r.ra_pan.toUpperCase()))return alert("Enter a valid RA PAN.");
-   if((r.kind==="Minor"||$("pan-ra-required").checked)&&(!r.ra_name||!r.ra_relation||!r.ra_mobile||!r.ra_email||!r.ra_address||!r.ra_city||!r.ra_state||!r.ra_pin))return alert("Minor applicant: complete all Representative Assessee details.");
-   if((r.kind==="Minor"||$("pan-ra-required").checked)&&!r.ra_pan&&!r.ra_aadhaar)return alert("Minor applicant: enter RA PAN or RA Aadhaar.");
+   const applicantAge=age(r.dob),isMinor=applicantAge!==null&&applicantAge<18;
+   if(!isMinor){["ra_name","ra_pan","ra_aadhaar","ra_relation","ra_mobile","ra_email","ra_landline","ra_address","ra_post","ra_area","ra_district","ra_state","ra_country","ra_pin"].forEach(k=>r[k]="");}
+   if(isMinor&&(!r.ra_name||!r.ra_relation||!r.ra_mobile||!r.ra_email||!r.ra_address||!r.ra_state||!r.ra_pin))return alert("Minor applicant: complete all Representative Assessee details.");
+   if(isMinor&&!r.ra_pan&&!r.ra_aadhaar)return alert("Minor applicant: enter RA PAN or RA Aadhaar.");
    if(mode==="correction"&&!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test((r.pan||"").toUpperCase()))return alert("Enter a valid existing PAN.");
    if(r.residential_status!=="Resident"&&(!r.passport||!r.passport.trim()))return alert("Passport number is mandatory for Non-resident / RNOR applicants.");
    if(!r.income_sources.length)return alert("Select at least one source of income.");
