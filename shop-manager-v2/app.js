@@ -962,8 +962,8 @@ function renderPanApplications(){
    const genderX={Male:183,Female:229,Transgender:290};draw(0,genderX[r.gender]||183,282,"X",10,6.5);
    if(r.dob){const [yy,mm,dd]=r.dob.split("-");draw(0,185,294,dd+mm+yy,80,5.8)}
    draw(0,185,307,r.aadhaar,170,5.8);
-   addr(0,"res",331);
-   if(r.office_flat||r.office_road||r.office_pin)addr(0,"office",472);
+   addr(0,"res",342);
+   if(r.office_flat||r.office_road||r.office_pin)addr(0,"office",435);
    const sx={"Resident":213,"Non-resident":275,"Resident but not ordinarily resident":352};draw(0,sx[r.residential_status]||213,523,"X",10,6.5);
    draw(0,345,547,r.passport,160,5.8);draw(0,345,563,r.tin,180,5.8);
    draw(0,240,598,"91",22,5.5);draw(0,375,598,r.mobile,145,5.8);draw(0,150,610,r.email,380,5.8);draw(0,240,624,r.landline,170,5.8);
@@ -974,7 +974,7 @@ function renderPanApplications(){
    name(1,23,[r.mother_first,r.mother_middle,r.mother_last].filter(Boolean).join(" "));draw(1,r.parent==="Father"?335:397,67,"X",10,6.5);
    draw(1,235,107,r.ao_area,45,5.8);draw(1,395,107,r.ao_type,32,5.8);draw(1,235,121,r.ao_range,45,5.8);draw(1,395,121,r.ao_number,32,5.8);
    name(1,155,r.ra_name);draw(1,180,196,r.ra_pan,160,5.8);draw(1,280,211,r.ra_aadhaar,175,5.8);
-   addr(1,"ra",228);
+   addr(1,"ra",240);
    draw(1,240,353,"91",22,5.5);draw(1,355,353,r.ra_mobile,150,5.8);draw(1,240,367,r.ra_email,350,5.8);draw(1,240,381,r.ra_landline,170,5.8);
    const comm={"Residence":216,"Representative Assessee Address":302,"Office":448};draw(1,comm[r.communication_address]||367,416,"X",10,6.5);
    const proofX=[70,169,270,70,169];["proof_identity","proof_address","proof_dob","ra_proof_identity","ra_proof_address"].forEach((k,i)=>{if(r[k])draw(1,proofX[i],474+(i>=3?37:0),"X",10,6.5)});
