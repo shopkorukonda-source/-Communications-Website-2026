@@ -950,9 +950,9 @@ function renderPanApplications(){
    draw(0,240,603,"91",22,5.5);draw(0,375,603,r.mobile,145,5.8);draw(0,150,617,r.email,380,5.8);draw(0,240,630,r.landline,170,5.8);
    const income={"Salary":[181,670],"Income from Business / Profession":[258,670],"Income from House Property":[397,670],"Capital Gains":[181,687],"Income from Other Sources":[258,687],"No Income":[397,687]};
    (r.income_sources||[]).forEach(v=>{if(income[v])draw(0,income[v][0],income[v][1],"X",10,6.5)});
-   draw(0,r.single_parent==="Yes"?243:304,725,"X",10,6.5);name(0,740,r.father);
+   draw(0,r.single_parent==="Yes"?243:304,725,"X",10,6.5);name(0,740,[r.father_first,r.father_middle,r.father_last].filter(Boolean).join(" "));
    // Page 2: mother, AO, RA, communication and declaration.
-   name(1,23,r.mother);draw(1,r.parent==="Father"?335:397,67,"X",10,6.5);
+   name(1,23,[r.mother_first,r.mother_middle,r.mother_last].filter(Boolean).join(" "));draw(1,r.parent==="Father"?335:397,67,"X",10,6.5);
    draw(1,235,107,r.ao_area,45,5.8);draw(1,395,107,r.ao_type,32,5.8);draw(1,235,121,r.ao_range,45,5.8);draw(1,395,121,r.ao_number,32,5.8);
    name(1,164,r.ra_name);draw(1,180,207,r.ra_pan,160,5.8);draw(1,280,223,r.ra_aadhaar,175,5.8);
    const raParts=String(r.ra_address||"").split(/[,\n]/).map(x=>x.trim()).filter(Boolean);
@@ -976,17 +976,17 @@ function renderPanApplications(){
  function form(mode){
   const newMode=mode==="new";
   const personal=field("name","Full name (First, Middle, Last)","text",true,"No initials / abbreviations")+select("gender","Gender",["Male","Female","Transgender"],true)+field("dob","Date of birth","date",true)+field("aadhaar","Aadhaar number (12 digits)","text",true,"12-digit number");
-  const contact=field("mobile","Mobile number with country code","tel",true,"+91")+field("email","Email ID","email",true)+field("landline","Landline with STD code");
+  const contact=field("mobile","Mobile number (10 digits)","tel",true,"Enter all 10 digits")+field("email","Email ID","email",true)+field("landline","Landline with STD code");
   const residence=addr("res","Residence Address");
   const office=addr("office","Office Address (if applicable)");
   const status=select("residential_status","Residential status",["Resident","Non-resident","Resident but not ordinarily resident"],true)+field("passport","Passport number (mandatory for NRI / RNOR)")+field("tin","TIN in country of residence (if any)");
   const income='<div class="pan-check-grid">'+["Salary","Income from Business / Profession","Income from House Property","Capital Gains","Income from Other Sources","No Income"].map(x=>'<label><input type="checkbox" name="income_sources" value="'+esc(x)+'"> '+esc(x)+'</label>').join("")+'</div>';
-  const parents=select("single_parent","Whether mother / father is a single parent?",["Yes","No"],true)+field("father","Father’s full name")+field("mother","Mother’s full name")+select("parent","Parent name to print on PAN card",["Father","Mother"],true);
+  const parents=select("single_parent","Whether mother / father is a single parent?",["Yes","No"],true)+field("father_first","Father – First name","text",true)+field("father_middle","Father – Middle name")+field("father_last","Father – Last name","text",true)+field("mother_first","Mother – First name")+field("mother_middle","Mother – Middle name")+field("mother_last","Mother – Last name")+select("parent","Parent name to print on PAN card",["Father","Mother"],true);
   const ao=field("ao_area","Area Code")+field("ao_type","AO Type")+field("ao_range","Range Code")+field("ao_number","AO Number");
   const ra=field("ra_name","Representative Assessee full name")+field("ra_pan","RA PAN (if available)")+field("ra_aadhaar","RA Aadhaar (if PAN unavailable)")+select("ra_relation","Relationship / capacity",["Father","Mother","Guardian","Other"])+field("ra_mobile","RA mobile with country code","tel")+field("ra_email","RA email","email")+field("ra_landline","RA landline with STD code")+field("ra_address","RA address")+field("ra_city","RA city")+field("ra_state","RA state")+field("ra_pin","RA PIN / ZIP");
   const communication=select("communication_address","Address for communication",["Residence","Office","Representative Assessee Address"],true);
   const proofs=select("proof_identity","Applicant – Proof of Identity",["Aadhaar","Passport","Voter ID","Driving Licence","Other notified document"],true)+select("proof_address","Applicant – Proof of Address",["Aadhaar","Passport","Voter ID","Driving Licence","Bank statement","Other notified document"],true)+select("proof_dob","Applicant – Proof of Date of Birth",["Birth Certificate","Passport","Driving Licence","Matriculation certificate","Other notified document"],true)+select("ra_proof_identity","RA – Proof of Identity",["Aadhaar","Passport","Voter ID","Driving Licence","Other notified document"])+select("ra_proof_address","RA – Proof of Address",["Aadhaar","Passport","Voter ID","Driving Licence","Bank statement","Other notified document"]);
-  const declaration=field("declarant_name","Name of person making declaration","text",true)+select("declarant_capacity","Capacity",["Self","Representative Assessee"],true)+field("declarant_designation","Designation (if applicable)")+field("place","Place","text",true)+field("declaration_date","Date","date",true);
+  const declaration=field("declarant_name","Verifier name (exactly as per Aadhaar)","text",true)+select("declarant_capacity","Capacity",["Self","Representative Assessee"],true)+field("declarant_designation","Designation (if applicable)")+field("place","Place","text",true)+field("declaration_date","Verification date","date",true);
   const correction=mode==="correction"?group("Existing PAN / Correction Details",field("pan","Existing PAN","text",true,"ABCDE1234F")+field("correction","Details to be corrected / requested changes")):"";
   root.innerHTML='<form id="pan-form"><h3>'+(newMode?"New PAN – Form No. 93":"PAN Correction – CR-01")+'</h3><p class="muted">Fields follow the notified Form 93 structure. Enter details exactly as supported by the applicant’s documents.</p>'+correction+
    group("PART A — PERSONAL INFORMATION",personal+residence+office+status+contact,"Residence address is required. Office address is optional.")+
@@ -1001,7 +1001,12 @@ function renderPanApplications(){
   setDefault("office_country","India");setDefault("residential_status","Resident");
   setDefault("single_parent","No");setDefault("parent","Father");
   setDefault("communication_address","Residence");setDefault("declarant_capacity","Self");
-  setDefault("declaration_date",new Date().toISOString().slice(0,10));
+  const localToday=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)};
+  setDefault("declaration_date",localToday());
+  setDefault("ao_area","APR");setDefault("ao_type","W");setDefault("ao_range","116");setDefault("ao_number","1");
+  const aadhaarInput=f.elements.namedItem("aadhaar"),mobileInput=f.elements.namedItem("mobile");
+  aadhaarInput.maxLength=12;aadhaarInput.inputMode="numeric";aadhaarInput.pattern="[0-9]{12}";aadhaarInput.title="Enter exactly 12 digits";
+  mobileInput.maxLength=10;mobileInput.inputMode="numeric";mobileInput.pattern="[0-9]{10}";mobileInput.title="Enter exactly 10 digits (without +91)";
   // Keep RA section out of the way for adult applicants; show it only when selected or applicant is a minor.
   const raWrap=$("pan-ra-wrap");
   const raToggle=document.createElement("label");raToggle.className="pan-ra-toggle";
@@ -1021,7 +1026,9 @@ function renderPanApplications(){
   $("pan-photo").onchange=e=>load(e.target.files[0],v=>photo=v);$("pan-sign").onchange=e=>load(e.target.files[0],v=>signature=v);
   f.onsubmit=e=>{
    e.preventDefault();const fd=new FormData(f),r=Object.fromEntries(fd.entries());r.income_sources=fd.getAll("income_sources");r.income_sources_text=r.income_sources.join(", ");
-   if(r.aadhaar&&!/^\d{12}$/.test(r.aadhaar.replace(/\s/g,"")))return alert("Aadhaar number must contain 12 digits.");
+   if(!/^\d{12}$/.test((r.aadhaar||"").trim()))return alert("Aadhaar number must contain exactly 12 digits. Form cannot be saved without all 12 digits.");
+   if(!/^\d{10}$/.test((r.mobile||"").trim()))return alert("Mobile number must contain exactly 10 digits (without +91). Form cannot be saved without all 10 digits.");
+   r.father=[r.father_first,r.father_middle,r.father_last].filter(Boolean).join(" ");r.mother=[r.mother_first,r.mother_middle,r.mother_last].filter(Boolean).join(" ");
    if(r.res_pin&&!/^\d{6}$/.test(r.res_pin))return alert("Residence PIN must contain 6 digits.");
    if(r.office_pin&&!/^\d{6}$/.test(r.office_pin))return alert("Office PIN must contain 6 digits.");
    if(r.ra_aadhaar&&!/^\d{12}$/.test(r.ra_aadhaar.replace(/\s/g,"")))return alert("RA Aadhaar must contain 12 digits.");
