@@ -982,7 +982,7 @@ function renderPanApplications(){
    await image(r.photo,0,46,23,100,128);await image(r.photo,0,443,23,100,128);
    if(r.signature){await image(r.signature,0,49,108,94,30);await image(r.signature,1,329,620,200,65);}
    const out=await pdf.save(),url=URL.createObjectURL(new Blob([out],{type:"application/pdf"}));
-   showPanPreview(url,r);
+   await showPanPreview(url,r);
   }catch(error){console.error(error);alert("PDF generation failed: "+(error.message||"Please try again."))}
   finally{if(btn){btn.disabled=false;btn.textContent=original||"Save Details & Preview Form"}}
  }
@@ -1131,7 +1131,7 @@ function renderPanApplications(){
    if(!r.income_sources.length)return alert("Select at least one source of income.");
    if(r.single_parent==="Yes"&&!r.parent)return alert("Select the parent name to print on PAN.");
    if(r.declarant_capacity==="Self"&&!r.declarant_name.trim())return alert("Enter declaration name.");
-   r.mode=mode;r.kind=age(r.dob)!==null&&age(r.dob)<18?"Minor":"Adult";r.ra_required=$("pan-ra-required").checked||r.kind==="Minor";r.photo=photo;r.signature=signature;
+   r.mode=mode;r.kind=age(r.dob)!==null&&age(r.dob)<18?"Minor":"Adult";r.ra_required=r.kind==="Minor"||Boolean(r.ra_name||r.ra_pan||r.ra_aadhaar);r.photo=photo;r.signature=signature;
    const n=Number(localStorage.getItem("slv_pan_seq")||0)+1;localStorage.setItem("slv_pan_seq",String(n));
    r.temp_ack="SLV-PAN-"+new Date().getFullYear()+"-"+String(n).padStart(6,"0");r.actual_ack="";r.status="Details Saved";
    try{const a=read();a.unshift(r);write(a)}catch{return alert("Browser storage full. Use a smaller photo image.")}
