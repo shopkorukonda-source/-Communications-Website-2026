@@ -246,6 +246,7 @@ async function renderWalletManager(){
       <div class="admin-form-grid"><label>Wallet name<input id="wallet-name" required maxlength="100" placeholder="e.g. IDFC Bank"></label><label>Wallet type<select id="wallet-type"><option value="bank">Bank</option><option value="upi">UPI</option><option value="provider">Provider</option><option value="cash">Cash</option><option value="other">Other</option></select></label><label>Provider / account label<input id="wallet-provider" maxlength="100" placeholder="Optional"></label></div>
       <small class="muted">New wallets always start with ₹0 opening balance.</small><div id="wallet-message" class="message"></div><button class="primary-btn admin-add-btn" type="submit" id="wallet-save">Create wallet</button>
     </form></div>
+    <div class="admin-editor"><h3>Load wallet balance</h3><form id="load-form" class="service-form"><div class="admin-form-grid"><label>Wallet<select id="load-wallet" required></select></label><label>Load amount (₹)<input id="load-amount" type="number" min="0.01" step="0.01" required></label><label>Source / bank account<input id="load-source" placeholder="e.g. SBI / IDFC / cash" maxlength="100"></label></div><div id="load-message" class="message"></div><button class="primary-btn" type="submit">Record wallet load</button></form></div>
     <div class="admin-editor"><h3>Wallet transfer</h3><form id="transfer-form" class="service-form">
       <div class="admin-form-grid"><label>From wallet<select id="transfer-from" required></select></label><label>To wallet<select id="transfer-to" required></select></label><label>Amount (₹)<input id="transfer-amount" type="number" min="0.01" step="0.01" required></label></div>
       <label>Note<input id="transfer-note" maxlength="200" placeholder="Optional transfer note"></label><div id="transfer-message" class="message"></div><button class="primary-btn admin-add-btn" type="submit" id="transfer-save">Transfer balance</button>
@@ -253,6 +254,8 @@ async function renderWalletManager(){
     <div class="admin-table-wrap"><div class="admin-table-head"><h3>All wallets</h3><input id="wallet-search" class="search-input" placeholder="Search wallets"></div><div id="wallet-rows"></div></div>`;
   fillTransferWallets();renderWalletRows();
   $("wallet-form").addEventListener("submit",createWallet);
+  $("load-wallet").innerHTML=walletOptions.filter(w=>w.is_active).map(w=>`<option value="${w.id}">${escapeHtml(w.name)}</option>`).join("");
+  $("load-form").addEventListener("submit",loadWallet);
   $("transfer-form").addEventListener("submit",transferWallet);
   $("wallet-search").addEventListener("input",renderWalletRows);
 }
@@ -275,6 +278,14 @@ async function createWallet(e){
   try{const {error}=await supabase.from("wallets").insert(payload);if(error)throw error;msg.textContent="Wallet created with ₹0 opening balance."; $("wallet-form").reset();await loadCatalog();await renderWalletManager();}
   catch(err){msg.textContent=err.message||"Unable to create wallet.";}
   finally{btn.disabled=false;}
+}
+async function loadWallet(e){
+  e.preventDefault();const msg=$("load-message"),btn=$("load-form").querySelector("button");btn.disabled=true;
+  try{
+    const amount=Number($("load-amount").value);if(!Number.isFinite(amount)||amount<=0)throw new Error("Enter a positive load amount.");
+    const {error}=await supabase.from("wallet_ledger").insert({wallet_id:$("load-wallet").value,entry_type:"top_up",amount,direction:"in",description:"Wallet load from "+($("load-source").value.trim()||"unspecified source"),created_by:(await supabase.auth.getUser()).data.user.id});
+    if(error)throw error;msg.textContent="Wallet load recorded and balance updated.";await loadCatalog();await renderWalletManager();
+  }catch(err){msg.textContent=err.message||"Unable to record wallet load.";}finally{btn.disabled=false;}
 }
 async function toggleWallet(id){
   const w=walletOptions.find(x=>x.id===id);if(!w)return;
