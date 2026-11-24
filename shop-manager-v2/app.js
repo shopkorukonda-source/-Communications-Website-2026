@@ -350,9 +350,28 @@ function calculateBillingRow(row){
   } else if(svc.code==="AEPS_WITHDRAWAL"){
     const bank=(row.bank||"").toLowerCase();charge=bank.includes("union")?0:Math.ceil(amount/1000)*Number(svc.billing_config?.charge_per_1000||10);cost=Number(row.cost||0);
   } else {
-    charge=Number(row.charge||svc.billing_config?.customer_charge||0);cost=Number(row.cost||svc.processing_cost_config?.fixed_amount||0);
+    const bc=svc.billing_config||{},cc=svc.processing_cost_config||{},pc=svc.profit_config||{};
+    if(svc.billing_type==="fixed") charge=Number(bc.customer_charge||0);
+    else if(svc.billing_type==="percentage") charge=Math.round(amount*Number(bc.percentage||0))/100;
+    else if(svc.billing_type==="slabs"){
+      const slab=(bc.slabs||[]).find(x=>amount>=Number(x.min||0)&&amount<=Number(x.max||0));
+      charge=slab?(slab.percentage!=null?Math.round(amount*Number(slab.percentage))/100:Number(slab.customer_charge??slab.charge??0)):0;
+    } else charge=Number(row.charge||bc.customer_charge||0);
+    if(svc.processing_cost_type==="fixed") cost=Number(cc.fixed_amount||0);
+    else if(svc.processing_cost_type==="percentage") cost=Math.round(amount*Number(cc.percentage||0))/100;
+    else if(svc.processing_cost_type==="slabs"){
+      const slab=(cc.slabs||[]).find(x=>amount>=Number(x.min||0)&&amount<=Number(x.max||0));
+      cost=Number(slab?.cost??slab?.processing_cost??0);
+    } else cost=Number(row.cost||0);
+    profit=charge-cost;
+    if(svc.profit_mode==="fixed"&&pc.fixed_amount!=null)profit=Number(pc.fixed_amount);
+    else if(svc.profit_mode==="percentage"&&pc.percentage!=null)profit=Math.round(amount*Number(pc.percentage))/100;
+    else if(svc.profit_mode==="slabs"&&Array.isArray(pc.slabs)){
+      const slab=pc.slabs.find(x=>amount>=Number(x.min||0)&&amount<=Number(x.max||0));
+      profit=Number(slab?.profit??slab?.amount??0);
+    }
   }
-  profit=charge-cost;
+  if(!["CURRENT_BILLS","MONEY_TRANSFER","PRIVATE_BUS_TICKET","APSRTC_TICKET","TTD_TICKET","CREDIT_CARD_BANK","AEPS_WITHDRAWAL"].includes(svc.code)) profit=svc.profit_mode==="manual"?charge-cost:profit;
   const unitTotal=amount+charge;
   return {charge,cost,profit,unitTotal,total:unitTotal*qty};
 }
