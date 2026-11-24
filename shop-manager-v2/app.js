@@ -974,17 +974,21 @@ async function showForm93HtmlPreview(r){
     const layer=document.createElement("div");layer.className="pan-html-overlay";wrap.appendChild(layer);pagesEl.appendChild(wrap);
     pageModels.push({page,wrap,layer,width:vp.width,height:vp.height,scale:vp.scale});
    }
-   const correction=13.5,cellW=10.62,cellH=13.7;let activeLayoutKey="";
+   const correction=13.5,cellW=10.62,cellH=13.7;let activeLayoutKey="",activeWordKey="",activeLetterKey="";
    const put=(pi,x,top,w,h,content,cls="pan-html-text")=>{
     const m=pageModels[pi];if(!m||content===null||content===undefined||(String(content)===""&&cls!=="pan-html-photo"))return null;
-    const el=document.createElement("div");el.className=cls;el.dataset.layoutKey=activeLayoutKey||("p"+pi+"-"+Math.round(x*10)+"-"+Math.round(top*10));const off=form93LayoutSettings[el.dataset.layoutKey]||{};el.style.left=((x+Number(off.dx||0))*m.scale/m.width*100)+"%";el.style.top=((top+Number(off.dy||0)+correction)*m.scale/m.height*100)+"%";el.style.width=(w*m.scale/m.width*100)+"%";el.style.height=(h*m.scale/m.height*100)+"%";el.textContent=String(content);el.style.fontWeight="700";m.layer.appendChild(el);return el;
+    const el=document.createElement("div");el.className=cls;el.dataset.layoutKey=activeLayoutKey||("p"+pi+"-"+Math.round(x*10)+"-"+Math.round(top*10));
+    if(activeWordKey)el.dataset.layoutWord=activeWordKey;if(activeLetterKey)el.dataset.layoutLetter=activeLetterKey;
+    const fieldOff=form93LayoutSettings[el.dataset.layoutKey]||{},wordOff=activeWordKey?(form93LayoutSettings[activeWordKey]||{}):{},letterOff=activeLetterKey?(form93LayoutSettings[activeLetterKey]||{}):{};
+    el.style.left=((x+Number(fieldOff.dx||0)+Number(wordOff.dx||0)+Number(letterOff.dx||0))*m.scale/m.width*100)+"%";el.style.top=((top+Number(fieldOff.dy||0)+Number(wordOff.dy||0)+Number(letterOff.dy||0)+correction)*m.scale/m.height*100)+"%";el.style.width=(w*m.scale/m.width*100)+"%";el.style.height=(h*m.scale/m.height*100)+"%";el.textContent=String(content);el.style.fontWeight="700";m.layer.appendChild(el);return el;
    };
    const text=(pi,x,top,value,w=120,size=6)=>{const prior=activeLayoutKey;activeLayoutKey="p"+pi+"-"+Math.round(x*10)+"-"+Math.round(top*10);const el=put(pi,x,top,w,12,value);activeLayoutKey=prior;if(el)el.style.fontSize=((size*1.12)*mScale(pageModels[pi]))+"px"};
    const mScale=m=>m.width/(m.page.view[2]-m.page.view[0]);
    const aadhaarNameGrid=(value)=>{const prior=activeLayoutKey;activeLayoutKey="p0-1800-2383";const parts=String(value||"").trim().toUpperCase().split(/\s+/).filter(Boolean);let pos=0;parts.forEach((part,idx)=>{if(idx===1)pos+=1;if(idx===2)pos+=1;[...part].forEach(ch=>{if(pos<25){if(ch!==" "){const el=put(0,180+pos*nameCellW,238.3,nameCellW,cellH,ch,"pan-html-char");if(el)el.style.fontSize=(5.9*mScale(pageModels[0]))+"px"}pos++}})});activeLayoutKey=prior};
    const grid=(pi,x,top,value,cols=36,cw=cellW,size=5.4)=>{
-    const prior=activeLayoutKey;activeLayoutKey="p"+pi+"-"+Math.round(x*10)+"-"+Math.round(top*10);
-    [...String(value??"").trim().toUpperCase()].slice(0,cols).forEach((ch,i)=>{if(ch===" ")return;const el=put(pi,x+i*cw,top,cw,cellH,ch,"pan-html-char");if(el)el.style.fontSize=(size*mScale(pageModels[pi]))+"px"});activeLayoutKey=prior;
+    const prior=activeLayoutKey,priorWord=activeWordKey,priorLetter=activeLetterKey,base="p"+pi+"-"+Math.round(x*10)+"-"+Math.round(top*10);activeLayoutKey=base;
+    let wordIndex=0;[...String(value??"").trim().toUpperCase()].slice(0,cols).forEach((ch,i)=>{if(ch===" "){wordIndex++;return}activeWordKey=base+"-w"+wordIndex;activeLetterKey=base+"-c"+i;const el=put(pi,x+i*cw,top,cw,cellH,ch,"pan-html-char");if(el)el.style.fontSize=(size*mScale(pageModels[pi]))+"px"});
+    activeLayoutKey=prior;activeWordKey=priorWord;activeLetterKey=priorLetter;
    };
    const nameCellW=15; const name=(pi,top,value)=>{const words=String(value||"").trim().replace(/\s+/g," ").split(" ").filter(Boolean);[words[0]||"",words[1]||"",words.slice(2).join(" ")].forEach((v,i)=>grid(pi,180,top+i*13.7-1.2,v,25,nameCellW,i===0?5.0:5.2))};
    const addr=(pi,p,top)=>{["flat","road","post","area","district"].forEach((k,i)=>grid(pi,180,top+i*13.7-2.5,r[p+"_"+k],25,15,5.4));grid(pi,132,top+5*13.7-2.5,r[p+"_state"],8,cellW,5.2);grid(pi,285,top+5*13.7-2.5,r[p+"_country"]||"India",12,cellW,5.2);grid(pi,455,top+5*13.7-2.5,r[p+"_pin"],10,cellW,5.2)};
@@ -1012,12 +1016,32 @@ async function showForm93HtmlPreview(r){
    const addImage=(pi,x,top,w,h,data)=>{if(!data)return;const el=put(pi,x,top-correction,w,h,"","pan-html-photo");el.style.backgroundImage="url("+data+")"};
    addImage(0,46,23,100,128,r.photo);addImage(0,443,23,100,128,r.photo);addImage(0,49,108,94,30,r.signature);addImage(1,329,620,200,65,r.signature);
    if(currentProfile?.role==="admin"){
-    const tools=document.createElement("div");tools.className="pan-calibration-toolbar";tools.innerHTML='<button type="button" class="secondary-btn" id="pan-calibrate-toggle">Adjust field positions</button><button type="button" class="secondary-btn" id="pan-calibrate-save" hidden>Save layout</button><button type="button" class="secondary-btn" id="pan-calibrate-reset" hidden>Reset positions</button><small id="pan-calibrate-help">Admin: enable adjustment, then drag a field on the form. Settings sync to mobile and desktop.</small>';overlay.querySelector(".pan-preview-header").after(tools);
+    const tools=document.createElement("div");tools.className="pan-calibration-toolbar";tools.innerHTML='<button type="button" class="secondary-btn" id="pan-calibrate-toggle">Adjust field positions</button><select id="pan-calibrate-mode" class="secondary-btn" aria-label="Adjustment mode"><option value="field">Whole field</option><option value="word">Each word</option><option value="letter">Each letter</option></select><button type="button" class="secondary-btn" id="pan-calibrate-save" hidden>Save layout</button><button type="button" class="secondary-btn" id="pan-calibrate-reset" hidden>Reset positions</button><small id="pan-calibrate-help">Choose Whole field, Each word, or Each letter, then drag the blue outline.</small>';overlay.querySelector(".pan-preview-header").after(tools);
     let calibration=false,drag=null;
     const toggle=tools.querySelector("#pan-calibrate-toggle"),save=tools.querySelector("#pan-calibrate-save"),reset=tools.querySelector("#pan-calibrate-reset");
-    const handles=[];
-    const makeHandles=()=>{handles.forEach(h=>h.remove());handles.length=0;pageModels.forEach(m=>{const groups=new Map();m.layer.querySelectorAll("[data-layout-key]").forEach(el=>{const k=el.dataset.layoutKey;if(!groups.has(k))groups.set(k,[]);groups.get(k).push(el)});groups.forEach((els,key)=>{const rects=els.map(e=>e.getBoundingClientRect()),left=Math.min(...rects.map(r=>r.left)),top=Math.min(...rects.map(r=>r.top)),right=Math.max(...rects.map(r=>r.right)),bottom=Math.max(...rects.map(r=>r.bottom));const h=document.createElement("div");h.className="pan-calibration-handle";h.dataset.key=key;h.style.left=((left-m.wrap.getBoundingClientRect().left)/m.wrap.clientWidth*100)+"%";h.style.top=((top-m.wrap.getBoundingClientRect().top)/m.wrap.clientHeight*100)+"%";h.style.width=Math.max(2,(right-left)/m.wrap.clientWidth*100)+"%";h.style.height=Math.max(1.5,(bottom-top)/m.wrap.clientHeight*100)+"%";h.title="Drag to reposition";h.addEventListener("pointerdown",e=>{if(!calibration)return;e.preventDefault();h.setPointerCapture(e.pointerId);drag={key,els,startX:e.clientX,startY:e.clientY,dx:0,dy:0};});h.addEventListener("pointermove",e=>{if(!drag||drag.key!==key)return;const dx=e.clientX-drag.startX,dy=e.clientY-drag.startY;drag.dx=dx;drag.dy=dy;els.forEach(el=>el.style.transform="translate("+dx+"px,"+dy+"px)");});h.addEventListener("pointerup",()=>{if(!drag||drag.key!==key)return;const scale=m.scale;const prev=form93LayoutSettings[key]||{};form93LayoutSettings[key]={...prev,dx:Number(prev.dx||0)+drag.dx/scale,dy:Number(prev.dy||0)+drag.dy/scale};els.forEach(el=>{el.style.transform="";el.style.left=(parseFloat(el.style.left)+drag.dx/m.wrap.clientWidth*100)+"%";el.style.top=(parseFloat(el.style.top)+drag.dy/m.wrap.clientHeight*100)+"%"});drag=null;makeHandles();});m.layer.appendChild(h);handles.push(h);});});};
-    toggle.onclick=()=>{calibration=!calibration;overlay.classList.toggle("pan-calibrating",calibration);toggle.textContent=calibration?"Finish adjusting":"Adjust field positions";save.hidden=!calibration;reset.hidden=!calibration;tools.querySelector("#pan-calibrate-help").textContent=calibration?"Drag the blue outlined field boxes. Changes are not saved until you tap Save layout.":"Admin: enable adjustment, then drag a field on the form.";if(calibration)makeHandles();else{handles.forEach(h=>h.remove());handles.length=0}};
+    const handles=[],modeSelect=tools.querySelector("#pan-calibrate-mode");
+    const makeHandles=()=>{
+      handles.forEach(h=>h.remove());handles.length=0;
+      const mode=modeSelect.value,attr=mode==="letter"?"layoutLetter":mode==="word"?"layoutWord":"layoutKey";
+      pageModels.forEach(m=>{
+        const groups=new Map();
+        m.layer.querySelectorAll("[data-layout-key]").forEach(el=>{const k=el.dataset[attr]||el.dataset.layoutKey;if(!groups.has(k))groups.set(k,[]);groups.get(k).push(el)});
+        groups.forEach((els,key)=>{
+          const rects=els.map(e=>e.getBoundingClientRect()),left=Math.min(...rects.map(r=>r.left)),top=Math.min(...rects.map(r=>r.top)),right=Math.max(...rects.map(r=>r.right)),bottom=Math.max(...rects.map(r=>r.bottom));
+          const h=document.createElement("div");h.className="pan-calibration-handle";h.dataset.key=key;
+          h.style.left=((left-m.wrap.getBoundingClientRect().left)/m.wrap.clientWidth*100)+"%";h.style.top=((top-m.wrap.getBoundingClientRect().top)/m.wrap.clientHeight*100)+"%";
+          h.style.width=Math.max(mode==="letter"?1:2,(right-left)/m.wrap.clientWidth*100)+"%";h.style.height=Math.max(mode==="letter"?0.8:1.5,(bottom-top)/m.wrap.clientHeight*100)+"%";
+          h.title=mode==="letter"?"Drag this letter":mode==="word"?"Drag this word":"Drag this field";
+          h.addEventListener("pointerdown",e=>{if(!calibration)return;e.preventDefault();h.setPointerCapture(e.pointerId);drag={key,els,startX:e.clientX,startY:e.clientY,dx:0,dy:0}});
+          h.addEventListener("pointermove",e=>{if(!drag||drag.key!==key)return;const dx=e.clientX-drag.startX,dy=e.clientY-drag.startY;drag.dx=dx;drag.dy=dy;els.forEach(el=>el.style.transform="translate("+dx+"px,"+dy+"px)")});
+          h.addEventListener("pointerup",()=>{if(!drag||drag.key!==key)return;const scale=m.scale,prev=form93LayoutSettings[key]||{};form93LayoutSettings[key]={...prev,dx:Number(prev.dx||0)+drag.dx/scale,dy:Number(prev.dy||0)+drag.dy/scale};
+            els.forEach(el=>{el.style.transform="";el.style.left=(parseFloat(el.style.left)+drag.dx/m.wrap.clientWidth*100)+"%";el.style.top=(parseFloat(el.style.top)+drag.dy/m.wrap.clientHeight*100)+"%"});drag=null;makeHandles()});
+          m.layer.appendChild(h);handles.push(h);
+        });
+      });
+    };
+    modeSelect.addEventListener("change",()=>{if(calibration)makeHandles()});
+    toggle.onclick=()=>{calibration=!calibration;overlay.classList.toggle("pan-calibrating",calibration);toggle.textContent=calibration?"Finish adjusting":"Adjust field positions";save.hidden=!calibration;reset.hidden=!calibration;tools.querySelector("#pan-calibrate-help").textContent=calibration?"Mode: "+modeSelect.options[modeSelect.selectedIndex].text+". Drag blue outlines; save when finished.":"Choose Whole field, Each word, or Each letter, then drag the blue outline.";if(calibration)makeHandles();else{handles.forEach(h=>h.remove());handles.length=0}};
     save.onclick=async()=>{try{await saveForm93LayoutSettings();save.textContent="Saved";setTimeout(()=>save.textContent="Save layout",1400)}catch(e){alert("Could not save layout: "+e.message)}};
     reset.onclick=async()=>{if(!confirm("Reset all Form 93 field positions to default?"))return;form93LayoutSettings={};try{await saveForm93LayoutSettings();overlay.remove();await print(r)}catch(e){alert("Could not reset layout: "+e.message)}};
    }
