@@ -1037,6 +1037,34 @@ function renderPanApplications(){
    group("PART F — COMMUNICATION ADDRESS",communication)+group("PART G — DOCUMENTS / PROOFS",proofs)+group("VERIFICATION AND DECLARATION",declaration)+
    '<section class="pan-section" style="padding:16px;border:1px solid #d8d8d8;border-radius:10px"><h3>Photograph & Signature</h3><div class="pan-grid"><label>Recent colour photograph (4.5 cm × 3.5 cm)<input id="pan-photo" type="file" accept="image/*"></label><label>Signature / left thumb impression<input id="pan-sign" type="file" accept="image/*"></label></div></section><button class="primary-btn" type="submit">Save Details & Preview Form</button><p id="pan-message"></p></form>';
   const f=$("pan-form");let photo="",signature="";
+  // India PIN lookup: fill district, state and matching post office for each address.
+  const attachPinLookup=(prefix)=>{
+   const pin=f.elements.namedItem(prefix+"_pin");
+   if(!pin)return;
+   pin.maxLength=6;pin.inputMode="numeric";pin.pattern="[0-9]{6}";
+   const district=f.elements.namedItem(prefix+"_district"),state=f.elements.namedItem(prefix+"_state"),post=f.elements.namedItem(prefix+"_post");
+   const note=document.createElement("small");note.className="pan-pin-status";note.setAttribute("aria-live","polite");pin.closest("label")?.appendChild(note);
+   let lastLookup="";
+   const lookup=async()=>{
+    const code=pin.value.trim();
+    if(!/^\\d{6}$/.test(code)){lastLookup="";note.textContent="Enter 6-digit PIN to auto-fill district and state.";return}
+    if(lastLookup===code)return;lastLookup=code;note.textContent="Looking up PIN…";
+    try{
+     const response=await fetch("https://api.postalpincode.in/pincode/"+encodeURIComponent(code));
+     if(!response.ok)throw new Error("PIN lookup service unavailable");
+     const result=await response.json(),entry=result?.[0];
+     if(!entry||entry.Status!=="Success"||!entry.PostOffice?.length)throw new Error("PIN not found");
+     const offices=entry.PostOffice;
+     const first=offices[0];
+     if(district)district.value=first.District||"";
+     if(state)state.value=first.State||"";
+     if(post)post.value=offices.length===1?first.Name:(post.value&&offices.some(x=>x.Name.toLowerCase()===post.value.toLowerCase())?post.value:first.Name);
+     note.textContent=offices.length>1?"District & State filled · Post Office: "+first.Name+" (multiple offices for this PIN)":"District, State & Post Office filled";
+    }catch(error){lastLookup="";note.textContent=error.message==="PIN not found"?"PIN not found. Check the 6 digits.":"Could not look up PIN. Enter district and state manually."}
+   };
+   pin.addEventListener("change",lookup);pin.addEventListener("blur",lookup);
+  };
+  ["res","office","ra"].forEach(attachPinLookup);
   // Safe defaults for commonly used values; identity and proof fields stay applicant-specific.
   const setDefault=(name,value)=>{const el=f.elements.namedItem(name);if(el&&!el.value)el.value=value};
   setDefault("res_country","India");
