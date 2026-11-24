@@ -953,13 +953,13 @@ function renderPanApplications(){
    draw(0,r.single_parent==="Yes"?243:304,725,"X",10,6.5);name(0,740,r.father);
    // Page 2: mother, AO, RA, communication and declaration.
    name(1,23,r.mother);draw(1,r.parent==="Father"?335:397,67,"X",10,6.5);
-   draw(1,408,107,r.ao_area,42,5.8);draw(1,565,107,r.ao_type,32,5.8);draw(1,408,121,r.ao_range,42,5.8);draw(1,565,121,r.ao_number,32,5.8);
-   name(1,164,r.ra_name);draw(1,307,207,r.ra_pan,160,5.8);draw(1,485,223,r.ra_aadhaar,175,5.8);
+   draw(1,235,107,r.ao_area,45,5.8);draw(1,395,107,r.ao_type,32,5.8);draw(1,235,121,r.ao_range,45,5.8);draw(1,395,121,r.ao_number,32,5.8);
+   name(1,164,r.ra_name);draw(1,180,207,r.ra_pan,160,5.8);draw(1,280,223,r.ra_aadhaar,175,5.8);
    const raParts=String(r.ra_address||"").split(/[,\n]/).map(x=>x.trim()).filter(Boolean);
-   ["flat","road","post","area","district"].forEach((k,i)=>draw(1,307,254+i*13.4,raParts[i]|| (i===0?r.ra_address:""),390,5.7));
-   draw(1,220,322,r.ra_state,90,5.5);draw(1,390,322,"India",90,5.5);draw(1,455,322,r.ra_pin,65,5.5);
+   ["flat","road","post","area","district"].forEach((k,i)=>draw(1,180,254+i*13.4,raParts[i]|| (i===0?r.ra_address:""),390,5.7));
+   draw(1,128,322,r.ra_state,82,5.5);draw(1,285,322,"India",90,5.5);draw(1,455,322,r.ra_pin,65,5.5);
    draw(1,240,353,"91",22,5.5);draw(1,355,353,r.ra_mobile,150,5.8);draw(1,240,367,r.ra_email,350,5.8);draw(1,240,381,r.ra_landline,170,5.8);
-   const comm={"Residence":367,"Representative Assessee Address":515,"Office":638};draw(1,comm[r.communication_address]||367,416,"X",10,6.5);
+   const comm={"Residence":216,"Representative Assessee Address":302,"Office":448};draw(1,comm[r.communication_address]||367,416,"X",10,6.5);
    const proofX=[70,169,270,70,169];["proof_identity","proof_address","proof_dob","ra_proof_identity","ra_proof_address"].forEach((k,i)=>{if(r[k])draw(1,proofX[i],474+(i>=3?37:0),"X",10,6.5)});
    draw(1,110,561,r.declarant_name,220,6);draw(1,365,561,r.declarant_capacity,130,6);
    draw(1,110,622,r.place,140,6);draw(1,110,637,r.declaration_date,140,6);
