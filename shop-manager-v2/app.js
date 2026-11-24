@@ -935,7 +935,7 @@ function renderPanApplications(){
     let fs=size;while(fs>4.8&&font.widthOfTextAtSize(value,fs)>max)fs-=.25;
     const page=pages[pi];page.drawText(value,{x,y:page.getHeight()-y-fs,font,size:fs,color:rgb(.04,.04,.04),maxWidth:max});
    };
-   const split=v=>{const a=String(v||"").trim().split(/\\s+/);if(a.length<2)return [a[0]||"","",""];return [a[0],a.length>2?a.slice(1,-1).join(" "):"",a[a.length-1]]};
+   const split=v=>{const a=String(v||"").trim().split(/\s+/);if(a.length<2)return [a[0]||"","",""];return [a[0],a.length>2?a.slice(1,-1).join(" "):"",a[a.length-1]]};
    const name=(pi,y,v)=>split(v).forEach((x,i)=>draw(pi,180,y+i*13,x,390,6.2));
    const addr=(pi,prefix,y)=>{const rows=["flat","road","post","area","district"];rows.forEach((k,i)=>draw(pi,180,y+i*13,r[prefix+"_"+k],390,6));draw(pi,132,y+5*13,r[prefix+"_state"],95,5.8);draw(pi,290,y+5*13,r[prefix+"_country"]||"India",95,5.8);draw(pi,465,y+5*13,r[prefix+"_pin"],75,6)};
    // Page 1 — coordinates follow the printed boxes and rows.
