@@ -1205,6 +1205,27 @@ function renderPanApplications(){
   $("pan-find").onclick=run;run();
  }
  $("pan-new").onclick=()=>form("new");$("pan-corr").onclick=()=>form("correction");$("pan-search").onclick=search;form("new");
+ // A one-click dummy-data preview lets staff verify PDF alignment without retyping a full application.
+ const sampleButton=document.createElement("button");sampleButton.type="button";sampleButton.className="secondary-btn pan-sample-preview";
+ sampleButton.textContent="Preview sample alignment (test only)";
+ sampleButton.title="Creates a temporary Form 93 preview with fictitious details; does not save or submit an application.";
+ $("pan-new").after(sampleButton);
+ sampleButton.addEventListener("click",()=>{
+  const sample={
+   name:"ARUN KUMAR REDDY",name_as_aadhaar:"ARUN KUMAR REDDY",gender:"Male",dob:"1993-01-29",aadhaar:"123456789012",
+   res_country:"India",res_flat:"12-4 MAIN BUILDING",res_road:"MAIN ROAD KORUKONDA",res_post:"KORUKONDA",res_area:"KORUKONDA",res_district:"EAST GODAVARI",res_state:"ANDHRA PRADESH",res_pin:"533289",
+   office_country:"India",office_flat:"SLV COMMUNICATIONS",office_road:"MAIN ROAD",office_post:"KORUKONDA",office_area:"KORUKONDA",office_district:"EAST GODAVARI",office_state:"ANDHRA PRADESH",office_pin:"533289",
+   residential_status:"Resident",passport:"",tin:"",mobile:"9876543210",email:"sample@example.com",landline:"0883",
+   income_sources:["Income from Business / Profession"],single_parent:"No",father_first:"RAMESH",father_middle:"KUMAR",father_last:"REDDY",
+   mother_first:"LAKSHMI",mother_middle:"DEVI",mother_last:"REDDY",parent:"Father",
+   ao_area:"APR",ao_type:"W",ao_range:"116",ao_number:"1",
+   ra_name:"",ra_pan:"",ra_aadhaar:"",ra_mobile:"",ra_email:"",ra_landline:"",
+   communication_address:"Residence",proof_identity:"Aadhaar",proof_address:"Aadhaar",proof_dob:"Aadhaar",
+   ra_proof_identity:"",ra_proof_address:"",declarant_name:"ARUN KUMAR REDDY",declarant_capacity:"Self",declarant_designation:"",
+   place:"KORUKONDA",declaration_date:"2026-11-24",temp_ack:"SLV-SAMPLE-ALIGNMENT",photo:"",signature:""
+  };
+  print(sample);
+ });
 }
 
 const announcementMeta={
