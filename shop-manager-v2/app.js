@@ -157,11 +157,27 @@ $("login-form").addEventListener("submit", async (event) => {
   button.disabled = true;
   button.textContent = "Signing in…";
   setMessage("", false);
-  const {data,error} = await supabase.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value});
-  if (error) setMessage(error.message);
-  else await showApp(data.user);
-  button.disabled = false;
-  button.innerHTML = 'Sign in <span>→</span>';
+  try {
+    const authResult = await Promise.race([
+      supabase.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value}),
+      new Promise((_,reject)=>setTimeout(()=>reject(new Error("Login request timed out. Check internet connection and try again.")),18000))
+    ]);
+    if (authResult.error) {
+      setMessage(authResult.error.message);
+      return;
+    }
+    button.textContent = "Loading workspace…";
+    await Promise.race([
+      showApp(authResult.data.user),
+      new Promise((_,reject)=>setTimeout(()=>reject(new Error("Login succeeded, but the workspace is taking too long to load. Refresh and try again.")),18000))
+    ]);
+  } catch (err) {
+    console.error("SLV login error:",err);
+    setMessage(err?.message || "Unable to sign in. Please check your connection and try again.");
+  } finally {
+    button.disabled = false;
+    button.innerHTML = 'Sign in <span>→</span>';
+  }
 });
 $("toggle-password").addEventListener("click",()=>{
   const input = $("password");
