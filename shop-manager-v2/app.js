@@ -179,6 +179,8 @@ document.querySelectorAll(".nav-item").forEach(btn=>btn.addEventListener("click"
   $("page-title").textContent=btn.textContent.trim();
   if(view==="billing") {
     await renderQuickBilling();
+  } else if(view==="quicklinks") {
+    await renderQuickLinks();
   } else if(view==="services") {
     await renderServiceManager();
   } else if(view==="wallets") {
@@ -666,3 +668,54 @@ async function applyApprovedEdit(transactionId,requestId){
 
 const {data:{session}} = await supabase.auth.getSession();
 if(session?.user) await showApp(session.user);
+
+
+async function renderQuickLinks() {
+  const host=$("other-view");
+  const admin=currentProfile?.role==="admin";
+  const {data:links,error}=await supabase.from("quick_links")
+    .select("id,name,url,category,is_active,sort_order").order("sort_order").order("name");
+  if(error){
+    host.innerHTML='<div class="empty-panel"><h2>Quick Links</h2><p>Unable to load saved websites. Please refresh or contact Admin.</p></div>';
+    console.error(error); return;
+  }
+  const visible=(links||[]).filter(x=>admin||x.is_active);
+  host.innerHTML=`
+    <div class="admin-module-head"><div><div class="eyebrow">WORKSPACE TOOLS</div><h2>Daily Use Websites</h2><p>Open approved work portals in a new browser tab. Your SLV dashboard stays open.</p></div></div>
+    ${admin?`<div class="admin-editor quick-link-editor"><h3>Manage websites</h3>
+      <form id="quick-link-form" class="quick-link-form">
+        <label>Website name<input id="quick-link-name" maxlength="80" required placeholder="e.g. CSC Digital Seva"></label>
+        <label>Website URL<input id="quick-link-url" type="url" required placeholder="https://example.gov.in"></label>
+        <label>Category<input id="quick-link-category" maxlength="50" value="General" placeholder="Government Services"></label>
+        <button class="primary-btn" type="submit">+ Add Website</button>
+      </form>
+    </div>`:''}
+    <div class="quick-link-grid">
+      ${visible.length?visible.map(link=>`<article class="quick-link-card">
+        <div class="quick-link-mark">↗</div><div class="quick-link-info"><strong>${escapeHtml(link.name)}</strong><small>${escapeHtml(link.category||"General")}</small></div>
+        <a class="primary-btn quick-link-open" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">Open Website ↗</a>
+        ${admin?`<div class="quick-link-admin"><span>${link.is_active?"Active":"Hidden for employees"}</span><button type="button" class="secondary-btn" data-link-toggle="${link.id}" data-active="${link.is_active}">${link.is_active?"Hide":"Show"}</button><button type="button" class="danger-btn" data-link-delete="${link.id}">Delete</button></div>`:''}
+      </article>`).join(""):'<div class="empty-state">No websites are available yet. Ask Admin to add a website.</div>'}
+    </div>
+    <div class="quick-link-note"><strong>Customer form assistance:</strong> External portals may block automatic form filling. For security, enter passwords, OTPs and CAPTCHA directly on the official website. Never save CSC login credentials here.</div>`;
+  if(admin){
+    $("quick-link-form").addEventListener("submit",async e=>{
+      e.preventDefault();
+      const name=$("quick-link-name").value.trim(),url=$("quick-link-url").value.trim(),category=$("quick-link-category").value.trim()||"General";
+      let parsed;try{parsed=new URL(url)}catch{return alert("Enter a valid website URL.");}
+      if(parsed.protocol!=="https:")return alert("Only secure HTTPS websites are allowed.");
+      const {error:saveError}=await supabase.from("quick_links").insert({name,url:parsed.href,category,created_by:(await supabase.auth.getUser()).data.user?.id});
+      if(saveError){alert("Could not add website: "+saveError.message);return;}
+      await renderQuickLinks();
+    });
+    host.querySelectorAll("[data-link-toggle]").forEach(btn=>btn.addEventListener("click",async()=>{
+      const {error:updateError}=await supabase.from("quick_links").update({is_active:btn.dataset.active!=="true"}).eq("id",btn.dataset.linkToggle);
+      if(updateError){alert("Could not update website.");return;} await renderQuickLinks();
+    }));
+    host.querySelectorAll("[data-link-delete]").forEach(btn=>btn.addEventListener("click",async()=>{
+      if(!confirm("Delete this website link?"))return;
+      const {error:deleteError}=await supabase.from("quick_links").delete().eq("id",btn.dataset.linkDelete);
+      if(deleteError){alert("Could not delete website.");return;} await renderQuickLinks();
+    }));
+  }
+}
