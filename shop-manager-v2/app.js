@@ -957,7 +957,7 @@ function renderPanApplications(){
    const grid=(pi,x,top,value,cols=36,cw=cellW,size=5.4)=>{
     [...String(value??"").trim().toUpperCase()].slice(0,cols).forEach((ch,i)=>{if(ch===" ")return;const el=put(pi,x+i*cw,top,cw,cellH,ch,"pan-html-char");if(el)el.style.fontSize=(size*mScale(pageModels[pi]))+"px"});
    };
-   const name=(pi,top,value)=>{const words=String(value||"").trim().replace(/\s+/g," ").split(" ").filter(Boolean);[words[0]||"",words[1]||"",words.slice(2).join(" ")].forEach((v,i)=>grid(pi,180,top+i*13.7,v,36,cellW,5.2))};
+   const name=(pi,top,value)=>{const words=String(value||"").trim().replace(/\s+/g," ").split(" ").filter(Boolean);[words[0]||"",words[1]||"",words.slice(2).join(" ")].forEach((v,i)=>grid(pi,180,top+i*13.7+(i===0?1.2:0),v,36,cellW,i===0?5.0:5.2))};
    const addr=(pi,p,top)=>{["flat","road","post","area","district"].forEach((k,i)=>grid(pi,180,top+i*13.7,r[p+"_"+k],36,cellW,5.4));grid(pi,132,top+5*13.7,r[p+"_state"],8,cellW,5.2);grid(pi,285,top+5*13.7,r[p+"_country"]||"India",12,cellW,5.2);grid(pi,455,top+5*13.7,r[p+"_pin"],10,cellW,5.2)};
    const mark=(pi,x,top)=>{const el=put(pi,x,top,10,12,"✓","pan-html-mark");if(el)el.style.fontSize=(8*mScale(pageModels[pi]))+"px";return el};
    // Page 1: applicant identity and contact.
