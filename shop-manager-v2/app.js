@@ -916,7 +916,7 @@ function renderPanApplications(){
  const field=(name,label,type="text",required=false,placeholder="")=>'<label>'+esc(label)+(required?' *':'')+'<input name="'+name+'" type="'+type+'" '+(required?'required':'')+' placeholder="'+esc(placeholder)+'"></label>';
  const select=(name,label,opts,required=false)=>'<label>'+esc(label)+(required?' *':'')+'<select name="'+name+'" '+(required?'required':'')+'><option value="">Select</option>'+opts.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join("")+'</select></label>';
  const group=(title,body,desc="")=>'<section class="pan-section" style="margin:18px 0;padding:16px;border:1px solid #d8d8d8;border-radius:10px"><h3>'+title+'</h3>'+(desc?'<p class="muted">'+desc+'</p>':'')+'<div class="pan-grid">'+body+'</div></section>';
- const addr=(prefix,label)=>addressFields(prefix,label).map(([n,l,v])=>field(n,l,"text",n.endsWith("_pin"),v)).join("");
+ const addr=(prefix,label)=>addressFields(prefix,label).map(([n,l,v])=>field(n,l,"text",n==="res_pin",v)).join("");
  host.innerHTML='<h2>PAN Applications</h2><p>New PAN Form 93 · Correction CR-01 · Full applicant details · Local device records</p><div class="pan-tabs"><button id="pan-new">New PAN – Form 93</button><button id="pan-corr">Correction – CR-01</button><button id="pan-search">Search / Link Ack</button></div><div id="pan-work"></div>';
  const root=$("pan-work");
  function print(r){
@@ -967,6 +967,8 @@ function renderPanApplications(){
    if(r.office_pin&&!/^\d{6}$/.test(r.office_pin))return alert("Office PIN must contain 6 digits.");
    if(r.ra_aadhaar&&!/^\d{12}$/.test(r.ra_aadhaar.replace(/\s/g,"")))return alert("RA Aadhaar must contain 12 digits.");
    if(r.ra_pan&&!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(r.ra_pan.toUpperCase()))return alert("Enter a valid RA PAN.");
+   if(r.kind==="Minor"&&(!r.ra_name||!r.ra_relation||!r.ra_mobile||!r.ra_email||!r.ra_address||!r.ra_city||!r.ra_state||!r.ra_pin))return alert("Minor applicant: complete all Representative Assessee details.");
+   if(r.kind==="Minor"&&!r.ra_pan&&!r.ra_aadhaar)return alert("Minor applicant: enter RA PAN or RA Aadhaar.");
    if(mode==="correction"&&!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test((r.pan||"").toUpperCase()))return alert("Enter a valid existing PAN.");
    if(r.residential_status!=="Resident"&&(!r.passport||!r.passport.trim()))return alert("Passport number is mandatory for Non-resident / RNOR applicants.");
    if(!r.income_sources.length)return alert("Select at least one source of income.");
