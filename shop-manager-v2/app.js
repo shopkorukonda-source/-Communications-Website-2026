@@ -366,26 +366,57 @@ async function transferWallet(e){
   catch(err){msg.textContent=err.message||"Transfer failed.";}
   finally{btn.disabled=false;}
 }
+
+const financePeriodLabels={day:"Daily",week:"Weekly",fortnight:"Fortnightly",month:"Monthly",year:"Yearly"};
+function financeRange(period){
+ const now=new Date(),start=new Date(now.getFullYear(),now.getMonth(),now.getDate()),end=new Date(start);
+ if(period==="day")end.setDate(end.getDate()+1);
+ else if(period==="week"){const day=(start.getDay()+6)%7;start.setDate(start.getDate()-day);end.setTime(start.getTime());end.setDate(end.getDate()+7)}
+ else if(period==="fortnight"){if(start.getDate()<=15){start.setDate(1);end.setDate(16)}else{start.setDate(16);end.setMonth(end.getMonth()+1,1)}}
+ else if(period==="month"){start.setDate(1);end.setMonth(end.getMonth()+1,1)}
+ else {start.setMonth(0,1);end.setFullYear(end.getFullYear()+1,0,1)}
+ return {start,end};
+}
 async function renderReports(){
-  const host=$("other-view");host.innerHTML=`
-    <div class="admin-module-head"><div><div class="eyebrow">ADMINISTRATION</div><h2>Reports</h2><p>Billing totals and profit summaries for your shop.</p></div><select id="report-period" class="search-input"><option value="day">Today</option><option value="week">Last 7 days</option><option value="month">This month</option></select></div>
-    <div class="admin-module-stats"><div><small>Customer collections</small><strong id="report-sales">₹0.00</strong></div><div><small>Processing cost</small><strong id="report-cost">₹0.00</strong></div><div><small>Profit</small><strong id="report-profit">₹0.00</strong></div></div>
-    <div class="admin-table-wrap"><h3>Recent bills</h3><div id="report-rows"></div></div>`;
-  $("report-period").addEventListener("change",loadReportsData);await loadReportsData();
+ const host=$("other-view");host.innerHTML=`
+ <div class="admin-module-head"><div><div class="eyebrow">ADMIN FINANCIAL CONTROL</div><h2>Targets, Income & Expenses</h2><p>Track earned service income against targets, operating expenses and net profit.</p></div><select id="report-period" class="search-input"><option value="day">Daily</option><option value="week">Weekly (Monday–Sunday)</option><option value="fortnight">Fortnightly (1–15 / 16–month end)</option><option value="month">Monthly</option><option value="year">Yearly</option></select></div>
+ <div class="finance-period-label" id="finance-period-label"></div>
+ <div class="finance-kpi-grid">
+  <article class="finance-kpi"><small>Income target</small><strong id="finance-target">₹0.00</strong><span id="finance-progress-label">0% achieved</span><div class="finance-progress"><i id="finance-progress-bar"></i></div></article>
+  <article class="finance-kpi"><small>Earned income</small><strong id="finance-income">₹0.00</strong><span>Service margin + earned commission</span></article>
+  <article class="finance-kpi"><small>Expenses</small><strong id="finance-expenses">₹0.00</strong><span id="finance-expense-count">0 expenses</span></article>
+  <article class="finance-kpi"><small>Net profit after expenses</small><strong id="finance-net">₹0.00</strong><span>Earned income − operating expenses</span></article>
+ </div>
+ <div class="finance-secondary-stats"><div><small>Customer collections (not income)</small><strong id="finance-collections">₹0.00</strong></div><div><small>Processing costs already deducted in earned income</small><strong id="finance-processing">₹0.00</strong></div></div>
+ <div class="admin-editor finance-target-editor"><h3>Set income targets</h3><p>Set a recurring target for each period. Actual income is compared with the selected period's target.</p><form id="finance-target-form" class="finance-target-form"><label>Target period<select id="finance-target-period"><option value="day">Daily</option><option value="week">Weekly</option><option value="fortnight">Fortnightly</option><option value="month">Monthly</option><option value="year">Yearly</option></select></label><label>Income target (₹)<input id="finance-target-input" type="number" min="0" step=".01" required></label><button class="primary-btn" type="submit">Save target</button></form><div id="finance-target-message" class="message"></div><div class="finance-target-chips" id="finance-target-chips"></div></div>
+ <div class="finance-lower-grid"><div class="admin-table-wrap"><h3>Expense category breakdown</h3><div id="finance-category-rows"></div></div><div class="admin-table-wrap"><h3>Recent expenses</h3><div id="finance-expense-rows"></div></div></div>
+ <div class="admin-table-wrap"><h3>Recent bills</h3><div id="report-rows"></div></div>`;
+ $("report-period").addEventListener("change",loadReportsData);
+ $("finance-target-period").addEventListener("change",async()=>{const {data}=await supabase.from("income_targets").select("period_type,target_amount");const key=$("finance-target-period").value;const x=(data||[]).find(v=>v.period_type===key);$("finance-target-input").value=Number(x?.target_amount||0)});
+ $("finance-target-form").addEventListener("submit",async e=>{e.preventDefault();const period=$("finance-target-period").value,amount=Number($("finance-target-input").value);if(!Number.isFinite(amount)||amount<0)return;const {error}=await supabase.from("income_targets").upsert({period_type:period,target_amount:amount,updated_by:(await supabase.auth.getUser()).data.user?.id,updated_at:new Date().toISOString()},{onConflict:"period_type"});$("finance-target-message").textContent=error?"Unable to save target: "+error.message:"Target saved successfully.";if(!error)await loadReportsData()});
+ await loadReportsData();
 }
 async function loadReportsData(){
-  const period=$("report-period").value,now=new Date(),start=new Date(now);
-  if(period==="day")start.setHours(0,0,0,0);else if(period==="week"){start.setDate(start.getDate()-6);start.setHours(0,0,0,0);}else start.setDate(1);
-  const [{data:summary,error:sumError},{data:rows,error:rowsError}]=await Promise.all([
-    supabase.rpc("get_billing_summary",{p_start:start.toISOString(),p_end:now.toISOString()}),
-    supabase.from("billing_transactions").select("id,bill_number,customer_name,customer_total,processing_total,profit_total,payment_mode,created_at").gte("created_at",start.toISOString()).order("created_at",{ascending:false}).limit(20)
-  ]);
-  if(sumError||rowsError){$("report-rows").innerHTML='<div class="empty-state">Unable to load reports: '+escapeHtml((sumError||rowsError).message)+'</div>';return;}
-  const s=Array.isArray(summary)?summary[0]:(summary||{});
-  $("report-sales").textContent="₹"+Number(s.customer_collections||0).toFixed(2);
-  $("report-cost").textContent="₹"+Number(s.processing_cost||0).toFixed(2);
-  $("report-profit").textContent="₹"+Number(s.net_profit||0).toFixed(2);
-  $("report-rows").innerHTML=(rows||[]).length?rows.map(x=>'<div class="admin-service-row"><div class="admin-service-main"><strong>Bill #'+x.bill_number+'</strong><small>'+escapeHtml(x.customer_name||"Walk-in customer")+' · '+new Date(x.created_at).toLocaleString("en-IN")+'</small></div><div class="admin-service-meta"><strong>₹'+Number(x.customer_total).toFixed(2)+'</strong><span>Profit ₹'+Number(x.profit_total).toFixed(2)+'</span></div><div class="admin-service-meta"><span>'+escapeHtml(x.payment_mode)+'</span></div></div>').join(""):'<div class="empty-state">No bills in this period.</div>';
+ const period=$("report-period")?.value||"day",{start,end}=financeRange(period),startIso=start.toISOString(),endIso=end.toISOString(),startDate=start.toISOString().slice(0,10),endDate=new Date(end.getTime()-86400000).toISOString().slice(0,10);
+ const [tx,ex,targets]=await Promise.all([
+  supabase.from("billing_transactions").select("id,bill_number,customer_name,customer_total,processing_total,profit_total,payment_mode,created_at").gte("created_at",startIso).lt("created_at",endIso).order("created_at",{ascending:false}).limit(1000),
+  supabase.from("expenses").select("id,expense_date,category,description,amount,payment_mode").gte("expense_date",startDate).lte("expense_date",endDate).order("expense_date",{ascending:false}).limit(1000),
+  supabase.from("income_targets").select("period_type,target_amount")
+ ]);
+ const failure=tx.error||ex.error||targets.error;if(failure){$("report-rows").innerHTML='<div class="empty-state">Unable to load financial report: '+escapeHtml(failure.message)+'</div>';return}
+ const bills=tx.data||[],expenses=ex.data||[],targetRows=targets.data||[];
+ const sum=(arr,k)=>arr.reduce((n,x)=>n+Number(x[k]||0),0),income=sum(bills,"profit_total"),expenseTotal=sum(expenses,"amount"),collection=sum(bills,"customer_total"),processing=sum(bills,"processing_total"),target=Number(targetRows.find(x=>x.period_type===period)?.target_amount||0),net=income-expenseTotal,pct=target>0?income/target*100:0;
+ const money=v=>"₹"+Number(v||0).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2});
+ $("finance-period-label").textContent=financePeriodLabels[period]+" · "+startDate+" to "+endDate;
+ $("finance-target").textContent=money(target);$("finance-income").textContent=money(income);$("finance-expenses").textContent=money(expenseTotal);$("finance-net").textContent=money(net);$("finance-collections").textContent=money(collection);$("finance-processing").textContent=money(processing);$("finance-expense-count").textContent=expenses.length+" expense entries";
+ $("finance-progress-label").textContent=target>0?Math.min(pct,999).toFixed(1)+"% achieved"+(pct>=100?" · Target reached":""):"Set a target to track progress";
+ $("finance-progress-bar").style.width=Math.min(pct,100)+"%";
+ $("finance-target-input").value=Number(targetRows.find(x=>x.period_type===$("finance-target-period").value)?.target_amount||0);
+ $("finance-target-chips").innerHTML=Object.entries(financePeriodLabels).map(([k,label])=>{const v=targetRows.find(x=>x.period_type===k);return '<span>'+label+': <b>'+money(v?.target_amount||0)+'</b></span>'}).join("");
+ const cats={};expenses.forEach(x=>{const k=x.category||"Other";cats[k]=(cats[k]||0)+Number(x.amount||0)});
+ $("finance-category-rows").innerHTML=Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([k,v])=>'<div class="admin-service-row"><div class="admin-service-main"><strong>'+escapeHtml(k)+'</strong></div><div class="admin-service-meta"><strong>'+money(v)+'</strong></div></div>').join("")||'<div class="empty-state">No expenses in this period.</div>';
+ $("finance-expense-rows").innerHTML=expenses.slice(0,30).map(x=>'<div class="admin-service-row"><div class="admin-service-main"><strong>'+escapeHtml(x.category)+'</strong><small>'+x.expense_date+' · '+escapeHtml(x.description||"")+'</small></div><div class="admin-service-meta"><strong>'+money(x.amount)+'</strong><span>'+escapeHtml(x.payment_mode||"")+'</span></div></div>').join("")||'<div class="empty-state">No expenses in this period.</div>';
+ $("report-rows").innerHTML=bills.slice(0,30).map(x=>'<div class="admin-service-row"><div class="admin-service-main"><strong>Bill #'+x.bill_number+'</strong><small>'+escapeHtml(x.customer_name||"Walk-in customer")+' · '+new Date(x.created_at).toLocaleString("en-IN")+'</small></div><div class="admin-service-meta"><strong>'+money(x.profit_total)+' income</strong><span>'+money(x.customer_total)+' collected</span></div><div class="admin-service-meta"><span>'+escapeHtml(x.payment_mode)+'</span></div></div>').join("")||'<div class="empty-state">No bills in this period.</div>';
 }
 async function renderEmployeeManager(){
   const {data:profiles}=await supabase.from("profiles").select("id,display_name,phone,role").eq("is_active",true).eq("role","employee").order("display_name");
