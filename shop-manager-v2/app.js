@@ -997,9 +997,8 @@ function renderPanApplications(){
   const f=$("pan-form");let photo="",signature="";
   // Safe defaults for commonly used values; identity and proof fields stay applicant-specific.
   const setDefault=(name,value)=>{const el=f.elements.namedItem(name);if(el&&!el.value)el.value=value};
-  setDefault("res_country","India");setDefault("res_state","Andhra Pradesh");
-  setDefault("office_country","India");setDefault("office_state","Andhra Pradesh");
-  setDefault("ra_state","Andhra Pradesh");setDefault("residential_status","Resident");
+  setDefault("res_country","India");
+  setDefault("office_country","India");setDefault("residential_status","Resident");
   setDefault("single_parent","No");setDefault("parent","Father");
   setDefault("communication_address","Residence");setDefault("declarant_capacity","Self");
   setDefault("declaration_date",new Date().toISOString().slice(0,10));
