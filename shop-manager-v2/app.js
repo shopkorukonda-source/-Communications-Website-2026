@@ -384,7 +384,7 @@ async function renderReports(){
  <div class="admin-module-head"><div><div class="eyebrow">ADMIN FINANCIAL CONTROL</div><h2>Targets, Income & Expenses</h2><p>Track earned service income against targets, operating expenses and net profit.</p></div><select id="report-period" class="search-input"><option value="day">Daily</option><option value="week">Weekly (Monday–Sunday)</option><option value="fortnight">Fortnightly (1–15 / 16–month end)</option><option value="month">Monthly</option><option value="year">Yearly</option></select></div>
  <div class="finance-period-label" id="finance-period-label"></div>
  <div class="finance-kpi-grid">
-  <article class="finance-kpi"><small>Income target</small><strong id="finance-target">₹0.00</strong><span id="finance-progress-label">0% achieved</span><div class="finance-progress"><i id="finance-progress-bar"></i></div></article>
+  <article class="finance-kpi"><small>Income target (including carry forward)</small><strong id="finance-target">₹0.00</strong><span id="finance-target-carry">Carry forward: ₹0.00</span><span id="finance-progress-label">0% achieved</span><div class="finance-progress"><i id="finance-progress-bar"></i></div></article>
   <article class="finance-kpi"><small>Earned income</small><strong id="finance-income">₹0.00</strong><span>Service margin + earned commission</span></article>
   <article class="finance-kpi"><small>Expenses</small><strong id="finance-expenses">₹0.00</strong><span id="finance-expense-count">0 expenses</span><div class="finance-progress"><i id="finance-expense-progress-bar"></i></div><span id="finance-expense-progress-label">No expense budget set</span></article>
   <article class="finance-kpi"><small>Net profit after expenses</small><strong id="finance-net">₹0.00</strong><span>Earned income − operating expenses</span></article>
@@ -394,7 +394,7 @@ async function renderReports(){
  <div class="finance-lower-grid"><div class="admin-table-wrap"><h3>Expense category breakdown</h3><div id="finance-category-rows"></div></div><div class="admin-table-wrap"><h3>Recent expenses</h3><div id="finance-expense-rows"></div></div></div>
  <div class="admin-table-wrap"><h3>Recent bills</h3><div id="report-rows"></div></div>`;
  $("report-period").addEventListener("change",loadReportsData);
- $("finance-target-period").addEventListener("change",async()=>{const {data}=await supabase.from("income_targets").select("period_type,target_amount");const key=financeDbPeriod[$("finance-target-period").value];const x=(data||[]).find(v=>v.period_type===key);$("finance-target-input").value=Number(x?.target_amount||0);$("finance-expense-target-input").value=Number(x?.expense_target_amount||0)});
+ $("finance-target-period").addEventListener("change",async()=>{const {data}=await supabase.from("income_targets").select("period_type,target_amount,daily_target_start_date");const key=financeDbPeriod[$("finance-target-period").value];const x=(data||[]).find(v=>v.period_type===key);$("finance-target-input").value=Number(x?.target_amount||0);$("finance-expense-target-input").value=Number(x?.expense_target_amount||0)});
  $("finance-target-form").addEventListener("submit",async e=>{e.preventDefault();const period=financeDbPeriod[$("finance-target-period").value],amount=Number($("finance-target-input").value),expenseBudget=Number($("finance-expense-target-input").value);if(!Number.isFinite(amount)||amount<0||!Number.isFinite(expenseBudget)||expenseBudget<0)return;const {error}=await supabase.from("income_targets").upsert({period_type:period,target_amount:amount,expense_target_amount:expenseBudget,updated_by:(await supabase.auth.getUser()).data.user?.id,updated_at:new Date().toISOString()},{onConflict:"period_type"});$("finance-target-message").textContent=error?"Unable to save target: "+error.message:"Target saved successfully.";if(!error)await loadReportsData()});
  await loadReportsData();
 }
@@ -407,10 +407,21 @@ async function loadReportsData(){
  ]);
  const failure=tx.error||ex.error||targets.error;if(failure){$("report-rows").innerHTML='<div class="empty-state">Unable to load financial report: '+escapeHtml(failure.message)+'</div>';return}
  const bills=tx.data||[],expenses=ex.data||[],targetRows=targets.data||[];
- const sum=(arr,k)=>arr.reduce((n,x)=>n+Number(x[k]||0),0),income=sum(bills,"profit_total"),expenseTotal=sum(expenses,"amount"),collection=sum(bills,"customer_total"),processing=sum(bills,"processing_total"),targetRow=targetRows.find(x=>x.period_type===financeDbPeriod[period]),target=Number(targetRow?.target_amount||0),expenseBudget=Number(targetRow?.expense_target_amount||0),net=income-expenseTotal,pct=target>0?income/target*100:0,expensePct=expenseBudget>0?expenseTotal/expenseBudget*100:0;
+ const sum=(arr,k)=>arr.reduce((n,x)=>n+Number(x[k]||0),0),income=sum(bills,"profit_total"),expenseTotal=sum(expenses,"amount"),collection=sum(bills,"customer_total"),processing=sum(bills,"processing_total"),targetRow=targetRows.find(x=>x.period_type===financeDbPeriod[period]),baseTarget=Number(targetRow?.target_amount||0),expenseBudget=Number(targetRow?.expense_target_amount||0);
+ let carryForward=0;
+ if(period==="day"&&baseTarget>0&&targetRow?.daily_target_start_date){
+  const carryStart=new Date(targetRow.daily_target_start_date+"T00:00:00");
+  if(carryStart<start){
+   const history=await supabase.from("billing_transactions").select("profit_total,created_at").gte("created_at",carryStart.toISOString()).lt("created_at",startIso).limit(10000);
+   if(history.error){$("report-rows").innerHTML='<div class="empty-state">Unable to calculate daily target carry forward: '+escapeHtml(history.error.message)+'</div>';return}
+   const dailyIncome={};(history.data||[]).forEach(x=>{const key=financeYmd(new Date(x.created_at));dailyIncome[key]=(dailyIncome[key]||0)+Number(x.profit_total||0)});
+   for(let d=new Date(carryStart);d<start;d.setDate(d.getDate()+1)){const dayKey=financeYmd(d);carryForward=Math.max(0,baseTarget+carryForward-(dailyIncome[dayKey]||0))}
+  }
+ }
+ const target=baseTarget+(period==="day"?carryForward:0),net=income-expenseTotal,pct=target>0?income/target*100:0,expensePct=expenseBudget>0?expenseTotal/expenseBudget*100:0;
  const money=v=>"₹"+Number(v||0).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2});
  $("finance-period-label").textContent=financePeriodLabels[period]+" · "+startDate+" to "+endDate;
- $("finance-target").textContent=money(target);$("finance-income").textContent=money(income);$("finance-expenses").textContent=money(expenseTotal);$("finance-net").textContent=money(net);$("finance-collections").textContent=money(collection);$("finance-processing").textContent=money(processing);$("finance-expense-count").textContent=expenses.length+" expense entries";
+ $("finance-target").textContent=money(target);$("finance-target-carry").textContent=period==="day"?"Carry forward: "+money(carryForward):"No daily carry forward for this period";$("finance-income").textContent=money(income);$("finance-expenses").textContent=money(expenseTotal);$("finance-net").textContent=money(net);$("finance-collections").textContent=money(collection);$("finance-processing").textContent=money(processing);$("finance-expense-count").textContent=expenses.length+" expense entries";
  $("finance-progress-label").textContent=target>0?Math.min(pct,999).toFixed(1)+"% achieved"+(pct>=100?" · Target reached":""):"Set a target to track progress";
  $("finance-progress-bar").style.width=Math.min(pct,100)+"%";$("finance-expense-progress-bar").style.width=Math.min(expensePct,100)+"%";$("finance-expense-progress-label").textContent=expenseBudget>0?(expensePct.toFixed(1)+"% of budget used"):"No expense budget set";
  $("finance-target-input").value=Number(targetRows.find(x=>x.period_type===financeDbPeriod[$("finance-target-period").value])?.target_amount||0);$("finance-expense-target-input").value=Number(targetRows.find(x=>x.period_type===financeDbPeriod[$("finance-target-period").value])?.expense_target_amount||0);
