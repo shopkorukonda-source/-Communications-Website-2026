@@ -964,7 +964,7 @@ function renderPanApplications(){
    // Page 1: applicant identity and contact.
    name(0,183.5,r.name);aadhaarNameGrid(r.name_as_aadhaar||r.name);
    mark(0,({Male:183,Female:229,Transgender:290})[r.gender]||183,280.5);
-   if(r.dob){const [yy,mm,dd]=r.dob.split("-");[dd,mm,yy].forEach((part,i)=>grid(0,181+[0,40,80][i],294,part,4,15,6.5))}
+   if(r.dob){const [yy,mm,dd]=r.dob.split("-");[dd,mm,yy].forEach((part,i)=>grid(0,181+[0,44,80][i],291.5,part,4,15,6.5))}
    grid(0,185,307,r.aadhaar,12,10.62,5.8);addr(0,"res",342);if(r.office_flat||r.office_road||r.office_pin)addr(0,"office",435);
    mark(0,({Resident:213,"Non-resident":275,"Resident but not ordinarily resident":352})[r.residential_status]||213,523);
    text(0,345,547,r.passport,160,5.8);text(0,345,563,r.tin,180,5.8);
