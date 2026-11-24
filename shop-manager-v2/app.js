@@ -50,9 +50,10 @@ async function showApp(user) {
 async function loadCatalog() {
   const grid = $("category-grid");
   grid.innerHTML = '<div class="loading-card">Loading categories…</div>';
+  const serviceFields=currentProfile?.role==="admin"?"id,category_id,name,code,description,billing_type,processing_cost_type,profit_mode,billing_config,processing_cost_config,profit_config,sort_order,is_active":"id,category_id,name,code,description,billing_type,processing_cost_type,profit_mode,billing_config,processing_cost_config,sort_order,is_active";
   const [{data: cats, error: catError},{data: rows,error: serviceError}] = await Promise.all([
     supabase.from("service_categories").select("id,name,slug,sort_order,is_active").order("sort_order"),
-    supabase.from("services").select("id,category_id,name,code,description,billing_type,processing_cost_type,profit_mode,billing_config,processing_cost_config,profit_config,sort_order,is_active").order("sort_order")
+    supabase.from("services").select(serviceFields).order("sort_order")
   ]);
   if (catError || serviceError) {
     grid.innerHTML = '<div class="empty-state">Unable to load the service catalogue. Please refresh or contact the administrator.</div>';
@@ -515,7 +516,9 @@ async function saveQuickBilling(){
       r.wallet_debits=wallet_debits;
       const calc=calculateBillingRow(r);
       const quantity=Math.max(1,Number(r.quantity||1)),price=calc.unitTotal;
-      items.push({service_id:r.service_id,quantity,customer_unit_price:price,processing_unit_cost:calc.cost,profit_amount:calc.profit,pricing_snapshot:{base_amount:Number(r.base),service_charge:calc.charge,bank:r.bank||null,wallet_debits},wallet_debits});
+      const itemPayload={service_id:r.service_id,quantity,customer_unit_price:price,processing_unit_cost:calc.cost,pricing_snapshot:{base_amount:Number(r.base),service_charge:calc.charge,bank:r.bank||null,wallet_debits},wallet_debits};
+      if(currentProfile?.role==="admin")itemPayload.profit_amount=calc.profit;
+      items.push(itemPayload);
       customerTotal+=price*quantity;processingTotal+=calc.cost*quantity;profitTotal+=calc.profit*quantity;
     }
     if(!items.length)throw new Error("Enter at least one bill.");
