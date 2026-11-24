@@ -966,7 +966,7 @@ function renderPanApplications(){
    if(r.office_flat||r.office_road||r.office_pin)addr(0,"office",435);
    const sx={"Resident":213,"Non-resident":275,"Resident but not ordinarily resident":352};draw(0,sx[r.residential_status]||213,523,"X",10,6.5);
    draw(0,345,547,r.passport,160,5.8);draw(0,345,563,r.tin,180,5.8);
-   draw(0,240,598,"91",22,5.5);draw(0,375,598,r.mobile,145,5.8);draw(0,150,610,r.email,380,5.8);draw(0,240,624,r.landline,170,5.8);
+   grid(0,240,598,"91",3,10.62,5.4);grid(0,375,598,r.mobile,10,10.62,5.4);draw(0,150,610,r.email,380,5.8);grid(0,240,624,String(r.landline||"").replace(/\\D/g,""),4,10.62,5.2);
    const income={"Salary":[181,637],"Income from Business / Profession":[258,637],"Income from House Property":[397,637],"Capital Gains":[181,652],"Income from Other Sources":[258,652],"No Income":[397,652]};
    (r.income_sources||[]).forEach(v=>{if(income[v])draw(0,income[v][0],income[v][1],"X",10,6.5)});
    draw(0,r.single_parent==="Yes"?243:304,675,"X",10,6.5);name(0,698,[r.father_first,r.father_middle,r.father_last].filter(Boolean).join(" "));
