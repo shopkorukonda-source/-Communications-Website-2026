@@ -76,34 +76,39 @@ export async function renderOperations(view, ctx) {
   }
 
   if(view==="payroll"){
-    if(!admin){host.innerHTML=head("Payroll","Admin access required.");return;}
+    const employee=admin?null:await getEmployee();
+    if(!admin&&!employee){host.innerHTML=head("My Payroll","Ask Admin to link your employee profile to view payroll.");return;}
     const [em,pr]=await Promise.all([
-      supabase.from("employees").select("id,full_name,monthly_salary").eq("is_active",true).order("full_name"),
-      supabase.from("payroll_entries").select("id,employee_id,pay_month,fixed_salary,deductions,additions,net_salary,status").order("pay_month",{ascending:false}).limit(100)
+      admin?supabase.from("employees").select("id,full_name,monthly_salary").eq("is_active",true).order("full_name"):Promise.resolve({data:[employee]}),
+      admin
+        ? supabase.from("payroll_entries").select("id,employee_id,pay_month,fixed_salary,deductions,additions,net_salary,status").order("pay_month",{ascending:false}).limit(100)
+        : supabase.from("payroll_entries").select("id,employee_id,pay_month,fixed_salary,deductions,additions,net_salary,status").eq("employee_id",employee.id).order("pay_month",{ascending:false}).limit(36)
     ]);
-    host.innerHTML=head("Payroll","Monthly salary, approved incentives, additions, deductions and payment status.")+
-      '<div class="admin-editor"><h3>Generate payroll</h3><form id="op-payroll" class="service-form"><div class="admin-form-grid"><label>Employee<select id="op-payroll-emp" required><option value="">Select</option>'+(em.data||[]).map(x=>'<option value="'+x.id+'">'+esc(x.full_name)+' · ₹'+money(x.monthly_salary)+'</option>').join("")+'</select></label><label>Pay month<input type="month" id="op-pay-month" required value="'+new Date().toISOString().slice(0,7)+'"></label><label>Other additions (₹)<input type="number" id="op-add" min="0" step=".01" value="0"></label><label>Deductions (₹)<input type="number" id="op-ded" min="0" step=".01" value="0"></label></div><p id="op-incentive-preview" class="muted">Select an employee to calculate approved incentives.</p><div id="op-payroll-msg" class="message"></div><button class="primary-btn">Create payroll</button></form></div>'+
-      '<div class="admin-table-wrap"><h3>Payroll history</h3>'+((pr.data||[]).map(x=>'<div class="admin-service-row"><div class="admin-service-main"><strong>'+esc((em.data||[]).find(y=>y.id===x.employee_id)?.full_name||"Employee")+'</strong><small>'+x.pay_month+' · Base ₹'+money(x.fixed_salary)+' · Additions ₹'+money(x.additions)+' · Deductions ₹'+money(x.deductions)+'</small></div><div class="admin-service-meta"><strong>₹'+money(x.net_salary)+'</strong><span>'+esc(x.status)+'</span></div>'+(x.status!=="paid"?'<div class="admin-service-actions"><button data-op-paid="'+x.id+'">Mark paid</button></div>':'')+'</div>').join("")||'<div class="empty-state">No payroll entries.</div>')+'</div>';
-    const preview=async()=>{
-      const empId=$("op-payroll-emp").value,month=$("op-pay-month").value;
-      if(!empId||!month){$("op-incentive-preview").textContent="Select an employee and pay month.";return 0;}
-      const [year,monthNumber]=month.split("-").map(Number);const from=month+"-01",to=monthNumber===12?(year+1)+"-01-01":year+"-"+String(monthNumber+1).padStart(2,"0")+"-01";
-      const q=await supabase.from("employee_incentives").select("amount").eq("employee_id",empId).eq("status","approved").is("payroll_entry_id",null).gte("incentive_date",from).lt("incentive_date",to);
-      if(q.error){$("op-incentive-preview").textContent="Incentives unavailable: "+q.error.message;return 0;}
-      const total=(q.data||[]).reduce((sum,x)=>sum+Number(x.amount||0),0);
-      $("op-incentive-preview").textContent="Approved incentives included automatically: ₹"+money(total);
-      return total;
-    };
-    $("op-payroll-emp").addEventListener("change",preview);
-    $("op-pay-month").addEventListener("change",preview);
-    $("op-payroll").addEventListener("submit",async e=>{
-      e.preventDefault();
-      const bonus=await preview();
-      const r=await supabase.rpc("generate_payroll_with_incentives",{p_employee_id:$("op-payroll-emp").value,p_pay_month:$("op-pay-month").value+"-01",p_additions:Number($("op-add").value||0),p_deductions:Number($("op-ded").value||0)});
-      $("op-payroll-msg").textContent=r.error?r.error.message:"Payroll created. Approved incentives ₹"+money(bonus)+" included in additions.";
-      if(!r.error)await renderOperations(view,ctx);
-    });
-    host.querySelectorAll("[data-op-paid]").forEach(b=>b.addEventListener("click",async()=>{const r=await supabase.rpc("mark_payroll_paid",{p_payroll_id:b.dataset.opPaid});if(r.error)alert(r.error.message);else await renderOperations(view,ctx);}));
+    host.innerHTML=head(admin?"Payroll Management":"My Payroll",admin?"Monthly salary, approved incentives, additions, deductions and payment status.":"Your salary, incentives, deductions and payment history.")+
+      (admin?'<div class="admin-editor"><h3>Generate payroll</h3><form id="op-payroll" class="service-form"><div class="admin-form-grid"><label>Employee<select id="op-payroll-emp" required><option value="">Select</option>'+(em.data||[]).map(x=>'<option value="'+x.id+'">'+esc(x.full_name)+' · ₹'+money(x.monthly_salary)+'</option>').join("")+'</select></label><label>Pay month<input type="month" id="op-pay-month" required value="'+new Date().toISOString().slice(0,7)+'"></label><label>Other additions (₹)<input type="number" id="op-add" min="0" step=".01" value="0"></label><label>Deductions (₹)<input type="number" id="op-ded" min="0" step=".01" value="0"></label></div><p id="op-incentive-preview" class="muted">Select an employee to calculate approved incentives.</p><div id="op-payroll-msg" class="message"></div><button class="primary-btn">Create payroll</button></form></div>':'')+
+      '<div class="admin-table-wrap"><h3>'+(admin?"Payroll history":"My salary history")+'</h3>'+((pr.data||[]).map(x=>'<div class="admin-service-row"><div class="admin-service-main"><strong>'+esc((em.data||[]).find(y=>y.id===x.employee_id)?.full_name||employee?.full_name||"Employee")+'</strong><small>'+x.pay_month+' · Base ₹'+money(x.fixed_salary)+' · Incentives / additions ₹'+money(x.additions)+' · Deductions ₹'+money(x.deductions)+'</small></div><div class="admin-service-meta"><strong>₹'+money(x.net_salary)+'</strong><span class="status-pill '+(x.status==="paid"?"is-active":"is-inactive")+'">'+esc(x.status)+'</span></div>'+(admin&&x.status!=="paid"?'<div class="admin-service-actions"><button data-op-paid="'+x.id+'">Mark paid</button></div>':'')+'</div>').join("")||'<div class="empty-state">No payroll entries.</div>')+'</div>';
+    if(admin){
+      const preview=async()=>{
+        const empId=$("op-payroll-emp").value,month=$("op-pay-month").value;
+        if(!empId||!month){$("op-incentive-preview").textContent="Select an employee and pay month.";return 0;}
+        const [year,monthNumber]=month.split("-").map(Number),from=month+"-01",to=monthNumber===12?(year+1)+"-01-01":year+"-"+String(monthNumber+1).padStart(2,"0")+"-01";
+        const q=await supabase.from("employee_incentives").select("amount").eq("employee_id",empId).eq("status","approved").is("payroll_entry_id",null).gte("incentive_date",from).lt("incentive_date",to);
+        if(q.error){$("op-incentive-preview").textContent="Incentives unavailable: "+q.error.message;return 0;}
+        const total=(q.data||[]).reduce((sum,x)=>sum+Number(x.amount||0),0);
+        $("op-incentive-preview").textContent="Approved incentives included automatically: ₹"+money(total);
+        return total;
+      };
+      $("op-payroll-emp").addEventListener("change",preview);
+      $("op-pay-month").addEventListener("change",preview);
+      $("op-payroll").addEventListener("submit",async e=>{
+        e.preventDefault();
+        const bonus=await preview();
+        const r=await supabase.rpc("generate_payroll_with_incentives",{p_employee_id:$("op-payroll-emp").value,p_pay_month:$("op-pay-month").value+"-01",p_additions:Number($("op-add").value||0),p_deductions:Number($("op-ded").value||0)});
+        $("op-payroll-msg").textContent=r.error?r.error.message:"Payroll created. Approved incentives ₹"+money(bonus)+" included in additions.";
+        if(!r.error)await renderOperations(view,ctx);
+      });
+      host.querySelectorAll("[data-op-paid]").forEach(b=>b.addEventListener("click",async()=>{const r=await supabase.rpc("mark_payroll_paid",{p_payroll_id:b.dataset.opPaid});if(r.error)alert(r.error.message);else await renderOperations(view,ctx);}));
+    }
     return;
   }
 
