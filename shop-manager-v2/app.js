@@ -1170,6 +1170,7 @@ function renderPanApplications(){
   $("pan-photo").onchange=e=>load(e.target.files[0],v=>photo=v);$("pan-sign").onchange=e=>load(e.target.files[0],v=>signature=v);
   f.onsubmit=async e=>{
    e.preventDefault();
+   steps.forEach(step=>step.hidden=false);
    for(let i=0;i<steps.length;i++){if(!validateStep(steps[i])){activeStep=i;renderStep();steps[i].scrollIntoView({behavior:"smooth",block:"start"});return;}}
    const fd=new FormData(f),r=Object.fromEntries(fd.entries());r.income_sources=fd.getAll("income_sources");r.income_sources_text=r.income_sources.join(", ");
    if(!/^\d{12}$/.test((r.aadhaar||"").trim()))return alert("Aadhaar number must contain exactly 12 digits. Form cannot be saved without all 12 digits.");
