@@ -309,12 +309,17 @@ async function renderReports(){
 }
 async function loadReportsData(){
   const period=$("report-period").value,now=new Date(),start=new Date(now);
-  if(period==="day")start.setHours(0,0,0,0);else if(period==="week")start.setDate(start.getDate()-6);else start.setDate(1);
-  const {data,error}=await supabase.from("billing_transactions").select("id,bill_number,customer_name,customer_total,processing_total,profit_total,payment_mode,created_at").gte("created_at",start.toISOString()).order("created_at",{ascending:false}).limit(100);
-  if(error){$("report-rows").innerHTML='<div class="empty-state">Unable to load reports.</div>';return;}
-  const rows=data||[],sum=k=>rows.reduce((a,x)=>a+Number(x[k]||0),0);
-  $("report-sales").textContent="₹"+sum("customer_total").toFixed(2);$("report-cost").textContent="₹"+sum("processing_total").toFixed(2);$("report-profit").textContent="₹"+sum("profit_total").toFixed(2);
-  $("report-rows").innerHTML=rows.length?rows.map(x=>`<div class="admin-service-row"><div class="admin-service-main"><strong>Bill #${x.bill_number}</strong><small>${escapeHtml(x.customer_name||"Walk-in customer")} · ${new Date(x.created_at).toLocaleString("en-IN")}</small></div><div class="admin-service-meta"><strong>₹${Number(x.customer_total).toFixed(2)}</strong><span>Profit ₹${Number(x.profit_total).toFixed(2)}</span></div><div class="admin-service-meta"><span>${escapeHtml(x.payment_mode)}</span></div></div>`).join(""):'<div class="empty-state">No bills in this period.</div>';
+  if(period==="day")start.setHours(0,0,0,0);else if(period==="week"){start.setDate(start.getDate()-6);start.setHours(0,0,0,0);}else start.setDate(1);
+  const [{data:summary,error:sumError},{data:rows,error:rowsError}]=await Promise.all([
+    supabase.rpc("get_billing_summary",{p_start:start.toISOString(),p_end:now.toISOString()}),
+    supabase.from("billing_transactions").select("id,bill_number,customer_name,customer_total,processing_total,profit_total,payment_mode,created_at").gte("created_at",start.toISOString()).order("created_at",{ascending:false}).limit(20)
+  ]);
+  if(sumError||rowsError){$("report-rows").innerHTML='<div class="empty-state">Unable to load reports: '+escapeHtml((sumError||rowsError).message)+'</div>';return;}
+  const s=Array.isArray(summary)?summary[0]:(summary||{});
+  $("report-sales").textContent="₹"+Number(s.customer_collections||0).toFixed(2);
+  $("report-cost").textContent="₹"+Number(s.processing_cost||0).toFixed(2);
+  $("report-profit").textContent="₹"+Number(s.net_profit||0).toFixed(2);
+  $("report-rows").innerHTML=(rows||[]).length?rows.map(x=>'<div class="admin-service-row"><div class="admin-service-main"><strong>Bill #'+x.bill_number+'</strong><small>'+escapeHtml(x.customer_name||"Walk-in customer")+' · '+new Date(x.created_at).toLocaleString("en-IN")+'</small></div><div class="admin-service-meta"><strong>₹'+Number(x.customer_total).toFixed(2)+'</strong><span>Profit ₹'+Number(x.profit_total).toFixed(2)+'</span></div><div class="admin-service-meta"><span>'+escapeHtml(x.payment_mode)+'</span></div></div>').join(""):'<div class="empty-state">No bills in this period.</div>';
 }
 async function renderEmployeeManager(){
   const {data:profiles}=await supabase.from("profiles").select("id,display_name,phone,role").eq("is_active",true).eq("role","employee").order("display_name");
