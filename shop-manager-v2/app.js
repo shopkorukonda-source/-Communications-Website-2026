@@ -995,6 +995,29 @@ function renderPanApplications(){
    group("PART F — COMMUNICATION ADDRESS",communication)+group("PART G — DOCUMENTS / PROOFS",proofs)+group("VERIFICATION AND DECLARATION",declaration)+
    '<section class="pan-section" style="padding:16px;border:1px solid #d8d8d8;border-radius:10px"><h3>Photograph & Signature</h3><div class="pan-grid"><label>Recent colour photograph (4.5 cm × 3.5 cm)<input id="pan-photo" type="file" accept="image/*"></label><label>Signature / left thumb impression<input id="pan-sign" type="file" accept="image/*"></label></div></section><button class="primary-btn" type="submit">Save Details & Generate Form Print</button><p id="pan-message"></p></form>';
   const f=$("pan-form");let photo="",signature="";
+  // Safe defaults for commonly used values; identity and proof fields stay applicant-specific.
+  const setDefault=(name,value)=>{const el=f.elements.namedItem(name);if(el&&!el.value)el.value=value};
+  setDefault("res_country","India");setDefault("res_state","Andhra Pradesh");
+  setDefault("office_country","India");setDefault("office_state","Andhra Pradesh");
+  setDefault("ra_state","Andhra Pradesh");setDefault("residential_status","Resident");
+  setDefault("single_parent","No");setDefault("parent","Father");
+  setDefault("communication_address","Residence");setDefault("declarant_capacity","Self");
+  setDefault("declaration_date",new Date().toISOString().slice(0,10));
+  // Keep RA section out of the way for adult applicants; show it only when selected or applicant is a minor.
+  const raWrap=$("pan-ra-wrap");
+  const raToggle=document.createElement("label");raToggle.className="pan-ra-toggle";
+  raToggle.innerHTML='<input type="checkbox" id="pan-ra-required"> Representative Assessee details are required';
+  raWrap.prepend(raToggle);const raBody=raWrap.querySelector(".pan-section");raBody.hidden=true;
+  const syncRa=()=>{const d=f.elements.namedItem("dob").value;const ageNow=age(d);const show=raToggle.querySelector("input").checked||(ageNow!==null&&ageNow<18);raBody.hidden=!show;if(show)raToggle.querySelector("input").checked=true};
+  raToggle.querySelector("input").addEventListener("change",syncRa);f.elements.namedItem("dob").addEventListener("change",syncRa);
+  // Passport/TIN only displayed for non-resident applicants.
+  const passport=f.elements.namedItem("passport"),tin=f.elements.namedItem("tin"),status=f.elements.namedItem("residential_status");
+  const nriWrap=document.createElement("div");nriWrap.id="pan-nri-fields";passport.closest("label").before(nriWrap);nriWrap.append(passport.closest("label"),tin.closest("label"));
+  const syncNri=()=>{nriWrap.hidden=!status.value||status.value==="Resident"};status.addEventListener("change",syncNri);syncNri();
+  // Optional office address is collapsed until requested.
+  const officeFields=["office_country","office_flat","office_road","office_pin","office_post","office_area","office_district","office_state"].map(n=>f.elements.namedItem(n)?.closest("label")).filter(Boolean);
+  if(officeFields.length){const details=document.createElement("details");details.className="pan-optional";details.innerHTML="<summary>Add office address (optional)</summary>";officeFields[0].before(details);officeFields.forEach(el=>details.appendChild(el))}
+
   const load=(file,cb)=>{if(!file)return;const rd=new FileReader();rd.onload=()=>cb(rd.result);rd.readAsDataURL(file)};
   $("pan-photo").onchange=e=>load(e.target.files[0],v=>photo=v);$("pan-sign").onchange=e=>load(e.target.files[0],v=>signature=v);
   f.onsubmit=e=>{
@@ -1004,14 +1027,14 @@ function renderPanApplications(){
    if(r.office_pin&&!/^\d{6}$/.test(r.office_pin))return alert("Office PIN must contain 6 digits.");
    if(r.ra_aadhaar&&!/^\d{12}$/.test(r.ra_aadhaar.replace(/\s/g,"")))return alert("RA Aadhaar must contain 12 digits.");
    if(r.ra_pan&&!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(r.ra_pan.toUpperCase()))return alert("Enter a valid RA PAN.");
-   if(r.kind==="Minor"&&(!r.ra_name||!r.ra_relation||!r.ra_mobile||!r.ra_email||!r.ra_address||!r.ra_city||!r.ra_state||!r.ra_pin))return alert("Minor applicant: complete all Representative Assessee details.");
-   if(r.kind==="Minor"&&!r.ra_pan&&!r.ra_aadhaar)return alert("Minor applicant: enter RA PAN or RA Aadhaar.");
+   if((r.kind==="Minor"||$("pan-ra-required").checked)&&(!r.ra_name||!r.ra_relation||!r.ra_mobile||!r.ra_email||!r.ra_address||!r.ra_city||!r.ra_state||!r.ra_pin))return alert("Minor applicant: complete all Representative Assessee details.");
+   if((r.kind==="Minor"||$("pan-ra-required").checked)&&!r.ra_pan&&!r.ra_aadhaar)return alert("Minor applicant: enter RA PAN or RA Aadhaar.");
    if(mode==="correction"&&!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test((r.pan||"").toUpperCase()))return alert("Enter a valid existing PAN.");
    if(r.residential_status!=="Resident"&&(!r.passport||!r.passport.trim()))return alert("Passport number is mandatory for Non-resident / RNOR applicants.");
    if(!r.income_sources.length)return alert("Select at least one source of income.");
    if(r.single_parent==="Yes"&&!r.parent)return alert("Select the parent name to print on PAN.");
    if(r.declarant_capacity==="Self"&&!r.declarant_name.trim())return alert("Enter declaration name.");
-   r.mode=mode;r.kind=age(r.dob)!==null&&age(r.dob)<18?"Minor":"Adult";r.photo=photo;r.signature=signature;
+   r.mode=mode;r.kind=age(r.dob)!==null&&age(r.dob)<18?"Minor":"Adult";r.ra_required=$("pan-ra-required").checked||r.kind==="Minor";r.photo=photo;r.signature=signature;
    const n=Number(localStorage.getItem("slv_pan_seq")||0)+1;localStorage.setItem("slv_pan_seq",String(n));
    r.temp_ack="SLV-PAN-"+new Date().getFullYear()+"-"+String(n).padStart(6,"0");r.actual_ack="";r.status="Details Saved";
    try{const a=read();a.unshift(r);write(a)}catch{return alert("Browser storage full. Use a smaller photo image.")}
