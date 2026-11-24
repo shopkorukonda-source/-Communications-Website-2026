@@ -1027,7 +1027,7 @@ function renderPanApplications(){
    group("PART B — SOURCE OF INCOME",income)+group("PART C — DETAILS OF PARENTS",parents)+group("PART D — AO CODE",ao)+
    '<div id="pan-ra-wrap">'+group("PART E — REPRESENTATIVE ASSESSEE (IF APPLICABLE)",ra,"For minors and cases where a Representative Assessee is required. Enter RA details as applicable.")+'</div>'+
    group("PART F — COMMUNICATION ADDRESS",communication)+group("PART G — DOCUMENTS / PROOFS",proofs)+group("VERIFICATION AND DECLARATION",declaration)+
-   '<section class="pan-section" style="padding:16px;border:1px solid #d8d8d8;border-radius:10px"><h3>Photograph & Signature</h3><div class="pan-grid"><label>Recent colour photograph (4.5 cm × 3.5 cm)<input id="pan-photo" type="file" accept="image/*"></label><label>Signature / left thumb impression<input id="pan-sign" type="file" accept="image/*"></label></div></section><button class="primary-btn" type="submit">Save Details & Generate Form Print</button><p id="pan-message"></p></form>';
+   '<section class="pan-section" style="padding:16px;border:1px solid #d8d8d8;border-radius:10px"><h3>Photograph & Signature</h3><div class="pan-grid"><label>Recent colour photograph (4.5 cm × 3.5 cm)<input id="pan-photo" type="file" accept="image/*"></label><label>Signature / left thumb impression<input id="pan-sign" type="file" accept="image/*"></label></div></section><button class="primary-btn" type="submit">Save Details & Preview Form</button><p id="pan-message"></p></form>';
   const f=$("pan-form");let photo="",signature="";
   // Safe defaults for commonly used values; identity and proof fields stay applicant-specific.
   const setDefault=(name,value)=>{const el=f.elements.namedItem(name);if(el&&!el.value)el.value=value};
