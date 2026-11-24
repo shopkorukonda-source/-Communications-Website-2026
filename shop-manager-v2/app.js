@@ -329,8 +329,8 @@ let billingWalletRules = {};
 function money(n){return Number(n||0).toFixed(2);}
 function serviceByCode(code){return services.find(s=>s.code===code);}
 function calculateBillingRow(row){
-  const svc=services.find(s=>s.id===row.service_id), amount=Number(row.base||0);
-  if(!svc||amount<0)return {charge:0,cost:0,profit:0,total:0};
+  const svc=services.find(s=>s.id===row.service_id), amount=Number(row.base||0),qty=Math.max(1,Number(row.quantity||1));
+  if(!svc||amount<0)return {charge:0,cost:0,profit:0,unitTotal:0,total:0};
   let charge=0,cost=Number(row.cost||0),profit=0;
   if(svc.code==="CURRENT_BILLS"){
     const cfg=svc.billing_config||{}, slabs=cfg.slabs||[];
@@ -338,19 +338,22 @@ function calculateBillingRow(row){
     const debitTotal=(row.wallet_debits||[]).reduce((sum,x)=>sum+Number(x.amount||0),0);
     if(slab){charge=Number(slab.customer_charge||0);cost=debitTotal>0?debitTotal-amount:(slab.wallet_extra==null?Number(row.cost||0):Number(slab.wallet_extra));}
     else if(amount>1000){charge=10+Math.ceil((amount-1000)/100)*Number(cfg.above_1000?.extra_per_100||1);cost=debitTotal>0?debitTotal-amount:Number(row.cost||0);}
+  } else if(svc.code==="MONEY_TRANSFER"){
+    charge=Math.ceil(amount/1000)*Number(svc.billing_config?.charge_per_1000||10);cost=Number(row.cost||0);
+  } else if(svc.code==="PRIVATE_BUS_TICKET"){
+    charge=Math.round(amount*Number(svc.billing_config?.commission_percent||6)/100*100)/100;cost=Number(row.cost||0);
+  } else if(svc.code==="APSRTC_TICKET"||svc.code==="TTD_TICKET"){
+    charge=Number(svc.billing_config?.customer_charge||50);cost=Number(row.cost||svc.processing_cost_config?.fixed_amount||0);
   } else if(svc.code==="CREDIT_CARD_BANK"){
-    charge=Math.round((amount*Number(svc.billing_config?.charge_percent||2)/100)*100)/100;
-    cost=Number(row.cost||0);
+    charge=Math.round((amount*Number(svc.billing_config?.charge_percent||2)/100)*100)/100;cost=Number(row.cost||0);
   } else if(svc.code==="AEPS_WITHDRAWAL"){
-    const bank=(row.bank||"").toLowerCase();
-    charge=bank.includes("union")?0:Math.ceil(amount/1000)*Number(svc.billing_config?.charge_per_1000||10);
-    cost=Number(row.cost||0);
+    const bank=(row.bank||"").toLowerCase();charge=bank.includes("union")?0:Math.ceil(amount/1000)*Number(svc.billing_config?.charge_per_1000||10);cost=Number(row.cost||0);
   } else {
-    charge=Number(row.charge||svc.billing_config?.customer_charge||0);
-    cost=Number(row.cost||0);
+    charge=Number(row.charge||svc.billing_config?.customer_charge||0);cost=Number(row.cost||svc.processing_cost_config?.fixed_amount||0);
   }
   profit=charge-cost;
-  return {charge,cost,profit,total:amount+charge};
+  const unitTotal=amount+charge;
+  return {charge,cost,profit,unitTotal,total:unitTotal*qty};
 }
 async function renderQuickBilling(){
   const host=$("other-view");
@@ -381,7 +384,7 @@ async function renderQuickBilling(){
 async function setBillingRows(n){
   const {data:rules}=await supabase.from("service_wallet_rules").select("service_id,wallet_id,wallet_slot,debit_config").order("wallet_slot");
   billingWalletRules={};(rules||[]).forEach(x=>(billingWalletRules[x.service_id]??=[]).push(x));
-  billingRows=Array.from({length:n},(_,i)=>billingRows[i]||({service_id:"",base:"",charge:"",cost:"",bank:"",wallet_debits:[]}));
+  billingRows=Array.from({length:n},(_,i)=>billingRows[i]||({service_id:"",base:"",charge:"",cost:"",bank:"",quantity:1,wallet_debits:[]}));
   $("billing-rows").innerHTML=billingRows.map((r,i)=>{
     const serviceOptions=services.filter(s=>s.is_active).map(s=>'<option value="'+s.id+'" '+(s.id===r.service_id?"selected":"")+'>'+escapeHtml(s.name)+'</option>').join("");
     const walletOptionsHtml=(billingWalletRules[r.service_id]||[]).map(w=>{
@@ -397,7 +400,7 @@ async function setBillingRows(n){
 function onBillingRowChange(e){
   const i=Number(e.target.dataset.i),field=e.target.dataset.field;
   billingRows[i][field]=e.target.value;
-  if(field==="service_id"){const svc=services.find(s=>s.id===e.target.value);billingRows[i].charge=svc?.billing_config?.customer_charge??"";billingRows[i].wallet_debits=[];setBillingRows(billingRows.length);return;}
+  if(field==="service_id"){const svc=services.find(s=>s.id===e.target.value);billingRows[i].base=svc?.billing_config?.base_amount??"";billingRows[i].charge=svc?.billing_config?.customer_charge??"";billingRows[i].cost=svc?.processing_cost_config?.fixed_amount??"";billingRows[i].quantity=1;billingRows[i].wallet_debits=[];setBillingRows(billingRows.length);return;}
   updateBillingTotals();
 }
 function onBillingWalletChange(e){
@@ -439,9 +442,9 @@ async function saveQuickBilling(){
       if(svc.code==="CURRENT_BILLS"&&Number(r.base)>=10&&Number(r.base)<=200&&!wallet_debits.length){const first=(billingWalletRules[r.service_id]||[])[0];if(!first)throw new Error("Assign a wallet to Current Bills in Admin Services.");wallet_debits=[{wallet_id:first.wallet_id,amount:Number(r.base)+1.68}];}
       if((billingWalletRules[r.service_id]||[]).length&&!wallet_debits.length)throw new Error("Select and enter at least one wallet debit for "+svc.name);
       if(wallet_debits.some(x=>!Number.isFinite(Number(x.amount))||Number(x.amount)<=0))throw new Error("Wallet debit amounts must be positive.");
-      const price=calc.total;
-      items.push({service_id:r.service_id,quantity:1,customer_unit_price:price,processing_unit_cost:calc.cost,profit_amount:calc.profit,pricing_snapshot:{base_amount:Number(r.base),service_charge:calc.charge,bank:r.bank||null,wallet_debits},wallet_debits});
-      customerTotal+=price;processingTotal+=calc.cost;profitTotal+=calc.profit;
+      const quantity=Math.max(1,Number(r.quantity||1)),price=calc.unitTotal;
+      items.push({service_id:r.service_id,quantity,customer_unit_price:price,processing_unit_cost:calc.cost,profit_amount:calc.profit,pricing_snapshot:{base_amount:Number(r.base),service_charge:calc.charge,bank:r.bank||null,wallet_debits},wallet_debits});
+      customerTotal+=price*quantity;processingTotal+=calc.cost*quantity;profitTotal+=calc.profit*quantity;
     }
     if(!items.length)throw new Error("Enter at least one bill.");
     const mode=$("bill-mode").value,received=Number($("bill-received").value||0);
