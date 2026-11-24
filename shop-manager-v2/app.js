@@ -945,11 +945,23 @@ function renderPanApplications(){
     const chars=[...String(value??"").trim().toUpperCase()];
     chars.slice(0,columns).forEach((ch,i)=>{if(ch!==" ")draw(pi,x+i*cellWidth,top,ch,cellWidth-1,size)});
    };
+   // Name characters need their own vertical centering: the general text
+   // baseline offset was placing glyphs across the horizontal cell rules.
+   const nameGrid=(pi,x,top,value,columns=boxColumns,cellWidth=cell,size=5.2)=>{
+    const chars=[...String(value??"").trim().toUpperCase()];
+    const page=pages[pi],cellHeight=13.7;
+    chars.slice(0,columns).forEach((ch,i)=>{
+     if(ch===" ")return;
+     let fs=size;while(fs>4.2&&font.widthOfTextAtSize(ch,fs)>cellWidth-1)fs-=.2;
+     const centeredTop=top+(cellHeight-fs)/2;
+     page.drawText(ch,{x:x+i*cellWidth,y:page.getHeight()-centeredTop-fs,font,size:fs,color:rgb(.04,.04,.04),maxWidth:cellWidth-1});
+    });
+   };
    const name=(pi,top,value)=>{
     const words=String(value||"").trim().replace(/\s+/g," ").split(" ").filter(Boolean);
-    [words[0]||"",words[1]||"",words.slice(2).join(" ")].forEach((line,i)=>grid(pi,180,top+i*13.7,line,boxColumns,cell,5.6));
+    [words[0]||"",words[1]||"",words.slice(2).join(" ")].forEach((line,i)=>nameGrid(pi,180,top+i*13.7,line,boxColumns,cell,5.2));
    };
-   const aadhaarNameGrid=value=>grid(0,180,239.5,value,boxColumns,cell,5.6);
+   const aadhaarNameGrid=value=>nameGrid(0,180,239.5,value,boxColumns,cell,5.2);
    // Address fields use the same character-cell spacing as the printed Form 93.
    const addr=(pi,prefix,top)=>{
     ["flat","road","post","area","district"].forEach((k,i)=>grid(pi,180,top+i*13.7,r[prefix+"_"+k],boxColumns,cell,5.4));
