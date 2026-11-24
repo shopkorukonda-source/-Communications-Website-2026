@@ -967,7 +967,7 @@ function renderPanApplications(){
    draw(1,235,107,r.ao_area,45,7);draw(1,350,107,r.ao_type,40,7);draw(1,235,121,r.ao_range,45,7);draw(1,350,121,r.ao_number,40,7);
    [0,1,2].forEach(i=>draw(1,180,164+i*13.4,rn[i],535,7));
    draw(1,180,210,r.ra_pan,160,7);draw(1,180,223,r.ra_aadhaar,180,7);
-   ["flat","road","post","area","district"].forEach((k,i)=>draw(1,180,254+i*13.4,r["ra_"+k],535,6.5));
+   draw(1,180,254,r.ra_address,535,6.5);draw(1,180,268,r.ra_city,535,6.5);draw(1,180,281,r.ra_city,535,6.5);
    draw(1,180,321,r.ra_state,100,6.5);draw(1,305,321,r.ra_country||"India",105,6.5);draw(1,470,321,r.ra_pin,75,6.5);
    draw(1,235,352,r.ra_mobile,115,6.5);draw(1,150,366,r.ra_email,380,6.5);draw(1,300,380,r.ra_landline,170,6.5);
    const comm={"Residence":180,"Representative Assessee Address":330,"Office":455};draw(1,comm[r.communication_address]||180,415,"X",12,8);
