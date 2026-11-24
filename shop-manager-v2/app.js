@@ -367,7 +367,7 @@ async function transferWallet(e){
   finally{btn.disabled=false;}
 }
 
-const financePeriodLabels={day:"Daily",week:"Weekly",fortnight:"Fortnightly",month:"Monthly",year:"Yearly"};
+const financePeriodLabels={day:"Daily",week:"Weekly",fortnight:"Fortnightly",month:"Monthly",year:"Yearly"};\nconst financeDbPeriod={day:"daily",week:"weekly",fortnight:"fortnightly",month:"monthly",year:"yearly"};
 function financeYmd(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
 function financeRange(period){
  const now=new Date(),start=new Date(now.getFullYear(),now.getMonth(),now.getDate()),end=new Date(start);
@@ -393,8 +393,8 @@ async function renderReports(){
  <div class="finance-lower-grid"><div class="admin-table-wrap"><h3>Expense category breakdown</h3><div id="finance-category-rows"></div></div><div class="admin-table-wrap"><h3>Recent expenses</h3><div id="finance-expense-rows"></div></div></div>
  <div class="admin-table-wrap"><h3>Recent bills</h3><div id="report-rows"></div></div>`;
  $("report-period").addEventListener("change",loadReportsData);
- $("finance-target-period").addEventListener("change",async()=>{const {data}=await supabase.from("income_targets").select("period_type,target_amount");const key=$("finance-target-period").value;const x=(data||[]).find(v=>v.period_type===key);$("finance-target-input").value=Number(x?.target_amount||0)});
- $("finance-target-form").addEventListener("submit",async e=>{e.preventDefault();const period=$("finance-target-period").value,amount=Number($("finance-target-input").value);if(!Number.isFinite(amount)||amount<0)return;const {error}=await supabase.from("income_targets").upsert({period_type:period,target_amount:amount,updated_by:(await supabase.auth.getUser()).data.user?.id,updated_at:new Date().toISOString()},{onConflict:"period_type"});$("finance-target-message").textContent=error?"Unable to save target: "+error.message:"Target saved successfully.";if(!error)await loadReportsData()});
+ $("finance-target-period").addEventListener("change",async()=>{const {data}=await supabase.from("income_targets").select("period_type,target_amount");const key=financeDbPeriod[$("finance-target-period").value];const x=(data||[]).find(v=>v.period_type===key);$("finance-target-input").value=Number(x?.target_amount||0)});
+ $("finance-target-form").addEventListener("submit",async e=>{e.preventDefault();const period=financeDbPeriod[$("finance-target-period").value],amount=Number($("finance-target-input").value);if(!Number.isFinite(amount)||amount<0)return;const {error}=await supabase.from("income_targets").upsert({period_type:period,target_amount:amount,updated_by:(await supabase.auth.getUser()).data.user?.id,updated_at:new Date().toISOString()},{onConflict:"period_type"});$("finance-target-message").textContent=error?"Unable to save target: "+error.message:"Target saved successfully.";if(!error)await loadReportsData()});
  await loadReportsData();
 }
 async function loadReportsData(){
@@ -406,14 +406,14 @@ async function loadReportsData(){
  ]);
  const failure=tx.error||ex.error||targets.error;if(failure){$("report-rows").innerHTML='<div class="empty-state">Unable to load financial report: '+escapeHtml(failure.message)+'</div>';return}
  const bills=tx.data||[],expenses=ex.data||[],targetRows=targets.data||[];
- const sum=(arr,k)=>arr.reduce((n,x)=>n+Number(x[k]||0),0),income=sum(bills,"profit_total"),expenseTotal=sum(expenses,"amount"),collection=sum(bills,"customer_total"),processing=sum(bills,"processing_total"),target=Number(targetRows.find(x=>x.period_type===period)?.target_amount||0),net=income-expenseTotal,pct=target>0?income/target*100:0;
+ const sum=(arr,k)=>arr.reduce((n,x)=>n+Number(x[k]||0),0),income=sum(bills,"profit_total"),expenseTotal=sum(expenses,"amount"),collection=sum(bills,"customer_total"),processing=sum(bills,"processing_total"),target=Number(targetRows.find(x=>x.period_type===financeDbPeriod[period])?.target_amount||0),net=income-expenseTotal,pct=target>0?income/target*100:0;
  const money=v=>"₹"+Number(v||0).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2});
  $("finance-period-label").textContent=financePeriodLabels[period]+" · "+startDate+" to "+endDate;
  $("finance-target").textContent=money(target);$("finance-income").textContent=money(income);$("finance-expenses").textContent=money(expenseTotal);$("finance-net").textContent=money(net);$("finance-collections").textContent=money(collection);$("finance-processing").textContent=money(processing);$("finance-expense-count").textContent=expenses.length+" expense entries";
  $("finance-progress-label").textContent=target>0?Math.min(pct,999).toFixed(1)+"% achieved"+(pct>=100?" · Target reached":""):"Set a target to track progress";
  $("finance-progress-bar").style.width=Math.min(pct,100)+"%";
- $("finance-target-input").value=Number(targetRows.find(x=>x.period_type===$("finance-target-period").value)?.target_amount||0);
- $("finance-target-chips").innerHTML=Object.entries(financePeriodLabels).map(([k,label])=>{const v=targetRows.find(x=>x.period_type===k);return '<span>'+label+': <b>'+money(v?.target_amount||0)+'</b></span>'}).join("");
+ $("finance-target-input").value=Number(targetRows.find(x=>x.period_type===financeDbPeriod[$("finance-target-period").value])?.target_amount||0);
+ $("finance-target-chips").innerHTML=Object.entries(financePeriodLabels).map(([k,label])=>{const v=targetRows.find(x=>x.period_type===financeDbPeriod[k]);return '<span>'+label+': <b>'+money(v?.target_amount||0)+'</b></span>'}).join("");
  const cats={};expenses.forEach(x=>{const k=x.category||"Other";cats[k]=(cats[k]||0)+Number(x.amount||0)});
  $("finance-category-rows").innerHTML=Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([k,v])=>'<div class="admin-service-row"><div class="admin-service-main"><strong>'+escapeHtml(k)+'</strong></div><div class="admin-service-meta"><strong>'+money(v)+'</strong></div></div>').join("")||'<div class="empty-state">No expenses in this period.</div>';
  $("finance-expense-rows").innerHTML=expenses.slice(0,30).map(x=>'<div class="admin-service-row"><div class="admin-service-main"><strong>'+escapeHtml(x.category)+'</strong><small>'+x.expense_date+' · '+escapeHtml(x.description||"")+'</small></div><div class="admin-service-meta"><strong>'+money(x.amount)+'</strong><span>'+escapeHtml(x.payment_mode||"")+'</span></div></div>').join("")||'<div class="empty-state">No expenses in this period.</div>';
