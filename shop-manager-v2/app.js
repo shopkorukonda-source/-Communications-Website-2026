@@ -942,7 +942,17 @@ function renderPanApplications(){
     const cell=13.72,startX=180,startTop=254,rowGap=13.7,columns=28;
     [...text].forEach((ch,i)=>{if(ch===" ")return;const row=Math.floor(i/columns),col=i%columns;if(row<3)draw(0,startX+col*cell,startTop+row*rowGap,ch,cell-1,6)});
    };
-   const addr=(pi,prefix,top)=>{["flat","road","post","area","district"].forEach((k,i)=>draw(pi,180,top+i*13.4,r[prefix+"_"+k],390,5.8));draw(pi,132,top+5*13.4,r[prefix+"_state"],95,5.5);draw(pi,290,top+5*13.4,r[prefix+"_country"]||"India",90,5.5);draw(pi,455,top+5*13.4,r[prefix+"_pin"],65,5.5)};
+   // Address fields are printed one character per official form box, not as a continuous string.
+   const grid=(pi,x,top,value,columns,cell=13.72,size=5.8)=>{
+    const text=String(value??"").trim().toUpperCase();
+    [...text].slice(0,columns).forEach((ch,i)=>{if(ch!==" ")draw(pi,x+i*cell,top,ch,cell-1,size)});
+   };
+   const addr=(pi,prefix,top)=>{
+    ["flat","road","post","area","district"].forEach((k,i)=>grid(pi,180,top+i*13.4,r[prefix+"_"+k],28,13.72,5.6));
+    grid(pi,132,top+5*13.4,r[prefix+"_state"],6,13.72,5.3);
+    grid(pi,285,top+5*13.4,r[prefix+"_country"]||"India",7,13.72,5.3);
+    grid(pi,455,top+5*13.4,r[prefix+"_pin"],8,13.72,5.3);
+   };
    // Page 1: coordinates matched to the printed Form 93 rows.
    name(0,196,r.name);aadhaarNameGrid(r.name_as_aadhaar||r.name);
    const genderX={Male:183,Female:229,Transgender:290};draw(0,genderX[r.gender]||183,294,"X",10,6.5);
@@ -960,9 +970,13 @@ function renderPanApplications(){
    name(1,23,[r.mother_first,r.mother_middle,r.mother_last].filter(Boolean).join(" "));draw(1,r.parent==="Father"?335:397,67,"X",10,6.5);
    draw(1,235,107,r.ao_area,45,5.8);draw(1,395,107,r.ao_type,32,5.8);draw(1,235,121,r.ao_range,45,5.8);draw(1,395,121,r.ao_number,32,5.8);
    name(1,164,r.ra_name);draw(1,180,207,r.ra_pan,160,5.8);draw(1,280,223,r.ra_aadhaar,175,5.8);
-   const raParts=String(r.ra_address||"").split(/[,\n]/).map(x=>x.trim()).filter(Boolean);
-   ["flat","road","post","area","district"].forEach((k,i)=>draw(1,180,254+i*13.4,raParts[i]|| (i===0?r.ra_address:""),390,5.7));
-   draw(1,128,322,r.ra_state,82,5.5);draw(1,285,322,"India",90,5.5);draw(1,455,322,r.ra_pin,65,5.5);
+   grid(1,180,254,r.ra_address,28,13.72,5.5);
+   grid(1,180,267.4,"",28);grid(1,180,280.8,"",28);
+   grid(1,180,294.2,r.ra_city,28,13.72,5.5);
+   grid(1,180,307.6,r.ra_district,28,13.72,5.5);
+   grid(1,128,321,r.ra_state,6,13.72,5.2);
+   grid(1,285,321,r.ra_country||"India",7,13.72,5.2);
+   grid(1,455,321,r.ra_pin,8,13.72,5.2);
    draw(1,240,353,"91",22,5.5);draw(1,355,353,r.ra_mobile,150,5.8);draw(1,240,367,r.ra_email,350,5.8);draw(1,240,381,r.ra_landline,170,5.8);
    const comm={"Residence":216,"Representative Assessee Address":302,"Office":448};draw(1,comm[r.communication_address]||367,416,"X",10,6.5);
    const proofX=[70,169,270,70,169];["proof_identity","proof_address","proof_dob","ra_proof_identity","ra_proof_address"].forEach((k,i)=>{if(r[k])draw(1,proofX[i],474+(i>=3?37:0),"X",10,6.5)});
@@ -1017,7 +1031,7 @@ function renderPanApplications(){
   const income='<div class="pan-check-grid">'+["Salary","Income from Business / Profession","Income from House Property","Capital Gains","Income from Other Sources","No Income"].map(x=>'<label><input type="checkbox" name="income_sources" value="'+esc(x)+'"> '+esc(x)+'</label>').join("")+'</div>';
   const parents=select("single_parent","Whether mother / father is a single parent?",["Yes","No"],true)+field("father_first","Father – First name")+field("father_middle","Father – Middle name")+field("father_last","Father – Last name")+field("mother_first","Mother – First name")+field("mother_middle","Mother – Middle name")+field("mother_last","Mother – Last name")+select("parent","Parent name to print on PAN card",["Father","Mother"],true);
   const ao=field("ao_area","Area Code")+field("ao_type","AO Type")+field("ao_range","Range Code")+field("ao_number","AO Number");
-  const ra=field("ra_name","Representative Assessee full name")+field("ra_pan","RA PAN (if available)")+field("ra_aadhaar","RA Aadhaar (if PAN unavailable)")+select("ra_relation","Relationship / capacity",["Father","Mother","Guardian","Other"])+field("ra_mobile","RA mobile with country code","tel")+field("ra_email","RA email","email")+field("ra_landline","RA landline with STD code")+field("ra_address","RA address")+field("ra_city","RA city")+field("ra_state","RA state")+field("ra_pin","RA PIN / ZIP");
+  const ra=field("ra_name","Representative Assessee full name")+field("ra_pan","RA PAN (if available)")+field("ra_aadhaar","RA Aadhaar (if PAN unavailable)")+select("ra_relation","Relationship / capacity",["Father","Mother","Guardian","Other"])+field("ra_mobile","RA mobile with country code","tel")+field("ra_email","RA email","email")+field("ra_landline","RA landline with STD code")+field("ra_address","RA – Flat / Door / Street / Post Office")+field("ra_city","RA – Area / Locality / Town / City")+field("ra_district","RA – District")+field("ra_state","RA – State / Union Territory")+field("ra_country","RA – Country / Region")+field("ra_pin","RA – PIN / ZIP");
   const communication=select("communication_address","Address for communication",["Residence","Office","Representative Assessee Address"],true);
   const proofs=select("proof_identity","Applicant – Proof of Identity",["Aadhaar","Passport","Voter ID","Driving Licence","Other notified document"],true)+select("proof_address","Applicant – Proof of Address",["Aadhaar","Passport","Voter ID","Driving Licence","Bank statement","Other notified document"],true)+select("proof_dob","Applicant – Proof of Date of Birth",["Birth Certificate","Passport","Driving Licence","Matriculation certificate","Other notified document"],true)+select("ra_proof_identity","RA – Proof of Identity",["Aadhaar","Passport","Voter ID","Driving Licence","Other notified document"])+select("ra_proof_address","RA – Proof of Address",["Aadhaar","Passport","Voter ID","Driving Licence","Bank statement","Other notified document"]);
   const declaration=field("declarant_name","Verifier name (exactly as per Aadhaar)","text",true)+select("declarant_capacity","Capacity",["Self","Representative Assessee"],true)+field("declarant_designation","Designation (if applicable)")+field("place","Place","text",true)+field("declaration_date","Verification date","date",true);
