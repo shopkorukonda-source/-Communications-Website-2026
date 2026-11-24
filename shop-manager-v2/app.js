@@ -403,11 +403,23 @@ async function renderReports(){
  <div class="finance-secondary-stats"><div><small>Customer collections (not income)</small><strong id="finance-collections">₹0.00</strong></div><div><small>Processing costs already deducted in earned income</small><strong id="finance-processing">₹0.00</strong></div></div>
  <div class="admin-editor finance-target-editor"><h3>Set income targets</h3><p>Set a recurring target for each period. Actual income is compared with the selected period's target.</p><form id="finance-target-form" class="finance-target-form"><label>Target period<select id="finance-target-period"><option value="day">Daily</option><option value="week">Weekly</option><option value="fortnight">Fortnightly</option><option value="month">Monthly</option><option value="year">Yearly</option></select></label><label>Income target (₹)<input id="finance-target-input" type="number" min="0" step=".01" required></label><label>Expense budget (₹)<input id="finance-expense-target-input" type="number" min="0" step=".01" required value="0"></label><button class="primary-btn" type="submit">Save target</button></form><div id="finance-target-message" class="message"></div><div class="finance-target-chips" id="finance-target-chips"></div></div>
  <div class="finance-lower-grid"><div class="admin-table-wrap"><h3>Expense category breakdown</h3><div id="finance-category-rows"></div></div><div class="admin-table-wrap"><h3>Recent expenses</h3><div id="finance-expense-rows"></div></div></div>
- <div class="admin-table-wrap"><h3>Recent bills</h3><div id="report-rows"></div></div>`;
+ <div class="admin-table-wrap"><h3>Recent bills</h3><div id="report-rows"></div></div><div class="admin-table-wrap"><h3>Permanent monthly income & expense history</h3><p class="muted">Monthly totals remain available even after old bill and expense details are cleaned up.</p><div id="monthly-financial-archive"></div></div>`;
  $("report-period").addEventListener("change",loadReportsData);
  $("finance-target-period").addEventListener("change",async()=>{const {data}=await supabase.from("income_targets").select("period_type,target_amount,daily_target_start_date");const key=financeDbPeriod[$("finance-target-period").value];const x=(data||[]).find(v=>v.period_type===key);$("finance-target-input").value=Number(x?.target_amount||0);$("finance-expense-target-input").value=Number(x?.expense_target_amount||0)});
  $("finance-target-form").addEventListener("submit",async e=>{e.preventDefault();const period=financeDbPeriod[$("finance-target-period").value],amount=Number($("finance-target-input").value),expenseBudget=Number($("finance-expense-target-input").value);if(!Number.isFinite(amount)||amount<0||!Number.isFinite(expenseBudget)||expenseBudget<0)return;const {error}=await supabase.from("income_targets").upsert({period_type:period,target_amount:amount,expense_target_amount:expenseBudget,updated_by:(await supabase.auth.getUser()).data.user?.id,updated_at:new Date().toISOString()},{onConflict:"period_type"});$("finance-target-message").textContent=error?"Unable to save target: "+error.message:"Target saved successfully.";if(!error)await loadReportsData()});
  await loadReportsData();
+ await loadMonthlyFinancialArchive();
+}
+async function loadMonthlyFinancialArchive(){
+ const host=$("monthly-financial-archive");
+ if(!host)return;
+ const {data,error}=await supabase.from("monthly_financial_summaries")
+  .select("month_start,month_label,income_total,expense_total,net_profit,bill_count")
+  .order("month_start",{ascending:false}).limit(60);
+ if(error){host.innerHTML='<div class="empty-state">Unable to load saved monthly history: '+escapeHtml(error.message)+'</div>';return;}
+ const rows=data||[];
+ const money=v=>"₹"+Number(v||0).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2});
+ host.innerHTML=rows.length?'<div class="admin-service-row"><div class="admin-service-main"><strong>Month</strong></div><div class="admin-service-meta"><strong>Income</strong><strong>Expenses</strong><strong>Net profit</strong></div></div>'+rows.map(x=>'<div class="admin-service-row"><div class="admin-service-main"><strong>'+escapeHtml(x.month_label)+'</strong><small>'+Number(x.bill_count||0)+' bills</small></div><div class="admin-service-meta"><strong>'+money(x.income_total)+'</strong><strong>'+money(x.expense_total)+'</strong><strong>'+money(x.net_profit)+'</strong></div></div>').join(""):'<div class="empty-state">Monthly history will appear after each month is completed.</div>';
 }
 async function loadReportsData(){
  const period=$("report-period")?.value||"day",{start,end}=financeRange(period),startIso=start.toISOString(),endIso=end.toISOString(),startDate=financeYmd(start),endDate=financeYmd(new Date(end.getTime()-86400000));
