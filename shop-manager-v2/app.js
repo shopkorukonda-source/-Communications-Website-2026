@@ -489,7 +489,7 @@ function updateBillingTotals(){
     const t=$("row-total-"+i),res=$("row-result-"+i),svc=services.find(s=>s.id===r.service_id),alloc=automaticWalletDebits(r,svc),walletBox=$("wallet-auto-"+i);
     if(t)t.textContent="₹"+money(calc.total);
     if(walletBox)walletBox.innerHTML=(billingWalletRules[r.service_id]||[]).map(rule=>{const wallet=walletOptions.find(x=>x.id===rule.wallet_id),debit=alloc.find(x=>x.wallet_id===rule.wallet_id);return wallet?'<div class="wallet-choice"><span>'+escapeHtml(wallet.name)+' <small>Balance ₹'+money(wallet.current_balance)+' · Auto debit ₹'+money(debit?.amount||0)+'</small></span></div>':"";}).join("")||"<small>No processing wallet configured for this service.</small>";
-    if(res)res.textContent="Service Charge: ₹"+money(calc.charge)+" · Processing Cost: ₹"+money(calc.cost)+" · Profit: ₹"+money(calc.profit)+" · Wallet debit: ₹"+money(alloc.reduce((a,x)=>a+x.amount,0));
+    if(res)res.textContent=currentProfile?.role==="admin"?"Service Charge: ₹"+money(calc.charge)+" · Processing Cost: ₹"+money(calc.cost)+" · Profit: ₹"+money(calc.profit)+" · Wallet debit: ₹"+money(alloc.reduce((a,x)=>a+x.amount,0)):"Service Charge: ₹"+money(calc.charge);
   });
   $("billing-totals").innerHTML=`<div><small>Total bill amount</small><strong>₹${money(base)}</strong></div><div><small>Total service charges</small><strong>₹${money(charges)}</strong></div><div><small>Customer total</small><strong>₹${money(total)}</strong></div>`;
   const received=Number($("bill-received").value||0);
@@ -553,9 +553,10 @@ async function loadRecentBills(){
 let awaitUserId=null;
 async function openBillEditor(id,requestOnly){
   const {data:userData}=await supabase.auth.getUser();awaitUserId=userData.user.id;
+  const itemFields=currentProfile?.role==="admin"?"service_id,quantity,customer_unit_price,processing_unit_cost,profit_amount,pricing_snapshot":"service_id,quantity,customer_unit_price,pricing_snapshot";
   const [{data:bill,error:bErr},{data:items,error:iErr}]=await Promise.all([
     supabase.from("billing_transactions").select("id,customer_name,customer_phone,payment_mode,customer_total,amount_received,cash_received,upi_received,notes,created_at,created_by").eq("id",id).single(),
-    supabase.from("billing_items").select("service_id,quantity,customer_unit_price,processing_unit_cost,profit_amount,pricing_snapshot").eq("transaction_id",id)
+    supabase.from("billing_items").select(itemFields).eq("transaction_id",id)
   ]);
   if(bErr||iErr){alert((bErr||iErr).message);return;}
   const payload={customer_name:bill.customer_name,customer_phone:bill.customer_phone,payment_mode:bill.payment_mode,customer_total:Number(bill.customer_total),amount_received:Number(bill.amount_received),cash_received:Number(bill.cash_received),upi_received:Number(bill.upi_received),notes:bill.notes,items:(items||[]).map(it=>({...it,wallet_debits:it.pricing_snapshot?.wallet_debits||[]}))};
