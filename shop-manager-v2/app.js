@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.0";
+import { renderOperations } from "./operations.js";
 
 const SUPABASE_URL = "https://fvjtbefsuzhrjimpmdop.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_ntLQ0BhfjcRnkxjt6xmRAQ_tBl5LtGD";
@@ -131,6 +132,8 @@ document.querySelectorAll(".nav-item").forEach(btn=>btn.addEventListener("click"
     await renderReports();
   } else if(view==="employees") {
     await renderEmployeeManager();
+  } else if(["drawers","attendance","leave","payroll","ucl","expenses","settlement"].includes(view)) {
+    await renderOperations(view,{supabase,host:$("other-view"),profile:currentProfile,$});
   } else {
     $("other-view").innerHTML='<div class="empty-panel"><div class="empty-icon">✦</div><h2 id="other-title"></h2><p>This module will be enabled after its complete workflow and safety checks are ready.</p></div>';
     $("other-title").textContent=btn.textContent.trim();
