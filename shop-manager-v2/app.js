@@ -1050,6 +1050,7 @@ function renderPanApplications(){
   aadhaarInput.maxLength=12;aadhaarInput.inputMode="numeric";aadhaarInput.pattern="[0-9]{12}";aadhaarInput.title="Enter exactly 12 digits";
   mobileInput.maxLength=10;mobileInput.inputMode="numeric";mobileInput.pattern="[0-9]{10}";mobileInput.title="Enter exactly 10 digits (without +91)";
   // Representative Assessee is shown automatically only when DOB indicates the applicant is under 18.
+  const raWrap=$("pan-ra-wrap");
   const raBody=raWrap.querySelector(".pan-section");
   const raProofFields=["ra_proof_identity","ra_proof_address"].map(n=>f.elements.namedItem(n)?.closest("label")).filter(Boolean);
   const syncRa=()=>{
