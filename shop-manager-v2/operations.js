@@ -115,7 +115,7 @@ export async function renderOperations(view, ctx) {
         const q=await supabase.from("employee_incentives").select("amount").eq("employee_id",empId).eq("status","approved").is("payroll_entry_id",null).gte("incentive_date",from).lt("incentive_date",to);
         if(q.error){$("op-incentive-preview").textContent="Incentives unavailable: "+q.error.message;return 0;}
         const total=(q.data||[]).reduce((sum,x)=>sum+Number(x.amount||0),0);
-        $("op-incentive-preview").textContent="Existing approved incentives: ₹"+money(total)+" · service-rule incentives are calculated when payroll is generated;
+        $("op-incentive-preview").textContent="Existing approved incentives: ₹"+money(total)+" · service-rule incentives are calculated when payroll is generated.";
         return total;
       };
       $("op-payroll-emp").addEventListener("change",preview);$("op-pay-month").addEventListener("change",preview);
