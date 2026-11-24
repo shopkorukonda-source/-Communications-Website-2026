@@ -930,10 +930,14 @@ function renderPanApplications(){
    if(pdf.getPageCount()<2)throw new Error("Official Form 93 template has fewer than two pages.");
    while(pdf.getPageCount()>2)pdf.removePage(2);
    const pages=pdf.getPages(),font=await pdf.embedFont(StandardFonts.Helvetica);
+   // The official Form 93 boxes sit about 13.5 PDF points below the
+   // first-pass anchor positions. Apply one calibrated vertical correction
+   // consistently to text and checkbox marks on both pages.
+   const FORM93_TEXT_Y_CORRECTION=13.5;
    const draw=(pi,x,top,value,max=120,size=6)=>{
     value=String(value??"").trim();if(!value||value==="—")return;
     let fs=size;while(fs>4.5&&font.widthOfTextAtSize(value,fs)>max)fs-=.25;
-    const page=pages[pi];page.drawText(value,{x,y:page.getHeight()-top-fs,font,size:fs,color:rgb(.04,.04,.04),maxWidth:max});
+    const page=pages[pi];page.drawText(value,{x,y:page.getHeight()-(top+FORM93_TEXT_Y_CORRECTION)-fs,font,size:fs,color:rgb(.04,.04,.04),maxWidth:max});
    };
    // Form 93 character boxes: one character per cell, retaining blank cells between words.
    const cell=10.62,boxColumns=36;
