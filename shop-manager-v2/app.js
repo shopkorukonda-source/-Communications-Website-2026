@@ -962,7 +962,9 @@ function renderPanApplications(){
    const addr=(pi,p,top)=>{["flat","road","post","area","district"].forEach((k,i)=>grid(pi,180,top+i*13.7-2.5,r[p+"_"+k],25,15,5.4));grid(pi,132,top+5*13.7-2.5,r[p+"_state"],8,cellW,5.2);grid(pi,285,top+5*13.7-2.5,r[p+"_country"]||"India",12,cellW,5.2);grid(pi,455,top+5*13.7-2.5,r[p+"_pin"],10,cellW,5.2)};
    const mark=(pi,x,top)=>{const el=put(pi,x,top,10,12,"✓","pan-html-mark");if(el)el.style.fontSize=(8*mScale(pageModels[pi]))+"px";return el};
    // Page 1: applicant identity and contact.
-   name(0,183.5,r.name);aadhaarNameGrid(r.name_as_aadhaar||r.name);
+   const applicantParts=[r.name_first,r.name_middle,r.name_last];
+   applicantParts.forEach((part,i)=>grid(0,180,183.5+i*13.7-1.2,part,25,nameCellW,i===0?5.0:5.2));
+   aadhaarNameGrid(r.name_as_aadhaar||r.name);
    mark(0,({Male:183,Female:229,Transgender:290})[r.gender]||183,280.5);
    if(r.dob){const [yy,mm,dd]=r.dob.split("-");[dd,mm,yy].forEach((part,i)=>grid(0,181+[0,44,84][i],291.5,part,4,15,6.5))}
    grid(0,185,307,r.aadhaar,12,10.62,5.8);addr(0,"res",342);if(r.office_flat||r.office_road||r.office_pin)addr(0,"office",435);
@@ -1028,7 +1030,7 @@ function renderPanApplications(){
  }
  function form(mode){
   const newMode=mode==="new";
-  const personal=field("name","Full name (First, Middle, Last)","text",true,"No initials / abbreviations")+field("name_as_aadhaar","Name exactly as per Aadhaar","text",true,"Enter exactly as printed on Aadhaar")+select("gender","Gender",["Male","Female","Transgender"],true)+field("dob","Date of birth","date",true)+field("aadhaar","Aadhaar number (12 digits)","text",true,"12-digit number");
+  const personal=field("name_first","First name (as per application)","text",true,"Enter the exact First Name")+field("name_middle","Middle name (optional)","text",false,"Leave blank if not applicable")+field("name_last","Last name / Surname (optional)","text",false,"Enter exactly as per application")+'<input type="hidden" name="name" id="pan-full-name">'+field("name_as_aadhaar","Name exactly as per Aadhaar","text",true,"Enter exactly as printed on Aadhaar")+select("gender","Gender",["Male","Female","Transgender"],true)+field("dob","Date of birth","date",true)+field("aadhaar","Aadhaar number (12 digits)","text",true,"12-digit number");
   const contact=field("mobile","Mobile number (10 digits)","tel",true,"Enter all 10 digits")+field("email","Email ID","email",true)+field("landline","Landline with STD code");
   const residence=addr("res","Residence Address");
   const office=addr("office","Office Address (if applicable)");
@@ -1102,14 +1104,12 @@ function renderPanApplications(){
    source.addEventListener("input",sync);source.addEventListener("change",sync);sync();
   };
   const applicantName=f.elements.namedItem("name"),aadhaarName=f.elements.namedItem("name_as_aadhaar");
-  if(applicantName&&aadhaarName){
-   applicantName.addEventListener("input",()=>{aadhaarName.value=applicantName.value});
-   applicantName.addEventListener("change",()=>{aadhaarName.value=applicantName.value});
-  }
+  const syncApplicantName=()=>{const first=f.elements.namedItem("name_first")?.value.trim()||"",middle=f.elements.namedItem("name_middle")?.value.trim()||"",last=f.elements.namedItem("name_last")?.value.trim()||"";applicantName.value=[first,middle,last].filter(Boolean).join(" ");};
+  ["name_first","name_middle","name_last"].forEach(n=>{const el=f.elements.namedItem(n);el?.addEventListener("input",syncApplicantName);el?.addEventListener("change",syncApplicantName)});
+  syncApplicantName();
   bindNameSplit("father_full","father");
   bindNameSplit("mother_full","mother");
   ["father_first","father_middle","father_last","mother_first","mother_middle","mother_last"].forEach(n=>{const el=f.elements.namedItem(n);if(el?.closest("label"))el.closest("label").hidden=true});
-  if(aadhaarName){aadhaarName.readOnly=true;aadhaarName.placeholder="Automatically copied from Full name";}
   // India PIN lookup: fill district, state and matching post office for each address.
   const attachPinLookup=(prefix)=>{
    const pin=f.elements.namedItem(prefix+"_pin");
@@ -1179,7 +1179,7 @@ function renderPanApplications(){
    const fd=new FormData(f),r=Object.fromEntries(fd.entries());r.income_sources=fd.getAll("income_sources");r.income_sources_text=r.income_sources.join(", ");
    if(!/^\d{12}$/.test((r.aadhaar||"").trim()))return alert("Aadhaar number must contain exactly 12 digits. Form cannot be saved without all 12 digits.");
    if(!/^\d{10}$/.test((r.mobile||"").trim()))return alert("Mobile number must contain exactly 10 digits (without +91). Form cannot be saved without all 10 digits.");
-   r.father=[r.father_first,r.father_middle,r.father_last].filter(Boolean).join(" ");r.mother=[r.mother_first,r.mother_middle,r.mother_last].filter(Boolean).join(" ");r.name_as_aadhaar=r.name;
+   r.name=[r.name_first,r.name_middle,r.name_last].map(v=>(v||"").trim()).filter(Boolean).join(" ");r.father=[r.father_first,r.father_middle,r.father_last].filter(Boolean).join(" ");r.mother=[r.mother_first,r.mother_middle,r.mother_last].filter(Boolean).join(" ");
    const applicantAge=age(r.dob),isMinor=applicantAge!==null&&applicantAge<18;
    if(!isMinor){["ra_name","ra_pan","ra_aadhaar","ra_relation","ra_mobile","ra_email","ra_landline","ra_address","ra_post","ra_area","ra_district","ra_state","ra_country","ra_pin"].forEach(k=>r[k]="");}
 
@@ -1216,7 +1216,7 @@ function renderPanApplications(){
  $("pan-new").after(sampleButton);
  sampleButton.addEventListener("click",()=>{
   const sample={
-   name:"ARUN KUMAR REDDY",name_as_aadhaar:"ARUN KUMAR REDDY",gender:"Male",dob:"1993-01-29",aadhaar:"123456789012",
+   name:"ARUN KUMAR REDDY",name_first:"ARUN",name_middle:"KUMAR",name_last:"REDDY",name_as_aadhaar:"ARUN KUMAR REDDY",gender:"Male",dob:"1993-01-29",aadhaar:"123456789012",
    res_country:"India",res_flat:"12-4 MAIN BUILDING",res_road:"MAIN ROAD KORUKONDA",res_post:"KORUKONDA",res_area:"KORUKONDA",res_district:"EAST GODAVARI",res_state:"ANDHRA PRADESH",res_pin:"533289",
    office_country:"India",office_flat:"SLV COMMUNICATIONS",office_road:"MAIN ROAD",office_post:"KORUKONDA",office_area:"KORUKONDA",office_district:"EAST GODAVARI",office_state:"ANDHRA PRADESH",office_pin:"533289",
    residential_status:"Resident",passport:"",tin:"",mobile:"9876543210",email:"sample@example.com",landline:"0883",
