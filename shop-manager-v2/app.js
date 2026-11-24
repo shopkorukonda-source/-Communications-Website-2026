@@ -953,7 +953,7 @@ async function saveForm93LayoutSettings(){
  const {error}=await supabase.from("form93_layout_settings").upsert({id:"default",settings:form93LayoutSettings,updated_by:user?.id||null,updated_at:new Date().toISOString()},{onConflict:"id"});
  if(error)throw error;
 }
-async function showForm93HtmlPreview(r){
+async async function showForm93HtmlPreview(r){
   const previous=$("pan-preview-overlay");if(previous)previous.remove();
   const overlay=document.createElement("div");overlay.id="pan-preview-overlay";overlay.className="pan-preview-overlay";
   overlay.innerHTML='<section class="pan-preview-modal" role="dialog" aria-modal="true" aria-label="PAN Form 93 preview"><header class="pan-preview-header"><div><strong>Form 93 Preview · HTML overlay</strong><small>'+esc(r.name||"Applicant")+' · '+esc(r.temp_ack||"")+'</small></div><div class="pan-preview-actions"><button type="button" class="secondary-btn" id="pan-preview-print" disabled>Print</button><button type="button" class="danger-btn" id="pan-preview-close">Close</button></div></header><div class="pan-preview-pages" id="pan-preview-pages"><p class="pan-preview-loading">Loading official Form 93 background…</p></div></section>';
@@ -982,17 +982,17 @@ async function showForm93HtmlPreview(r){
     const fieldOff=form93LayoutSettings[el.dataset.layoutKey]||{},wordOff=activeWordKey?(form93LayoutSettings[activeWordKey]||{}):{},letterOff=activeLetterKey?(form93LayoutSettings[activeLetterKey]||{}):{};
     el.style.left=((x+Number(fieldOff.dx||0)+Number(wordOff.dx||0)+Number(letterOff.dx||0))*m.scale/m.width*100)+"%";el.style.top=((top+Number(fieldOff.dy||0)+Number(wordOff.dy||0)+Number(letterOff.dy||0)+correction)*m.scale/m.height*100)+"%";el.style.width=(w*m.scale/m.width*100)+"%";el.style.height=(h*m.scale/m.height*100)+"%";el.textContent=String(content);el.style.fontWeight="700";m.layer.appendChild(el);return el;
    };
-   const text=(pi,x,top,value,w=120,size=6)=>{const prior=activeLayoutKey;activeLayoutKey="p"+pi+"-"+Math.round(x*10)+"-"+Math.round(top*10);const el=put(pi,x,top,w,12,value);activeLayoutKey=prior;if(el)el.style.fontSize=((size*1.12)*mScale(pageModels[pi]))+"px"};
+   const setBaseFont=(el,pi,size)=>{if(!el)return;el.dataset.baseFont=String(size);el.dataset.pageIndex=String(pi);const f=form93LayoutSettings[el.dataset.layoutKey]||{},w=form93LayoutSettings[el.dataset.layoutWord]||{},c=form93LayoutSettings[el.dataset.layoutLetter]||{};el.style.fontSize=(Number(c.size??w.size??f.size??size)*mScale(pageModels[pi]))+"px"};\n   const text=(pi,x,top,value,w=120,size=6)=>{const prior=activeLayoutKey;activeLayoutKey="p"+pi+"-"+Math.round(x*10)+"-"+Math.round(top*10);const el=put(pi,x,top,w,12,value);activeLayoutKey=prior;if(el)setBaseFont(el,pi,size*1.12)};
    const mScale=m=>m.width/(m.page.view[2]-m.page.view[0]);
-   const aadhaarNameGrid=(value)=>{const prior=activeLayoutKey,priorWord=activeWordKey,priorLetter=activeLetterKey,base="p0-1800-2383";activeLayoutKey=base;const parts=String(value||"").trim().toUpperCase().split(/\s+/).filter(Boolean);let pos=0;parts.forEach((part,idx)=>{if(idx===1)pos+=1;if(idx===2)pos+=1;[...part].forEach((ch,j)=>{if(pos<25){activeWordKey=base+"-w"+idx;activeLetterKey=base+"-c"+pos;const el=put(0,180+pos*nameCellW,238.3,nameCellW,cellH,ch,"pan-html-char");if(el)el.style.fontSize=(5.9*mScale(pageModels[0]))+"px";pos++}})});activeLayoutKey=prior;activeWordKey=priorWord;activeLetterKey=priorLetter};
+   const aadhaarNameGrid=(value)=>{const prior=activeLayoutKey,priorWord=activeWordKey,priorLetter=activeLetterKey,base="p0-1800-2383";activeLayoutKey=base;const parts=String(value||"").trim().toUpperCase().split(/\s+/).filter(Boolean);let pos=0;parts.forEach((part,idx)=>{if(idx===1)pos+=1;if(idx===2)pos+=1;[...part].forEach((ch,j)=>{if(pos<25){activeWordKey=base+"-w"+idx;activeLetterKey=base+"-c"+pos;const el=put(0,180+pos*nameCellW,238.3,nameCellW,cellH,ch,"pan-html-char");if(el)setBaseFont(el,0,5.9);pos++}})});activeLayoutKey=prior;activeWordKey=priorWord;activeLetterKey=priorLetter};
    const grid=(pi,x,top,value,cols=36,cw=cellW,size=5.4)=>{
     const prior=activeLayoutKey,priorWord=activeWordKey,priorLetter=activeLetterKey,base="p"+pi+"-"+Math.round(x*10)+"-"+Math.round(top*10);activeLayoutKey=base;
-    let wordIndex=0;[...String(value??"").trim().toUpperCase()].slice(0,cols).forEach((ch,i)=>{if(ch===" "){wordIndex++;return}activeWordKey=base+"-w"+wordIndex;activeLetterKey=base+"-c"+i;const el=put(pi,x+i*cw,top,cw,cellH,ch,"pan-html-char");if(el)el.style.fontSize=(size*mScale(pageModels[pi]))+"px"});
+    let wordIndex=0;[...String(value??"").trim().toUpperCase()].slice(0,cols).forEach((ch,i)=>{if(ch===" "){wordIndex++;return}activeWordKey=base+"-w"+wordIndex;activeLetterKey=base+"-c"+i;const el=put(pi,x+i*cw,top,cw,cellH,ch,"pan-html-char");if(el)setBaseFont(el,pi,size)});
     activeLayoutKey=prior;activeWordKey=priorWord;activeLetterKey=priorLetter;
    };
    const nameCellW=15; const name=(pi,top,value)=>{const words=String(value||"").trim().replace(/\s+/g," ").split(" ").filter(Boolean);[words[0]||"",words[1]||"",words.slice(2).join(" ")].forEach((v,i)=>grid(pi,180,top+i*13.7-1.2,v,25,nameCellW,i===0?5.0:5.2))};
    const addr=(pi,p,top)=>{["flat","road","post","area","district"].forEach((k,i)=>grid(pi,180,top+i*13.7-2.5,r[p+"_"+k],25,15,5.4));grid(pi,132,top+5*13.7-2.5,r[p+"_state"],8,cellW,5.2);grid(pi,285,top+5*13.7-2.5,r[p+"_country"]||"India",12,cellW,5.2);grid(pi,455,top+5*13.7-2.5,r[p+"_pin"],10,cellW,5.2)};
-   const mark=(pi,x,top)=>{const el=put(pi,x,top,10,12,"✓","pan-html-mark");if(el)el.style.fontSize=(8*mScale(pageModels[pi]))+"px";return el};
+   const mark=(pi,x,top)=>{const el=put(pi,x,top,10,12,"✓","pan-html-mark");if(el)setBaseFont(el,pi,8);return el};
    // Page 1: applicant identity and contact.
    const applicantParts=[r.name_first,r.name_middle,r.name_last];
    applicantParts.forEach((part,i)=>grid(0,180,183.5+i*13.7-1.2,part,25,nameCellW,i===0?5.0:5.2));
@@ -1016,10 +1016,10 @@ async function showForm93HtmlPreview(r){
    const addImage=(pi,x,top,w,h,data)=>{if(!data)return;const el=put(pi,x,top-correction,w,h,"","pan-html-photo");el.style.backgroundImage="url("+data+")"};
    addImage(0,46,23,100,128,r.photo);addImage(0,443,23,100,128,r.photo);addImage(0,49,108,94,30,r.signature);addImage(1,329,620,200,65,r.signature);
    if(currentProfile?.role==="admin"){
-    const tools=document.createElement("div");tools.className="pan-calibration-toolbar";tools.innerHTML='<button type="button" class="secondary-btn" id="pan-calibrate-toggle">Adjust field positions</button><select id="pan-calibrate-mode" class="secondary-btn" aria-label="Adjustment mode"><option value="field">Whole field</option><option value="word">Each word</option><option value="letter">Each letter</option></select><button type="button" class="secondary-btn" id="pan-calibrate-save" hidden>Save layout</button><button type="button" class="secondary-btn" id="pan-calibrate-reset" hidden>Reset positions</button><small id="pan-calibrate-help">Choose Whole field, Each word, or Each letter, then drag the blue outline.</small>';overlay.querySelector(".pan-preview-header").after(tools);
+    const tools=document.createElement("div");tools.className="pan-calibration-toolbar";tools.innerHTML='<button type="button" class="secondary-btn" id="pan-calibrate-toggle">Adjust field positions</button><select id="pan-calibrate-mode" class="secondary-btn" aria-label="Adjustment mode"><option value="field">Whole field</option><option value="word">Each word</option><option value="letter">Each letter</option></select><select id="pan-calibrate-size" class="secondary-btn" aria-label="Lettering size"><option value="4">Size 4</option><option value="5">Size 5</option><option value="6" selected>Size 6</option><option value="7">Size 7</option><option value="8">Size 8</option></select><button type="button" class="secondary-btn" id="pan-calibrate-apply-size" disabled>Apply size to selected</button><button type="button" class="secondary-btn" id="pan-calibrate-save" hidden>Save layout</button><button type="button" class="secondary-btn" id="pan-calibrate-reset" hidden>Reset positions</button><small id="pan-calibrate-help">Choose Whole field, Each word, or Each letter, then drag the blue outline.</small>';overlay.querySelector(".pan-preview-header").after(tools);
     let calibration=false,drag=null;
     const toggle=tools.querySelector("#pan-calibrate-toggle"),save=tools.querySelector("#pan-calibrate-save"),reset=tools.querySelector("#pan-calibrate-reset");
-    const handles=[],modeSelect=tools.querySelector("#pan-calibrate-mode");
+    const handles=[],modeSelect=tools.querySelector("#pan-calibrate-mode"),sizeSelect=tools.querySelector("#pan-calibrate-size"),applySize=tools.querySelector("#pan-calibrate-apply-size");let selectedCalibration=null;
     const makeHandles=()=>{
       handles.forEach(h=>h.remove());handles.length=0;
       const mode=modeSelect.value,attr=mode==="letter"?"layoutLetter":mode==="word"?"layoutWord":"layoutKey";
@@ -1031,7 +1031,7 @@ async function showForm93HtmlPreview(r){
           const h=document.createElement("div");h.className="pan-calibration-handle";h.dataset.key=key;
           h.style.left=((left-m.wrap.getBoundingClientRect().left)/m.wrap.clientWidth*100)+"%";h.style.top=((top-m.wrap.getBoundingClientRect().top)/m.wrap.clientHeight*100)+"%";
           h.style.width=Math.max(mode==="letter"?1:2,(right-left)/m.wrap.clientWidth*100)+"%";h.style.height=Math.max(mode==="letter"?0.8:1.5,(bottom-top)/m.wrap.clientHeight*100)+"%";
-          h.title=mode==="letter"?"Drag this letter":mode==="word"?"Drag this word":"Drag this field";
+          h.title=mode==="letter"?"Tap to select this letter, drag to move":mode==="word"?"Tap to select this word, drag to move":"Tap to select this field, drag to move";h.addEventListener("click",()=>{selectedCalibration={key,els,mode};handles.forEach(x=>x.classList.toggle("selected",x===h));applySize.disabled=false});
           h.addEventListener("pointerdown",e=>{if(!calibration)return;e.preventDefault();h.setPointerCapture(e.pointerId);drag={key,els,startX:e.clientX,startY:e.clientY,dx:0,dy:0}});
           h.addEventListener("pointermove",e=>{if(!drag||drag.key!==key)return;const dx=e.clientX-drag.startX,dy=e.clientY-drag.startY;drag.dx=dx;drag.dy=dy;els.forEach(el=>el.style.transform="translate("+dx+"px,"+dy+"px)")});
           h.addEventListener("pointerup",()=>{if(!drag||drag.key!==key)return;const scale=m.scale,prev=form93LayoutSettings[key]||{};form93LayoutSettings[key]={...prev,dx:Number(prev.dx||0)+drag.dx/scale,dy:Number(prev.dy||0)+drag.dy/scale};
@@ -1040,7 +1040,7 @@ async function showForm93HtmlPreview(r){
         });
       });
     };
-    modeSelect.addEventListener("change",()=>{if(calibration)makeHandles()});
+    modeSelect.addEventListener("change",()=>{selectedCalibration=null;applySize.disabled=true;if(calibration)makeHandles()});\n    applySize.addEventListener("click",()=>{if(!selectedCalibration)return;const {key,els}=selectedCalibration,prev=form93LayoutSettings[key]||{},size=Number(sizeSelect.value);form93LayoutSettings[key]={...prev,size};els.forEach(el=>{const pi=Number(el.dataset.pageIndex||0);el.style.fontSize=(size*mScale(pageModels[pi]))+"px"});});
     toggle.onclick=()=>{calibration=!calibration;overlay.classList.toggle("pan-calibrating",calibration);toggle.textContent=calibration?"Finish adjusting":"Adjust field positions";save.hidden=!calibration;reset.hidden=!calibration;tools.querySelector("#pan-calibrate-help").textContent=calibration?"Mode: "+modeSelect.options[modeSelect.selectedIndex].text+". Drag blue outlines; save when finished.":"Choose Whole field, Each word, or Each letter, then drag the blue outline.";if(calibration)makeHandles();else{handles.forEach(h=>h.remove());handles.length=0}};
     save.onclick=async()=>{try{await saveForm93LayoutSettings();save.textContent="Saved";setTimeout(()=>save.textContent="Save layout",1400)}catch(e){alert("Could not save layout: "+e.message)}};
     reset.onclick=async()=>{if(!confirm("Reset all Form 93 field positions to default?"))return;form93LayoutSettings={};try{await saveForm93LayoutSettings();overlay.remove();await print(r)}catch(e){alert("Could not reset layout: "+e.message)}};
