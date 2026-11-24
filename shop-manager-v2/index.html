@@ -32,6 +32,7 @@
         <label for="password">Password</label>
         <div class="password-wrap"><input id="password" type="password" autocomplete="current-password" placeholder="Enter your password" required><button type="button" id="toggle-password" aria-label="Show password">Show</button></div>
         <button class="primary-btn" type="submit" id="login-btn">Sign in <span>→</span></button>
+        <div class="login-actions"><button type="button" id="forgot-password-btn" class="link-btn">Forgot password?</button><span>Secure access · SLV Communications</span></div>
         <div id="login-message" class="message" role="status"></div>
         <div class="login-note">Your shop data is protected by secure account access.</div>
       </form>
@@ -66,7 +67,7 @@
     <section class="main-area">
       <header class="topbar">
         <div><div class="eyebrow" id="greeting">GOOD DAY</div><h2 id="page-title">Overview</h2></div>
-        <div class="user-area"><div class="user-meta"><strong id="user-name">Team member</strong><small id="user-role">Employee</small></div><div class="avatar" id="avatar">S</div><button id="signout-btn" class="signout-btn">Sign out</button></div>
+        <div class="user-area"><div class="user-meta"><strong id="user-name">Team member</strong><small id="user-role">Employee</small></div><div class="avatar" id="avatar">S</div><button id="change-password-btn" class="signout-btn">Change password</button><button id="signout-btn" class="signout-btn">Sign out</button></div>
       </header>
       <section id="overview-view" class="view">
         <div class="welcome-row"><div><h1>Your shop, <span>in control.</span></h1><p>Here’s a clear view of today’s operations.</p></div><div class="date-chip" id="today-date"></div></div>
@@ -84,6 +85,20 @@
       <section id="other-view" class="view hidden"><div class="empty-panel"><div class="empty-icon">✦</div><h2 id="other-title">Coming next</h2><p>This workspace is being built in focused modules. Your existing website remains untouched.</p></div></section>
     </section>
   </main>
+
+  <section id="password-dialog" class="password-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="password-dialog-title">
+    <form id="password-form" class="password-dialog-card">
+      <button type="button" id="password-dialog-close" class="dialog-close" aria-label="Close">×</button>
+      <div class="eyebrow">ACCOUNT SECURITY</div>
+      <h2 id="password-dialog-title">Change password</h2>
+      <p id="password-dialog-copy">Verify your current password, then choose a new secure password.</p>
+      <label id="current-password-label">Current password<input id="current-password" type="password" autocomplete="current-password" minlength="8"></label>
+      <label>New password<input id="new-password" type="password" autocomplete="new-password" minlength="8" required></label>
+      <label>Confirm new password<input id="confirm-password" type="password" autocomplete="new-password" minlength="8" required></label>
+      <div id="password-dialog-message" class="message" role="status"></div>
+      <button class="primary-btn" type="submit" id="password-save-btn">Update password</button>
+    </form>
+  </section>
   <script type="module" src="./app.js"></script>
 </body>
 </html>
