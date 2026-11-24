@@ -945,8 +945,8 @@ function renderPanApplications(){
 let form93LayoutSettings={};
 let form93ApplicantLayoutSettings={};
 function applicantLayoutStorageKey(r){return "slv_form93_applicant_layout_v1_"+String(r?.temp_ack||"").replace(/[^a-zA-Z0-9_-]/g,"_")}
-function loadApplicantLayoutSettings(r){try{form93ApplicantLayoutSettings=JSON.parse(localStorage.getItem(applicantLayoutStorageKey(r))||"{}")}catch{form93ApplicantLayoutSettings={}}return form93ApplicantLayoutSettings}
-function saveApplicantLayoutSettings(r){localStorage.setItem(applicantLayoutStorageKey(r),JSON.stringify(form93ApplicantLayoutSettings))}
+async function loadApplicantLayoutSettings(r){form93ApplicantLayoutSettings={};const {data,error}=await supabase.from("form93_applicant_layout_settings").select("settings").eq("temp_ack",r?.temp_ack||"").maybeSingle();if(error){console.warn("Applicant layout cloud load failed",error);try{form93ApplicantLayoutSettings=JSON.parse(localStorage.getItem(applicantLayoutStorageKey(r))||"{}")}catch{}return form93ApplicantLayoutSettings}form93ApplicantLayoutSettings=data?.settings||{};return form93ApplicantLayoutSettings}
+async function saveApplicantLayoutSettings(r){const {data:{user}}=await supabase.auth.getUser();const {error}=await supabase.from("form93_applicant_layout_settings").upsert({temp_ack:r?.temp_ack||"",settings:form93ApplicantLayoutSettings,updated_by:user?.id||null,updated_at:new Date().toISOString()},{onConflict:"temp_ack"});if(error)throw error;localStorage.setItem(applicantLayoutStorageKey(r),JSON.stringify(form93ApplicantLayoutSettings))}
 async function loadForm93LayoutSettings(){
  const {data,error}=await supabase.from("form93_layout_settings").select("settings").eq("id","default").maybeSingle();
  if(error){console.warn("Form 93 layout settings unavailable",error);return form93LayoutSettings;}
@@ -958,7 +958,7 @@ async function saveForm93LayoutSettings(){
  if(error)throw error;
 }
 async function showForm93HtmlPreview(r){
-  loadApplicantLayoutSettings(r);
+  await loadApplicantLayoutSettings(r);
   const previous=$("pan-preview-overlay");if(previous)previous.remove();
   const overlay=document.createElement("div");overlay.id="pan-preview-overlay";overlay.className="pan-preview-overlay";
   overlay.innerHTML='<section class="pan-preview-modal" role="dialog" aria-modal="true" aria-label="PAN Form 93 preview"><header class="pan-preview-header"><div><strong>Form 93 Preview · HTML overlay</strong><small>'+esc(r.name||"Applicant")+' · '+esc(r.temp_ack||"")+'</small></div><div class="pan-preview-actions"><button type="button" class="secondary-btn" id="pan-preview-print" disabled>Print</button><button type="button" class="danger-btn" id="pan-preview-close">Close</button></div></header><div class="pan-preview-pages" id="pan-preview-pages"><p class="pan-preview-loading">Loading official Form 93 background…</p></div></section>';
@@ -1049,8 +1049,8 @@ async function showForm93HtmlPreview(r){
     modeSelect.addEventListener("change",()=>{selectedCalibration=null;applySize.disabled=true;if(calibration)makeHandles()});
     applySize.addEventListener("click",()=>{if(!selectedCalibration)return;const {key,els}=selectedCalibration,prev=form93ApplicantLayoutSettings[key]||{},size=Number(sizeSelect.value);form93ApplicantLayoutSettings[key]={...prev,size};els.forEach(el=>{const pi=Number(el.dataset.pageIndex||0);el.style.fontSize=(size*mScale(pageModels[pi]))+"px"});});
     toggle.onclick=()=>{calibration=!calibration;overlay.classList.toggle("pan-calibrating",calibration);toggle.textContent=calibration?"Finish adjusting":"Adjust field positions";save.hidden=!calibration;reset.hidden=!calibration;tools.querySelector("#pan-calibrate-help").textContent=calibration?"Mode: "+modeSelect.options[modeSelect.selectedIndex].text+". Drag blue outlines; save when finished.":"Choose Whole field, Each word, or Each letter, then drag the blue outline.";if(calibration)makeHandles();else{handles.forEach(h=>h.remove());handles.length=0}};
-    save.onclick=async()=>{try{saveApplicantLayoutSettings(r);save.textContent="Applicant layout saved";setTimeout(()=>save.textContent="Save layout",1400)}catch(e){alert("Could not save applicant layout: "+e.message)}};
-    reset.onclick=async()=>{if(!confirm("Reset only this applicant’s Form 93 adjustments? Other applicants and the standard template will not change."))return;form93ApplicantLayoutSettings={};try{saveApplicantLayoutSettings(r);overlay.remove();await print(r)}catch(e){alert("Could not reset applicant layout: "+e.message)}};
+    save.onclick=async()=>{save.disabled=true;try{await saveApplicantLayoutSettings(r);save.textContent="Saved to all PCs";setTimeout(()=>save.textContent="Save layout",1600)}catch(e){alert("Could not save applicant layout to cloud: "+e.message)}finally{save.disabled=false}};
+    reset.onclick=async()=>{if(!confirm("Reset only this applicant’s Form 93 adjustments? Other applicants and the standard template will not change."))return;form93ApplicantLayoutSettings={};try{await saveApplicantLayoutSettings(r);overlay.remove();await print(r)}catch(e){alert("Could not reset applicant layout: "+e.message)}};
    }
    const printBtn=overlay.querySelector("#pan-preview-print");printBtn.disabled=false;printBtn.onclick=()=>{
     const frame=document.createElement("iframe");frame.style.cssText="position:fixed;width:1px;height:1px;right:0;bottom:0;border:0";document.body.appendChild(frame);
