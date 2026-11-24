@@ -927,7 +927,7 @@ function renderPanApplications(){
    if(!window.PDFLib){
     await new Promise((resolve,reject)=>{const s=document.createElement("script");s.src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js";s.onload=resolve;s.onerror=()=>reject(new Error("PDF engine could not load. Check internet connection."));document.head.appendChild(s)});
    }
-   const templateUrl="https://tinpan.proteantech.in/downloads/pan/download/Form%2093.pdf";
+   const templateUrl="https://fvjtbefsuzhrjimpmdop.supabase.co/functions/v1/form93-template";
    const response=await fetch(templateUrl);
    if(!response.ok)throw new Error("Official Form 93 template could not be downloaded. Please try again.");
    const bytes=await response.arrayBuffer();
@@ -935,7 +935,7 @@ function renderPanApplications(){
    const pdf=await PDFDocument.load(bytes);
    if(pdf.getPageCount()<2)throw new Error("The downloaded Form 93 template does not contain the required two pages.");
    const font=await pdf.embedFont(StandardFonts.Helvetica);
-   const pages=pdf.getPages().slice(0,2);
+   while(pdf.getPageCount()>2)pdf.removePage(2);\n   const pages=pdf.getPages();
    const draw=(pi,x,y,text,max=42,size=7)=>{
     const value=String(text??"").trim();if(!value||value==="—")return;
     const page=pages[pi],w=page.getWidth(),h=page.getHeight();
