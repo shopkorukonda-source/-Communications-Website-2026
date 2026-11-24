@@ -65,6 +65,7 @@ async function showApp(user) {
     document.querySelector(".stat-card:nth-child(2) small").textContent = "Shop Cash wallet balance";
   }
   await loadCatalog();
+  if (profile.role === "employee") await loadEmployeeAnnouncements();
 }
 
 async function loadCatalog() {
@@ -183,6 +184,8 @@ document.querySelectorAll(".nav-item").forEach(btn=>btn.addEventListener("click"
     await renderQuickLinks();
   } else if(view==="panforms") {
     renderPanApplications();
+  } else if(view==="announcements") {
+    await renderAnnouncementManager();
   } else if(view==="services") {
     await renderServiceManager();
   } else if(view==="wallets") {
@@ -752,4 +755,58 @@ function renderPanApplications(){
   $("pan-find").onclick=run;run();
  }
  $("pan-new").onclick=()=>form("new");$("pan-corr").onclick=()=>form("correction");$("pan-search").onclick=search;form("new");
+}
+
+
+const announcementMeta={
+ festive:{label:"Festive Wishes",icon:"🎉"},
+ holiday:{label:"Holiday Declaration",icon:"📅"},
+ important:{label:"Important Announcement",icon:"📢"}
+};
+async function loadEmployeeAnnouncements(){
+ const host=$("employee-announcements");if(!host||currentProfile?.role!=="employee")return;
+ const {data,error}=await supabase.from("shop_announcements")
+  .select("id,announcement_type,title,message,event_date,expires_on,created_at")
+  .eq("is_published",true).or("expires_on.is.null,expires_on.gte."+new Date().toISOString().slice(0,10))
+  .order("created_at",{ascending:false}).limit(12);
+ if(error){host.innerHTML="";console.warn("Announcements unavailable",error);return}
+ if(!data?.length){host.innerHTML="";return}
+ host.innerHTML='<div class="announcement-heading"><div><div class="eyebrow">FROM SLV MANAGEMENT</div><h3>Updates & Announcements</h3></div></div><div class="announcement-list">'+data.map(a=>{
+ const m=announcementMeta[a.announcement_type]||announcementMeta.important;
+ return '<article class="announcement-card announcement-'+a.announcement_type+'"><div class="announcement-icon">'+m.icon+'</div><div class="announcement-copy"><div class="announcement-type">'+m.label+(a.event_date?' · '+new Date(a.event_date+"T00:00:00").toLocaleDateString("en-IN"):"")+'</div><strong>'+escapeHtml(a.title)+'</strong><p>'+escapeHtml(a.message).replace(/\n/g,"<br>")+'</p></div></article>'
+ }).join("")+'</div>';
+}
+async function renderAnnouncementManager(){
+ const host=$("other-view");if(currentProfile?.role!=="admin"){host.innerHTML='<div class="empty-panel"><h2>Announcements</h2><p>Only Admin can manage shop announcements.</p></div>';return}
+ const {data:rows,error}=await supabase.from("shop_announcements").select("*").order("created_at",{ascending:false}).limit(100);
+ if(error){host.innerHTML='<div class="empty-panel"><h2>Announcements</h2><p>Unable to load announcements.</p></div>';return}
+ host.innerHTML=`
+ <div class="admin-module-head"><div><div class="eyebrow">EMPLOYEE COMMUNICATION</div><h2>Festive Wishes & Announcements</h2><p>Create festive wishes, holiday declarations and important notices for all employees.</p></div></div>
+ <div class="admin-editor announcement-editor"><h3 id="announcement-form-title">Create announcement</h3>
+ <form id="announcement-form" class="announcement-form">
+  <input type="hidden" id="announcement-id">
+  <label>Announcement type<select id="announcement-type"><option value="festive">Festive Wishes</option><option value="holiday">Holiday Declaration</option><option value="important">Important Announcement</option></select></label>
+  <label>Title<input id="announcement-title" maxlength="120" required placeholder="e.g. Happy Diwali"></label>
+  <label>Message<textarea id="announcement-message" rows="4" maxlength="2000" required placeholder="Write message for employees"></textarea></label>
+  <label>Event / Holiday date<input id="announcement-date" type="date"></label>
+  <label>Visible until<input id="announcement-expiry" type="date"></label>
+  <label>Publish status<select id="announcement-published"><option value="true">Publish now</option><option value="false">Save as draft / hidden</option></select></label>
+  <div class="announcement-actions"><button class="primary-btn" type="submit" id="announcement-save">Publish announcement</button><button class="secondary-btn" type="button" id="announcement-reset">Clear form</button></div>
+ </form></div>
+ <div class="announcement-admin-list"><h3>Existing announcements</h3>
+ ${rows?.length?rows.map(a=>{const m=announcementMeta[a.announcement_type]||announcementMeta.important;return `<article class="announcement-admin-row"><div class="announcement-icon">${m.icon}</div><div class="announcement-copy"><div class="announcement-type">${m.label} · ${a.is_published?"Published":"Draft / Hidden"}</div><strong>${escapeHtml(a.title)}</strong><p>${escapeHtml(a.message)}</p><small>${a.event_date?"Event: "+a.event_date:""} ${a.expires_on?"· Expires: "+a.expires_on:""}</small></div><div class="announcement-row-actions"><button type="button" data-ann-edit="${a.id}">Edit</button><button type="button" data-ann-toggle="${a.id}" data-published="${a.is_published}">${a.is_published?"Hide":"Publish"}</button><button type="button" class="danger-btn" data-ann-delete="${a.id}">Delete</button></div></article>`}).join(""):'<div class="empty-state">No announcements created yet.</div>'}
+ </div>`;
+ const reset=()=>{$("announcement-form").reset();$("announcement-id").value="";$("announcement-form-title").textContent="Create announcement";$("announcement-save").textContent="Publish announcement"};
+ $("announcement-reset").onclick=reset;
+ $("announcement-form").onsubmit=async e=>{
+  e.preventDefault();const id=$("announcement-id").value;
+  const payload={announcement_type:$("announcement-type").value,title:$("announcement-title").value.trim(),message:$("announcement-message").value.trim(),event_date:$("announcement-date").value||null,expires_on:$("announcement-expiry").value||null,is_published:$("announcement-published").value==="true"};
+  if(payload.expires_on&&payload.event_date&&payload.expires_on<payload.event_date){alert("Visible until date cannot be before event date.");return}
+  const result=id?await supabase.from("shop_announcements").update(payload).eq("id",id):await supabase.from("shop_announcements").insert({...payload,created_by:(await supabase.auth.getUser()).data.user?.id});
+  if(result.error){alert("Unable to save: "+result.error.message);return}
+  await renderAnnouncementManager();
+ };
+ host.querySelectorAll("[data-ann-edit]").forEach(btn=>btn.onclick=()=>{const a=rows.find(x=>x.id===btn.dataset.annEdit);$("announcement-id").value=a.id;$("announcement-type").value=a.announcement_type;$("announcement-title").value=a.title;$("announcement-message").value=a.message;$("announcement-date").value=a.event_date||"";$("announcement-expiry").value=a.expires_on||"";$("announcement-published").value=String(a.is_published);$("announcement-form-title").textContent="Edit announcement";$("announcement-save").textContent="Save changes";$("announcement-form").scrollIntoView({behavior:"smooth",block:"start"})});
+ host.querySelectorAll("[data-ann-toggle]").forEach(btn=>btn.onclick=async()=>{const {error:e}=await supabase.from("shop_announcements").update({is_published:btn.dataset.published!=="true"}).eq("id",btn.dataset.annToggle);if(e)alert(e.message);else await renderAnnouncementManager()});
+ host.querySelectorAll("[data-ann-delete]").forEach(btn=>btn.onclick=async()=>{if(!confirm("Delete this announcement?"))return;const {error:e}=await supabase.from("shop_announcements").delete().eq("id",btn.dataset.annDelete);if(e)alert(e.message);else await renderAnnouncementManager()});
 }
