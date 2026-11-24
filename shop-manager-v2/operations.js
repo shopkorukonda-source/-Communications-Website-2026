@@ -115,11 +115,11 @@ export async function renderOperations(view, ctx) {
         const q=await supabase.from("employee_incentives").select("amount").eq("employee_id",empId).eq("status","approved").is("payroll_entry_id",null).gte("incentive_date",from).lt("incentive_date",to);
         if(q.error){$("op-incentive-preview").textContent="Incentives unavailable: "+q.error.message;return 0;}
         const total=(q.data||[]).reduce((sum,x)=>sum+Number(x.amount||0),0);
-        $("op-incentive-preview").textContent="Approved incentives included automatically: ₹"+money(total);
+        $("op-incentive-preview").textContent="Existing approved incentives: ₹"+money(total)+" · service-rule incentives are calculated when payroll is generated;
         return total;
       };
       $("op-payroll-emp").addEventListener("change",preview);$("op-pay-month").addEventListener("change",preview);
-      $("op-payroll").addEventListener("submit",async e=>{e.preventDefault();const bonus=await preview();const r=await supabase.rpc("generate_payroll_with_incentives",{p_employee_id:$("op-payroll-emp").value,p_pay_month:$("op-pay-month").value+"-01",p_additions:Number($("op-add").value||0),p_deductions:Number($("op-ded").value||0)});$("op-payroll-msg").textContent=r.error?r.error.message:"Payroll created. Approved incentives ₹"+money(bonus)+" included; attendance deductions calculated automatically.";if(!r.error)await renderOperations(view,ctx);});
+      $("op-payroll").addEventListener("submit",async e=>{e.preventDefault();const bonus=await preview();const r=await supabase.rpc("generate_payroll_with_incentives",{p_employee_id:$("op-payroll-emp").value,p_pay_month:$("op-pay-month").value+"-01",p_additions:Number($("op-add").value||0),p_deductions:Number($("op-ded").value||0)});$("op-payroll-msg").textContent=r.error?r.error.message:"Payroll created. Service-rule incentives and attendance deductions calculated automatically.";if(!r.error)await renderOperations(view,ctx);});
       host.querySelectorAll("[data-op-paid]").forEach(b=>b.addEventListener("click",async()=>{const r=await supabase.rpc("mark_payroll_paid",{p_payroll_id:b.dataset.opPaid});if(r.error)alert(r.error.message);else await renderOperations(view,ctx);}));
     }
     return;
