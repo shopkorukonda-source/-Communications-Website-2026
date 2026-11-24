@@ -87,7 +87,7 @@ export async function renderOperations(view, ctx) {
     const preview=async()=>{
       const empId=$("op-payroll-emp").value,month=$("op-pay-month").value;
       if(!empId||!month){$("op-incentive-preview").textContent="Select an employee and pay month.";return 0;}
-      const from=month+"-01",to=new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),1).toISOString().slice(0,10);
+      const [year,monthNumber]=month.split("-").map(Number);const from=month+"-01",to=monthNumber===12?(year+1)+"-01-01":year+"-"+String(monthNumber+1).padStart(2,"0")+"-01";
       const q=await supabase.from("employee_incentives").select("amount").eq("employee_id",empId).eq("status","approved").is("payroll_entry_id",null).gte("incentive_date",from).lt("incentive_date",to);
       if(q.error){$("op-incentive-preview").textContent="Incentives unavailable: "+q.error.message;return 0;}
       const total=(q.data||[]).reduce((sum,x)=>sum+Number(x.amount||0),0);
