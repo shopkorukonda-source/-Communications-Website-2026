@@ -935,7 +935,8 @@ function renderPanApplications(){
    const pdf=await PDFDocument.load(bytes);
    if(pdf.getPageCount()<2)throw new Error("The downloaded Form 93 template does not contain the required two pages.");
    const font=await pdf.embedFont(StandardFonts.Helvetica);
-   while(pdf.getPageCount()>2)pdf.removePage(2);\n   const pages=pdf.getPages();
+   while(pdf.getPageCount()>2)pdf.removePage(2);
+   const pages=pdf.getPages();
    const draw=(pi,x,y,text,max=42,size=7)=>{
     const value=String(text??"").trim();if(!value||value==="—")return;
     const page=pages[pi],w=page.getWidth(),h=page.getHeight();
