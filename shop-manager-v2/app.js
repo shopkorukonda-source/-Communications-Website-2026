@@ -919,22 +919,68 @@ function renderPanApplications(){
  const addr=(prefix,label)=>addressFields(prefix,label).map(([n,l,v])=>field(n,l,"text",n==="res_pin",v)).join("");
  host.innerHTML='<h2>PAN Applications</h2><p>New PAN Form 93 · Correction CR-01 · Full applicant details · Local device records</p><div class="pan-tabs"><button id="pan-new">New PAN – Form 93</button><button id="pan-corr">Correction – CR-01</button><button id="pan-search">Search / Link Ack</button></div><div id="pan-work"></div>';
  const root=$("pan-work");
- function print(r){
-  const w=window.open("","_blank");if(!w)return alert("Allow pop-ups to print.");
-  const val=k=>esc(r[k]||"—");
-  const line=(label,k)=>'<tr><th>'+esc(label)+'</th><td>'+val(k)+'</td></tr>';
-  const address=(prefix,label)=>'<h4>'+label+'</h4><table>'+addressFields(prefix,label).map(([k,l])=>line(l,k)).join("")+'</table>';
-  const table=(rows)=>'<table>'+rows.join("")+'</table>';
-  const photo='<div class="photo-area"><div class="photo-box">'+(r.photo?'<img src="'+r.photo+'">':'Photograph<br>4.5 cm × 3.5 cm')+'</div><div class="photo-box">'+(r.signature?'<img src="'+r.signature+'">':'Signature / Left thumb impression<br>across photograph')+'</div></div>';
-  const sources=(r.income_sources||[]).join(", ")||"—";
-  const raRows=["ra_name","ra_pan","ra_aadhaar","ra_mobile","ra_email","ra_landline"].map(k=>line(k.replace(/^ra_/,"").replace(/_/g," "),k));
-  const pages=[
-   '<section class="page"><div class="form-head"><b>FORM NO. 93</b><h2>Application for Allotment of Permanent Account Number</h2><p>[See rule 158] · For an Individual being a Citizen of India</p></div>'+photo+'<h3>PART A — PERSONAL INFORMATION</h3>'+table([line("1. Full name", "name"),line("2. Gender","gender"),line("3. Date of birth","dob"),line("4. Aadhaar number","aadhaar"),line("7. Residential status","residential_status"),line("8. Passport number","passport"),line("9. TIN in country of residence","tin"),line("10. Mobile number with country code","mobile"),line("10. Email ID","email"),line("10. Landline with STD code","landline")])+address("res","5. Residence Address")+(r.office_country||r.office_flat||r.office_pin?address("office","6. Office Address"):"")+'</section>',
-   '<section class="page"><h3>PART B — SOURCE OF INCOME</h3>'+table([line("11. Source(s) of income","income_sources_text")])+'<p>'+esc(sources)+'</p><h3>PART C — DETAILS OF PARENTS</h3>'+table([line("12. Mother / Father is a single parent?","single_parent"),line("13. Father’s name","father"),line("14. Mother’s name","mother"),line("15. Parent name to print on PAN","parent")])+'<h3>PART D — AO CODE</h3>'+table([line("16. Area Code","ao_area"),line("AO Type","ao_type"),line("Range Code","ao_range"),line("AO Number","ao_number")])+'<h3>PART E — REPRESENTATIVE ASSESSEE (IF APPLICABLE)</h3>'+table(raRows.concat([line("Relationship / Capacity","ra_relation"),line("Address","ra_address"),line("City","ra_city"),line("State","ra_state"),line("PIN","ra_pin")]))+'</section>',
-   '<section class="page"><h3>PART F — COMMUNICATION ADDRESS</h3>'+table([line("22. Address for communication","communication_address")])+'<p>Selected address: '+val("communication_address")+'</p><h3>PART G — DOCUMENTS / PROOFS</h3>'+table([line("23. Applicant Proof of Identity","proof_identity"),line("23. Applicant Proof of Address","proof_address"),line("23. Applicant Proof of Date of Birth","proof_dob"),line("24. RA Proof of Identity","ra_proof_identity"),line("24. RA Proof of Address","ra_proof_address")])+'<h3>VERIFICATION AND DECLARATION</h3><p>I, '+val("declarant_name")+', in the capacity of '+val("declarant_capacity")+' (Self or Representative Assessee), do hereby declare that what is stated above is true to the best of my knowledge and belief.</p><p>I declare that the applicant does not possess Permanent Account Number and shall be liable for legal consequences under the Income-tax Act, 2025 (30 of 2025) if this declaration is found to be incorrect.</p><p>Place: '+val("place")+' &nbsp;&nbsp; Date: '+val("declaration_date")+'</p><div class="sign-box">'+(r.signature?'<img src="'+r.signature+'">':'')+'</div><p>Signature / Left hand thumb impression of Applicant or Representative Assessee</p><p>Name: '+val("declarant_name")+' &nbsp; Designation: '+val("declarant_designation")+'</p><hr><small>Internal SLV data-entry printout for review and submission through an authorised PAN service provider. This is not proof of filing, an official acknowledgement, or a PAN allotment.</small></section>'
-  ];
-  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Form 93 – '+val("name")+'</title><style>@page{size:A4;margin:12mm}*{box-sizing:border-box}body{font:10pt Arial,sans-serif;color:#111}.page{min-height:270mm;page-break-after:always}.page:last-child{page-break-after:auto}.form-head{text-align:center;border-bottom:2px solid #222;padding-bottom:8px}.form-head h2{font-size:16pt;margin:8px}.photo-area{display:flex;justify-content:flex-end;gap:12px;margin:12px 0}.photo-box{width:45mm;height:35mm;border:1px solid #555;display:flex;align-items:center;justify-content:center;text-align:center;font-size:9pt}.photo-box img{width:100%;height:100%;object-fit:contain}h3{font-size:11pt;background:#eee;padding:7px;margin:14px 0 7px}h4{margin:9px 0 4px}table{width:100%;border-collapse:collapse;margin:5px 0 12px}th,td{border:1px solid #999;padding:6px;text-align:left;vertical-align:top}th{width:42%;font-weight:600}.sign-box{height:25mm;width:55mm;border:1px solid #777;margin:10px 0 5px auto}.sign-box img{max-width:100%;max-height:100%;object-fit:contain}</style></head><body>'+pages.join("")+'<script>onload=()=>print()<\/script></body></html>');
-  w.document.close();
+ async function print(r){
+  const btn=document.querySelector('#pan-form button[type="submit"]');
+  const original=btn?.textContent;
+  if(btn){btn.disabled=true;btn.textContent="Preparing official Form 93 PDF…";}
+  try{
+   if(!window.PDFLib){
+    await new Promise((resolve,reject)=>{const s=document.createElement("script");s.src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js";s.onload=resolve;s.onerror=()=>reject(new Error("PDF engine could not load. Check internet connection."));document.head.appendChild(s)});
+   }
+   const templateUrl="https://tinpan.proteantech.in/downloads/pan/download/Form%2093.pdf";
+   const response=await fetch(templateUrl);
+   if(!response.ok)throw new Error("Official Form 93 template could not be downloaded. Please try again.");
+   const bytes=await response.arrayBuffer();
+   const {PDFDocument,StandardFonts,rgb}=window.PDFLib;
+   const pdf=await PDFDocument.load(bytes);
+   if(pdf.getPageCount()<2)throw new Error("The downloaded Form 93 template does not contain the required two pages.");
+   const font=await pdf.embedFont(StandardFonts.Helvetica);
+   const pages=pdf.getPages().slice(0,2);
+   const draw=(pi,x,y,text,max=42,size=7)=>{
+    const value=String(text??"").trim();if(!value||value==="—")return;
+    const page=pages[pi],w=page.getWidth(),h=page.getHeight();
+    let s=size;while(s>5&&font.widthOfTextAtSize(value,s)>max)s-=0.4;
+    page.drawText(value,{x,y:h-y-s,font,size:s,color:rgb(0.05,0.05,0.05),maxWidth:max});
+   };
+   const parts=v=>{const a=String(v||"").trim().split(/\\s+/);return [a[0]||"",a.length>2?a.slice(1,-1).join(" "):"",a.length>1?a[a.length-1]:""]};
+   const nm=parts(r.name),fn=parts(r.father),mn=parts(r.mother),rn=parts(r.ra_name);
+   // Page 1: applicant details, residence/office address, contact and income.
+   [0,1,2].forEach(i=>draw(0,180,196+i*13.4,nm[i],535,7));
+   draw(0,180,239,r.name,535,7);
+   draw(0,250,294,r.gender,90,7);
+   if(r.dob){const d=r.dob.split("-");draw(0,185,307,d[2]+d[1]+d[0],90,7);}
+   draw(0,185,321,r.aadhaar,150,7);
+   const address=(pi,prefix,y)=>{const keys=["flat","road","post","area","district"];keys.forEach((k,i)=>draw(pi,180,y+i*13.4,r[prefix+"_"+k],535,6.5));draw(pi,185,y+5*13.4,r[prefix+"_state"],100,6.5);draw(pi,305,y+5*13.4,r[prefix+"_country"]||"India",105,6.5);draw(pi,470,y+5*13.4,r[prefix+"_pin"],75,6.5)};
+   address(0,"res",351);
+   if(r.office_flat||r.office_road||r.office_pin)address(0,"office",449);
+   draw(0,250,538,r.residential_status,300,6.5);
+   draw(0,350,552,r.passport,180,6.5);
+   draw(0,350,572,r.tin,180,6.5);
+   draw(0,235,603,r.mobile,115,6.5);draw(0,150,617,r.email,380,6.5);draw(0,300,630,r.landline,170,6.5);
+   const incomeMap={"Salary":[180,650],"Income from Business / Profession":[260,650],"Income from House Property":[420,650],"Capital Gains":[180,665],"Income from Other Sources":[260,665],"No Income":[420,665]};
+   (r.income_sources||[]).forEach(v=>{const p=incomeMap[v];if(p)draw(0,p[0],p[1],"X",12,8)});
+   draw(0,250,694,r.single_parent==="Yes"?"X":"",12,8);draw(0,350,694,r.single_parent==="No"?"X":"",12,8);
+   [0,1,2].forEach(i=>draw(0,180,739+i*13.4,fn[i],535,7));
+   // Page 2: mother, parent choice, AO, representative assessee, communication and declaration.
+   [0,1,2].forEach(i=>draw(1,180,22+i*13.4,mn[i],535,7));
+   draw(1,250,80,r.parent==="Father"?"X":"",12,8);draw(1,330,80,r.parent==="Mother"?"X":"",12,8);
+   draw(1,235,107,r.ao_area,45,7);draw(1,350,107,r.ao_type,40,7);draw(1,235,121,r.ao_range,45,7);draw(1,350,121,r.ao_number,40,7);
+   [0,1,2].forEach(i=>draw(1,180,164+i*13.4,rn[i],535,7));
+   draw(1,180,210,r.ra_pan,160,7);draw(1,180,223,r.ra_aadhaar,180,7);
+   ["flat","road","post","area","district"].forEach((k,i)=>draw(1,180,254+i*13.4,r["ra_"+k],535,6.5));
+   draw(1,180,321,r.ra_state,100,6.5);draw(1,305,321,r.ra_country||"India",105,6.5);draw(1,470,321,r.ra_pin,75,6.5);
+   draw(1,235,352,r.ra_mobile,115,6.5);draw(1,150,366,r.ra_email,380,6.5);draw(1,300,380,r.ra_landline,170,6.5);
+   const comm={"Residence":180,"Representative Assessee Address":330,"Office":455};draw(1,comm[r.communication_address]||180,415,"X",12,8);
+   ["proof_identity","proof_address","proof_dob","ra_proof_identity","ra_proof_address"].forEach((k,i)=>{if(r[k])draw(1,85+(i%3)*130,452+Math.floor(i/3)*17,"X",12,8)});
+   draw(1,180,622,r.declarant_name,260,8);draw(1,300,622,r.declarant_capacity,170,8);draw(1,180,637,r.place,160,8);draw(1,180,652,r.declaration_date,160,8);draw(1,360,744,r.declarant_name,180,8);draw(1,360,770,r.declarant_designation,180,8);
+   const embedImage=async(data,x,y,w,h)=>{if(!data)return;const raw=data.split(",")[1];if(!raw)return;const bin=atob(raw),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);const img=data.startsWith("data:image/png")?await pdf.embedPng(u):await pdf.embedJpg(u);const page=pages[0];page.drawImage(img,{x,y:page.getHeight()-y-h,width:w,height:h});};
+   await embedImage(r.signature,45,24,100,110);
+   await embedImage(r.photo,450,24,100,110);
+   if(r.signature){const raw=r.signature.split(",")[1],bin=atob(raw),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);const img=r.signature.startsWith("data:image/png")?await pdf.embedPng(u):await pdf.embedJpg(u);pages[1].drawImage(img,{x:330,y:pages[1].getHeight()-680-80,width:205,height:80});}
+   const out=await pdf.save(),blob=new Blob([out],{type:"application/pdf"}),url=URL.createObjectURL(blob),a=document.createElement("a");
+   a.href=url;a.download="SLV-Form-93-"+(r.name||"Applicant").replace(/[^a-z0-9-]/gi,"-")+".pdf";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+  }catch(error){console.error(error);alert("PDF generation failed: "+(error.message||"Please try again."));}
+  finally{if(btn){btn.disabled=false;btn.textContent=original||"Save Details & Generate Form Print";}}
  }
  function form(mode){
   const newMode=mode==="new";
