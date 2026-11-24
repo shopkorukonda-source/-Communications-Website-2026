@@ -1023,7 +1023,7 @@ function renderPanApplications(){
   const office=addr("office","Office Address (if applicable)");
   const residentialStatusFields=select("residential_status","Residential status",["Resident","Non-resident","Resident but not ordinarily resident"],true)+field("passport","Passport number (mandatory for NRI / RNOR)")+field("tin","TIN in country of residence (if any)");
   const income='<div class="pan-check-grid">'+["Salary","Income from Business / Profession","Income from House Property","Capital Gains","Income from Other Sources","No Income"].map(x=>'<label><input type="checkbox" name="income_sources" value="'+esc(x)+'"> '+esc(x)+'</label>').join("")+'</div>';
-  const parents=select("single_parent","Whether mother / father is a single parent?",["Yes","No"],true)+field("father_first","Father – First name")+field("father_middle","Father – Middle name")+field("father_last","Father – Last name")+field("mother_first","Mother – First name")+field("mother_middle","Mother – Middle name")+field("mother_last","Mother – Last name")+select("parent","Parent name to print on PAN card",["Father","Mother"],true);
+  const parents=select("single_parent","Whether mother / father is a single parent?",["Yes","No"],true)+field("father_full","Father full name (First Middle Last)")+field("mother_full","Mother full name (First Middle Last)")+field("father_first","Father – First name")+field("father_middle","Father – Middle name")+field("father_last","Father – Last name")+field("mother_first","Mother – First name")+field("mother_middle","Mother – Middle name")+field("mother_last","Mother – Last name")+select("parent","Parent name to print on PAN card",["Father","Mother"],true);
   const ao=field("ao_area","Area Code")+field("ao_type","AO Type")+field("ao_range","Range Code")+field("ao_number","AO Number");
   const ra=field("ra_name","Representative Assessee full name")+field("ra_pan","RA PAN (if available)")+field("ra_aadhaar","RA Aadhaar (if PAN unavailable)")+select("ra_relation","Relationship / capacity",["Father","Mother","Guardian","Other"])+field("ra_mobile","RA mobile with country code","tel")+field("ra_email","RA email","email")+field("ra_landline","RA landline with STD code")+addr("ra","Representative Assessee Address");
   const communication=select("communication_address","Address for communication",["Residence","Office","Representative Assessee Address"],true);
@@ -1037,6 +1037,28 @@ function renderPanApplications(){
    group("PART F — COMMUNICATION ADDRESS",communication)+group("PART G — DOCUMENTS / PROOFS",proofs)+group("VERIFICATION AND DECLARATION",declaration)+
    '<section class="pan-section" style="padding:16px;border:1px solid #d8d8d8;border-radius:10px"><h3>Photograph & Signature</h3><div class="pan-grid"><label>Recent colour photograph (4.5 cm × 3.5 cm)<input id="pan-photo" type="file" accept="image/*"></label><label>Signature / left thumb impression<input id="pan-sign" type="file" accept="image/*"></label></div></section><button class="primary-btn" type="submit">Save Details & Preview Form</button><p id="pan-message"></p></form>';
   const f=$("pan-form");let photo="",signature="";
+  // Split typed names into First / Middle / Last fields and mirror applicant name to Aadhaar-name field.
+  const splitName=value=>{
+   const words=String(value||"").trim().replace(/\\s+/g," ").split(" ").filter(Boolean);
+   return {first:words[0]||"",middle:words[1]||"",last:words.slice(2).join(" ")};
+  };
+  const bindNameSplit=(sourceName,prefix)=>{
+   const source=f.elements.namedItem(sourceName);
+   if(!source)return;
+   const targets={first:f.elements.namedItem(prefix+"_first"),middle:f.elements.namedItem(prefix+"_middle"),last:f.elements.namedItem(prefix+"_last")};
+   const sync=()=>{
+    const parts=splitName(source.value);
+    Object.entries(targets).forEach(([key,el])=>{if(el)el.value=parts[key]});
+   };
+   source.addEventListener("input",sync);source.addEventListener("change",sync);sync();
+  };
+  const applicantName=f.elements.namedItem("name"),aadhaarName=f.elements.namedItem("name_as_aadhaar");
+  if(applicantName&&aadhaarName){
+   applicantName.addEventListener("input",()=>{aadhaarName.value=applicantName.value});
+   applicantName.addEventListener("change",()=>{aadhaarName.value=applicantName.value});
+  }
+  bindNameSplit("father_full","father");
+  bindNameSplit("mother_full","mother");
   // India PIN lookup: fill district, state and matching post office for each address.
   const attachPinLookup=(prefix)=>{
    const pin=f.elements.namedItem(prefix+"_pin");
@@ -1103,7 +1125,7 @@ function renderPanApplications(){
    e.preventDefault();const fd=new FormData(f),r=Object.fromEntries(fd.entries());r.income_sources=fd.getAll("income_sources");r.income_sources_text=r.income_sources.join(", ");
    if(!/^\d{12}$/.test((r.aadhaar||"").trim()))return alert("Aadhaar number must contain exactly 12 digits. Form cannot be saved without all 12 digits.");
    if(!/^\d{10}$/.test((r.mobile||"").trim()))return alert("Mobile number must contain exactly 10 digits (without +91). Form cannot be saved without all 10 digits.");
-   r.father=[r.father_first,r.father_middle,r.father_last].filter(Boolean).join(" ");r.mother=[r.mother_first,r.mother_middle,r.mother_last].filter(Boolean).join(" ");
+   r.father=[r.father_first,r.father_middle,r.father_last].filter(Boolean).join(" ");r.mother=[r.mother_first,r.mother_middle,r.mother_last].filter(Boolean).join(" ");r.name_as_aadhaar=r.name;
    const applicantAge=age(r.dob),isMinor=applicantAge!==null&&applicantAge<18;
    if(!isMinor){["ra_name","ra_pan","ra_aadhaar","ra_relation","ra_mobile","ra_email","ra_landline","ra_address","ra_post","ra_area","ra_district","ra_state","ra_country","ra_pin"].forEach(k=>r[k]="");}
 
