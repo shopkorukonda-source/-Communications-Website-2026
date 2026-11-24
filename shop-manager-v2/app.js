@@ -578,7 +578,8 @@ async function saveQuickBilling(){
     const upi=mode==="cash"?0:mode==="upi"?received:Number($("bill-upi").value||0);
     if(received<customerTotal)throw new Error("Amount received must be equal to or greater than customer total.");
     if(mode==="split"&&Math.abs(cash+upi-received)>0.009)throw new Error("Cash + UPI must equal amount received.");
-    const payload={customer_name:$("bill-customer").value.trim()||null,customer_phone:$("bill-phone").value.trim()||null,payment_mode:mode,customer_total:customerTotal,amount_received:received,cash_received:cash,upi_received:upi,items};
+    let activeDrawerId=null;if(currentProfile?.role==="employee"&&currentEmployee){const activeSession=await supabase.from("drawer_sessions").select("drawer_id").eq("employee_id",currentEmployee.id).eq("status","open").order("opened_at",{ascending:false}).limit(1).maybeSingle();if(activeSession.error)throw activeSession.error;activeDrawerId=activeSession.data?.drawer_id||null;}
+    const payload={drawer_id:activeDrawerId,customer_name:$("bill-customer").value.trim()||null,customer_phone:$("bill-phone").value.trim()||null,payment_mode:mode,customer_total:customerTotal,amount_received:received,cash_received:cash,upi_received:upi,items};
     const {data,error}=await supabase.rpc("create_bill",{payload});
     if(error)throw error;
     msg.textContent="Bills saved successfully. Transaction ID: "+data;
