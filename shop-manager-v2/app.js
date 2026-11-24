@@ -388,11 +388,6 @@ function calculateBillingRow(row){
       profit=Number(slab?.profit??slab?.amount??0);
     }
   }
-  const configuredWalletDebits=automaticWalletDebits(row,svc);
-  if(configuredWalletDebits.length){
-    const totalDebit=configuredWalletDebits.reduce((sum,x)=>sum+Number(x.amount||0),0);
-    cost=svc.code==="CURRENT_BILLS"?Math.max(0,totalDebit-amount):totalDebit;
-  }
   if(["CURRENT_BILLS","MONEY_TRANSFER","PRIVATE_BUS_TICKET","APSRTC_TICKET","TTD_TICKET","CREDIT_CARD_BANK","AEPS_WITHDRAWAL"].includes(svc.code))profit=charge-cost;
   else if(svc.profit_mode==="manual")profit=charge-cost;
   const unitTotal=amount+charge;
