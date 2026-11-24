@@ -979,7 +979,7 @@ function renderPanApplications(){
   const contact=field("mobile","Mobile number (10 digits)","tel",true,"Enter all 10 digits")+field("email","Email ID","email",true)+field("landline","Landline with STD code");
   const residence=addr("res","Residence Address");
   const office=addr("office","Office Address (if applicable)");
-  const status=select("residential_status","Residential status",["Resident","Non-resident","Resident but not ordinarily resident"],true)+field("passport","Passport number (mandatory for NRI / RNOR)")+field("tin","TIN in country of residence (if any)");
+  const residentialStatusFields=select("residential_status","Residential status",["Resident","Non-resident","Resident but not ordinarily resident"],true)+field("passport","Passport number (mandatory for NRI / RNOR)")+field("tin","TIN in country of residence (if any)");
   const income='<div class="pan-check-grid">'+["Salary","Income from Business / Profession","Income from House Property","Capital Gains","Income from Other Sources","No Income"].map(x=>'<label><input type="checkbox" name="income_sources" value="'+esc(x)+'"> '+esc(x)+'</label>').join("")+'</div>';
   const parents=select("single_parent","Whether mother / father is a single parent?",["Yes","No"],true)+field("father_first","Father – First name")+field("father_middle","Father – Middle name")+field("father_last","Father – Last name")+field("mother_first","Mother – First name")+field("mother_middle","Mother – Middle name")+field("mother_last","Mother – Last name")+select("parent","Parent name to print on PAN card",["Father","Mother"],true);
   const ao=field("ao_area","Area Code")+field("ao_type","AO Type")+field("ao_range","Range Code")+field("ao_number","AO Number");
@@ -989,7 +989,7 @@ function renderPanApplications(){
   const declaration=field("declarant_name","Verifier name (exactly as per Aadhaar)","text",true)+select("declarant_capacity","Capacity",["Self","Representative Assessee"],true)+field("declarant_designation","Designation (if applicable)")+field("place","Place","text",true)+field("declaration_date","Verification date","date",true);
   const correction=mode==="correction"?group("Existing PAN / Correction Details",field("pan","Existing PAN","text",true,"ABCDE1234F")+field("correction","Details to be corrected / requested changes")):"";
   root.innerHTML='<form id="pan-form"><h3>'+(newMode?"New PAN – Form No. 93":"PAN Correction – CR-01")+'</h3><p class="muted">Fields follow the notified Form 93 structure. Enter details exactly as supported by the applicant’s documents.</p>'+correction+
-   group("PART A — PERSONAL INFORMATION",personal+residence+office+status+contact,"Residence address is required. Office address is optional.")+
+   group("PART A — PERSONAL INFORMATION",personal+residence+office+residentialStatusFields+contact,"Residence address is required. Office address is optional.")+
    group("PART B — SOURCE OF INCOME",income)+group("PART C — DETAILS OF PARENTS",parents)+group("PART D — AO CODE",ao)+
    '<div id="pan-ra-wrap">'+group("PART E — REPRESENTATIVE ASSESSEE (IF APPLICABLE)",ra,"For minors and cases where a Representative Assessee is required. Enter RA details as applicable.")+'</div>'+
    group("PART F — COMMUNICATION ADDRESS",communication)+group("PART G — DOCUMENTS / PROOFS",proofs)+group("VERIFICATION AND DECLARATION",declaration)+
