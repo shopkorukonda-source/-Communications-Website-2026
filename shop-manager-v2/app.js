@@ -1044,6 +1044,44 @@ function renderPanApplications(){
    group("PART F — COMMUNICATION ADDRESS",communication)+group("PART G — DOCUMENTS / PROOFS",proofs)+group("VERIFICATION AND DECLARATION",declaration)+
    '<section class="pan-section" style="padding:16px;border:1px solid #d8d8d8;border-radius:10px"><h3>Photograph & Signature</h3><div class="pan-grid"><label>Recent colour photograph (4.5 cm × 3.5 cm)<input id="pan-photo" type="file" accept="image/*"></label><label>Signature / left thumb impression<input id="pan-sign" type="file" accept="image/*"></label></div></section><button class="primary-btn" type="submit">Save Details & Preview Form</button><p id="pan-message"></p></form>';
   const f=$("pan-form");let photo="",signature="";
+  // Guided, mobile-friendly entry flow: one Form 93 section per step.
+  f.noValidate=true;
+  const stepNodes=Array.from(f.children).filter(el=>el.matches(".pan-section")||el.id==="pan-ra-wrap");
+  const stepTitles=stepNodes.map(el=>el.querySelector("h3")?.textContent?.trim()||"Additional details");
+  const steps=stepNodes.map((el,i)=>{
+   const panel=document.createElement("section");panel.className="pan-wizard-step";panel.dataset.step=String(i);
+   el.before(panel);panel.appendChild(el);return panel;
+  });
+  let activeStep=0;
+  const wizard=document.createElement("div");wizard.className="pan-wizard";
+  wizard.innerHTML='<div class="pan-wizard-top"><div><small>APPLICATION PROGRESS</small><strong id="pan-step-title"></strong></div><span id="pan-step-count"></span></div><div class="pan-wizard-track"><span id="pan-step-progress"></span></div><div class="pan-wizard-dots" id="pan-step-dots"></div>';
+  f.insertBefore(wizard,steps[0]);
+  const submitButton=f.querySelector('button[type="submit"]');
+  const nav=document.createElement("div");nav.className="pan-wizard-nav";
+  nav.innerHTML='<button type="button" class="secondary-btn" id="pan-step-back">Back</button><button type="button" class="primary-btn" id="pan-step-next">Continue</button>';
+  submitButton.before(nav);
+  const renderStep=()=>{
+   steps.forEach((step,i)=>{step.hidden=i!==activeStep;});
+   $("pan-step-title").textContent=stepTitles[activeStep];
+   $("pan-step-count").textContent="Step "+(activeStep+1)+" of "+steps.length;
+   $("pan-step-progress").style.width=((activeStep+1)/steps.length*100)+"%";
+   $("pan-step-dots").innerHTML=stepTitles.map((t,i)=>'<button type="button" class="pan-step-dot '+(i===activeStep?"active":i<activeStep?"done":"")+'" data-pan-step="'+i+'" aria-label="Go to '+esc(t)+'" title="'+esc(t)+'">'+(i+1)+'</button>').join("");
+   $("pan-step-back").disabled=activeStep===0;
+   $("pan-step-next").hidden=activeStep===steps.length-1;
+   submitButton.hidden=activeStep!==steps.length-1;
+   $("pan-step-dots").querySelectorAll("[data-pan-step]").forEach(b=>b.addEventListener("click",()=>{
+    const target=Number(b.dataset.panStep);
+    if(target<=activeStep){activeStep=target;renderStep();steps[activeStep].scrollIntoView({behavior:"smooth",block:"start"});}
+   }));
+  };
+  const validateStep=step=>{
+   const controls=Array.from(step.querySelectorAll("input,select,textarea")).filter(el=>!el.disabled&&!el.closest("[hidden]"));
+   for(const el of controls){if(!el.checkValidity()){el.reportValidity();return false;}}
+   return true;
+  };
+  $("pan-step-back").onclick=()=>{if(activeStep>0){activeStep--;renderStep();steps[activeStep].scrollIntoView({behavior:"smooth",block:"start"});}};
+  $("pan-step-next").onclick=()=>{if(!validateStep(steps[activeStep]))return;if(activeStep<steps.length-1){activeStep++;renderStep();steps[activeStep].scrollIntoView({behavior:"smooth",block:"start"});}};
+  renderStep();
   // Split typed names into First / Middle / Last fields and mirror applicant name to Aadhaar-name field.
   const splitName=value=>{
    const words=String(value||"").trim().replace(/\\s+/g," ").split(" ").filter(Boolean);
@@ -1131,7 +1169,9 @@ function renderPanApplications(){
   const load=(file,cb)=>{if(!file)return;const rd=new FileReader();rd.onload=()=>cb(rd.result);rd.readAsDataURL(file)};
   $("pan-photo").onchange=e=>load(e.target.files[0],v=>photo=v);$("pan-sign").onchange=e=>load(e.target.files[0],v=>signature=v);
   f.onsubmit=async e=>{
-   e.preventDefault();const fd=new FormData(f),r=Object.fromEntries(fd.entries());r.income_sources=fd.getAll("income_sources");r.income_sources_text=r.income_sources.join(", ");
+   e.preventDefault();
+   for(let i=0;i<steps.length;i++){if(!validateStep(steps[i])){activeStep=i;renderStep();steps[i].scrollIntoView({behavior:"smooth",block:"start"});return;}}
+   const fd=new FormData(f),r=Object.fromEntries(fd.entries());r.income_sources=fd.getAll("income_sources");r.income_sources_text=r.income_sources.join(", ");
    if(!/^\d{12}$/.test((r.aadhaar||"").trim()))return alert("Aadhaar number must contain exactly 12 digits. Form cannot be saved without all 12 digits.");
    if(!/^\d{10}$/.test((r.mobile||"").trim()))return alert("Mobile number must contain exactly 10 digits (without +91). Form cannot be saved without all 10 digits.");
    r.father=[r.father_first,r.father_middle,r.father_last].filter(Boolean).join(" ");r.mother=[r.mother_first,r.mother_middle,r.mother_last].filter(Boolean).join(" ");r.name_as_aadhaar=r.name;
