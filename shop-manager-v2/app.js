@@ -925,8 +925,8 @@ function renderPanApplications(){
   if(btn){btn.disabled=true;btn.textContent="Preparing legacy preview…";}
   try{await showPanPreview("",r)}finally{if(btn){btn.disabled=false;btn.textContent=original||"Save Details & Preview Form"}}
  }
- async function print(r){return showForm93HtmlPreview(r)}
- async let form93LayoutSettings={};
+ async function print(r){await loadForm93LayoutSettings();return showForm93HtmlPreview(r)}
+let form93LayoutSettings={};
 async function loadForm93LayoutSettings(){
  const {data,error}=await supabase.from("form93_layout_settings").select("settings").eq("id","default").maybeSingle();
  if(error){console.warn("Form 93 layout settings unavailable",error);return form93LayoutSettings;}
