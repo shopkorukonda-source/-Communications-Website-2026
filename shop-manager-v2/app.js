@@ -1059,6 +1059,8 @@ function renderPanApplications(){
   }
   bindNameSplit("father_full","father");
   bindNameSplit("mother_full","mother");
+  ["father_first","father_middle","father_last","mother_first","mother_middle","mother_last"].forEach(n=>{const el=f.elements.namedItem(n);if(el?.closest("label"))el.closest("label").hidden=true});
+  if(aadhaarName){aadhaarName.readOnly=true;aadhaarName.placeholder="Automatically copied from Full name";}
   // India PIN lookup: fill district, state and matching post office for each address.
   const attachPinLookup=(prefix)=>{
    const pin=f.elements.namedItem(prefix+"_pin");
