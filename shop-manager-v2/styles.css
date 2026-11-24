@@ -96,3 +96,21 @@
 .finance-lower-grid .admin-table-wrap{min-width:0}
 @media(max-width:900px){.finance-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){.finance-kpi-grid{grid-template-columns:1fr 1fr;gap:8px}.finance-kpi{padding:12px}.finance-secondary-stats,.finance-lower-grid{grid-template-columns:1fr}.finance-target-form{grid-template-columns:1fr}.finance-target-form button{width:100%}}
+
+
+.festive-login-overlay{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(12,12,12,.72);backdrop-filter:blur(5px);animation:festiveFadeIn .22s ease}
+.festive-login-modal{position:relative;width:min(520px,100%);max-height:min(82vh,720px);overflow:auto;padding:30px 26px 24px;border:1px solid #d6b76d;border-radius:18px;background:linear-gradient(145deg,#fffdf7,#fff 62%,#fbf4e6);box-shadow:0 24px 90px rgba(0,0,0,.32);text-align:center;animation:festivePopIn .28s ease}
+.festive-popup-close{position:absolute;right:13px;top:10px;width:34px;height:34px;border:1px solid #e4d7b9;border-radius:50%;background:#fff;color:#333;font-size:23px;line-height:1;cursor:pointer}
+.festive-popup-confetti{color:#b28b3e;font-size:26px;letter-spacing:12px;margin:3px 0 10px}
+.festive-popup-eyebrow{font-size:10px;font-weight:800;letter-spacing:2px;color:#98732d}
+.festive-login-modal h2{margin:10px 0 6px;color:#805d20;font-family:Georgia,serif;font-size:30px}
+.festive-popup-subtitle{margin:0 auto 18px;max-width:360px;color:#71634a;font-size:13px;line-height:1.6}
+.festive-popup-items{display:grid;gap:10px;text-align:left}
+.festive-popup-item{padding:14px 16px;border:1px solid #eadfc8;border-radius:12px;background:rgba(255,255,255,.86)}
+.festive-popup-date{font-size:10px;color:#9a7a3e;margin-bottom:4px}
+.festive-popup-item h3{margin:0 0 6px;font-size:16px;color:#27231c}
+.festive-popup-item p{margin:0;color:#615b50;font-size:13px;line-height:1.55;white-space:pre-wrap}
+.festive-popup-ok{margin-top:18px;min-width:130px}
+@keyframes festiveFadeIn{from{opacity:0}to{opacity:1}}
+@keyframes festivePopIn{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:520px){.festive-login-modal{padding:26px 17px 20px;border-radius:15px}.festive-login-modal h2{font-size:26px}}
