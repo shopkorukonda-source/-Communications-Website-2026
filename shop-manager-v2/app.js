@@ -169,6 +169,72 @@ $("toggle-password").addEventListener("click",()=>{
   input.type = visible ? "text" : "password";
   $("toggle-password").textContent = visible ? "Hide" : "Show";
 });
+
+function openPasswordDialog(recovery=false){
+  $("password-dialog").classList.remove("hidden");
+  $("password-form").dataset.recovery=recovery?"true":"false";
+  $("password-dialog-title").textContent=recovery?"Set a new password":"Change password";
+  $("password-dialog-copy").textContent=recovery?"Choose a new password for your SLV account.":"Verify your current password, then choose a new secure password.";
+  $("current-password-label").classList.toggle("hidden",recovery);
+  $("current-password").required=!recovery;
+  $("password-form").reset();
+  $("password-dialog-message").textContent="";
+  $("password-dialog-close").classList.toggle("hidden",recovery);
+}
+function closePasswordDialog(){
+  $("password-dialog").classList.add("hidden");
+  $("password-form").reset();
+}
+$("forgot-password-btn").addEventListener("click",async()=>{
+  const email=$("email").value.trim();
+  if(!email){setMessage("Enter your account email first.");$("email").focus();return;}
+  const btn=$("forgot-password-btn");btn.disabled=true;btn.textContent="Sending recovery email…";
+  const {error}=await supabase.auth.resetPasswordForEmail(email,{redirectTo:"https://slv-shop-manager-v2.onrender.com/"});
+  if(error)setMessage(error.message);
+  else setMessage("Password reset link sent. Check your inbox and Spam folder.",false);
+  btn.disabled=false;btn.textContent="Forgot password?";
+});
+$("change-password-btn").addEventListener("click",()=>openPasswordDialog(false));
+$("password-dialog-close").addEventListener("click",closePasswordDialog);
+$("password-dialog").addEventListener("click",e=>{if(e.target===$("password-dialog")&&!$("password-form").dataset.recovery)closePasswordDialog();});
+$("password-form").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const recovery=$("password-form").dataset.recovery==="true";
+  const current=$("current-password").value;
+  const next=$("new-password").value;
+  const confirm=$("confirm-password").value;
+  const msg=$("password-dialog-message"),btn=$("password-save-btn");
+  if(next.length<8){msg.textContent="Use at least 8 characters for the new password.";return;}
+  if(next!==confirm){msg.textContent="New password and confirmation do not match.";return;}
+  if(!recovery&&next===current){msg.textContent="New password must be different from current password.";return;}
+  btn.disabled=true;btn.textContent="Updating…";msg.textContent="";
+  try{
+    if(!recovery){
+      const {data:{user},error:authError}=await supabase.auth.getUser();
+      if(authError||!user?.email)throw authError||new Error("Unable to verify the signed-in account.");
+      const {error:verifyError}=await supabase.auth.signInWithPassword({email:user.email,password:current});
+      if(verifyError)throw new Error("Current password is incorrect. Please try again.");
+    }
+    const {error}=await supabase.auth.updateUser({password:next});
+    if(error)throw error;
+    msg.style.color="#27865e";
+    msg.textContent="Password updated successfully.";
+    $("password-form").reset();
+    if(recovery){
+      setTimeout(async()=>{await supabase.auth.signOut();closePasswordDialog();showLogin();setMessage("Password updated. Sign in with your new password.",false);},1100);
+    }else{
+      setTimeout(closePasswordDialog,1100);
+    }
+  }catch(error){msg.style.color="#b33b34";msg.textContent=error.message||"Unable to update password.";}
+  finally{btn.disabled=false;btn.textContent="Update password";}
+});
+supabase.auth.onAuthStateChange((event,session)=>{
+  if(event==="PASSWORD_RECOVERY"&&session?.user){
+    loginScreen.classList.remove("hidden");appScreen.classList.add("hidden");
+    openPasswordDialog(true);
+  }
+});
+
 $("signout-btn").addEventListener("click",async()=>{await supabase.auth.signOut();showLogin();});
 $("service-search").addEventListener("input",renderServices);
 document.querySelectorAll(".nav-item").forEach(btn=>btn.addEventListener("click",async()=>{
