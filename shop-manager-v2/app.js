@@ -948,7 +948,7 @@ function renderPanApplications(){
    }
    const correction=13.5,cellW=10.62,cellH=13.7;
    const put=(pi,x,top,w,h,content,cls="pan-html-text")=>{
-    const m=pageModels[pi];if(!m||content===null||content===undefined||String(content)==="")return null;
+    const m=pageModels[pi];if(!m||content===null||content===undefined||(String(content)===""&&cls!=="pan-html-photo"))return null;
     const el=document.createElement("div");el.className=cls;el.style.left=(x/m.width*100)+"%";el.style.top=((top+correction)/m.height*100)+"%";el.style.width=(w/m.width*100)+"%";el.style.height=(h/m.height*100)+"%";el.textContent=String(content);m.layer.appendChild(el);return el;
    };
    const text=(pi,x,top,value,w=120,size=6)=>{const el=put(pi,x,top,w,12,value);if(el)el.style.fontSize=(size*mScale(pageModels[pi]))+"px"};
@@ -977,7 +977,7 @@ function renderPanApplications(){
    mark(1,({Residence:216,"Representative Assessee Address":302,Office:448})[r.communication_address]||367,402.5);
    const px=[70,169,270,70,169],proof=["proof_identity","proof_address","proof_dob","ra_proof_identity","ra_proof_address"];proof.forEach((k,i)=>{if(r[k])mark(1,px[i],460.5+(i>=3?37:0))});
    text(1,110,547.5,r.declarant_name,220,6);text(1,110,608.5,r.place,140,6);text(1,110,623.5,r.declaration_date,140,6);text(1,390,766,r.declarant_name,125,6);text(1,410,793,r.declarant_designation,105,6);
-   const addImage=(pi,x,top,w,h,data)=>{if(!data)return;const el=put(pi,x,top,w,h,"","pan-html-photo");el.style.backgroundImage="url("+data+")"};
+   const addImage=(pi,x,top,w,h,data)=>{if(!data)return;const el=put(pi,x,top-correction,w,h,"","pan-html-photo");el.style.backgroundImage="url("+data+")"};
    addImage(0,46,23,100,128,r.photo);addImage(0,443,23,100,128,r.photo);addImage(0,49,108,94,30,r.signature);addImage(1,329,620,200,65,r.signature);
    const printBtn=overlay.querySelector("#pan-preview-print");printBtn.disabled=false;printBtn.onclick=()=>{
     const frame=document.createElement("iframe");frame.style.cssText="position:fixed;width:1px;height:1px;right:0;bottom:0;border:0";document.body.appendChild(frame);
