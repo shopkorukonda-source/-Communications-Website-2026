@@ -1112,7 +1112,7 @@ function renderPanApplications(){
 
   const load=(file,cb)=>{if(!file)return;const rd=new FileReader();rd.onload=()=>cb(rd.result);rd.readAsDataURL(file)};
   $("pan-photo").onchange=e=>load(e.target.files[0],v=>photo=v);$("pan-sign").onchange=e=>load(e.target.files[0],v=>signature=v);
-  f.onsubmit=e=>{
+  f.onsubmit=async e=>{
    e.preventDefault();const fd=new FormData(f),r=Object.fromEntries(fd.entries());r.income_sources=fd.getAll("income_sources");r.income_sources_text=r.income_sources.join(", ");
    if(!/^\d{12}$/.test((r.aadhaar||"").trim()))return alert("Aadhaar number must contain exactly 12 digits. Form cannot be saved without all 12 digits.");
    if(!/^\d{10}$/.test((r.mobile||"").trim()))return alert("Mobile number must contain exactly 10 digits (without +91). Form cannot be saved without all 10 digits.");
@@ -1135,7 +1135,9 @@ function renderPanApplications(){
    const n=Number(localStorage.getItem("slv_pan_seq")||0)+1;localStorage.setItem("slv_pan_seq",String(n));
    r.temp_ack="SLV-PAN-"+new Date().getFullYear()+"-"+String(n).padStart(6,"0");r.actual_ack="";r.status="Details Saved";
    try{const a=read();a.unshift(r);write(a)}catch{return alert("Browser storage full. Use a smaller photo image.")}
-   $("pan-message").textContent="Saved locally · "+r.temp_ack+" · Preview only; not submitted to PAN provider";print(r);
+   $("pan-message").textContent="Saved locally · "+r.temp_ack+" · Preparing preview…";
+   await print(r);
+   $("pan-message").textContent="Saved locally · "+r.temp_ack+" · Preview only; not submitted to PAN provider";
   };
  }
  function search(){
