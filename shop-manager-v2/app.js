@@ -954,7 +954,7 @@ function renderPanApplications(){
    };
    const text=(pi,x,top,value,w=120,size=6)=>{const el=put(pi,x,top,w,12,value);if(el)el.style.fontSize=(size*mScale(pageModels[pi]))+"px"};
    const mScale=m=>m.width/(m.page.view[2]-m.page.view[0]);
-   const aadhaarNameGrid=(value)=>{const parts=String(value||"").trim().toUpperCase().split(/\s+/).filter(Boolean);let pos=0;parts.forEach((part,idx)=>{if(idx>0)pos+=2;[...part].forEach(ch=>{if(pos<25){if(ch!==" "){const el=put(0,180+pos*nameCellW,238.3,nameCellW,cellH,ch,"pan-html-char");if(el)el.style.fontSize=(5.2*mScale(pageModels[0]))+"px"}pos++}})})};
+   const aadhaarNameGrid=(value)=>{const parts=String(value||"").trim().toUpperCase().split(/\s+/).filter(Boolean);let pos=0;parts.forEach((part,idx)=>{if(idx>0)pos+=1;[...part].forEach(ch=>{if(pos<25){if(ch!==" "){const el=put(0,180+pos*nameCellW,238.3,nameCellW,cellH,ch,"pan-html-char");if(el)el.style.fontSize=(5.2*mScale(pageModels[0]))+"px"}pos++}})})};
    const grid=(pi,x,top,value,cols=36,cw=cellW,size=5.4)=>{
     [...String(value??"").trim().toUpperCase()].slice(0,cols).forEach((ch,i)=>{if(ch===" ")return;const el=put(pi,x+i*cw,top,cw,cellH,ch,"pan-html-char");if(el)el.style.fontSize=(size*mScale(pageModels[pi]))+"px"});
    };
