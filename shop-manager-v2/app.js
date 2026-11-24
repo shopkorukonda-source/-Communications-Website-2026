@@ -919,94 +919,75 @@ function renderPanApplications(){
  const addr=(prefix,label)=>addressFields(prefix,label).map(([n,l,v])=>field(n,l,"text",n==="res_pin",v)).join("");
  host.innerHTML='<h2>PAN Applications</h2><p>New PAN Form 93 · Correction CR-01 · Full applicant details · Local device records</p><div class="pan-tabs"><button id="pan-new">New PAN – Form 93</button><button id="pan-corr">Correction – CR-01</button><button id="pan-search">Search / Link Ack</button></div><div id="pan-work"></div>';
  const root=$("pan-work");
- async function print(r){
+ async function printLegacy(r){
+  // Retained temporarily as a fallback while the HTML overlay preview is validated.
   const btn=document.querySelector('#pan-form button[type="submit"]'),original=btn?.textContent;
-  if(btn){btn.disabled=true;btn.textContent="Preparing Form 93 PDF…";}
-  try{
-   if(!window.PDFLib)await new Promise((resolve,reject)=>{const sc=document.createElement("script");sc.src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js";sc.onload=resolve;sc.onerror=()=>reject(new Error("PDF engine could not load."));document.head.appendChild(sc)});
-   const response=await fetch("https://fvjtbefsuzhrjimpmdop.supabase.co/functions/v1/form93-template");
-   if(!response.ok)throw new Error("Form 93 template could not be downloaded.");
-   const {PDFDocument,StandardFonts,rgb}=window.PDFLib,pdf=await PDFDocument.load(await response.arrayBuffer());
-   if(pdf.getPageCount()<2)throw new Error("Official Form 93 template has fewer than two pages.");
-   while(pdf.getPageCount()>2)pdf.removePage(2);
-   const pages=pdf.getPages(),font=await pdf.embedFont(StandardFonts.Helvetica);
-   // The official Form 93 boxes sit about 13.5 PDF points below the
-   // first-pass anchor positions. Apply one calibrated vertical correction
-   // consistently to text and checkbox marks on both pages.
-   const FORM93_TEXT_Y_CORRECTION=13.5;
-   const draw=(pi,x,top,value,max=120,size=6)=>{
-    value=String(value??"").trim();if(!value||value==="—")return;
-    let fs=size;while(fs>4.5&&font.widthOfTextAtSize(value,fs)>max)fs-=.25;
-    const page=pages[pi];page.drawText(value,{x,y:page.getHeight()-(top+FORM93_TEXT_Y_CORRECTION)-fs,font,size:fs,color:rgb(.04,.04,.04),maxWidth:max});
-   };
-   // Form 93 character boxes: one character per cell, retaining blank cells between words.
-   const cell=10.62,boxColumns=36;
-   const grid=(pi,x,top,value,columns=boxColumns,cellWidth=cell,size=5.6)=>{
-    const chars=[...String(value??"").trim().toUpperCase()];
-    chars.slice(0,columns).forEach((ch,i)=>{if(ch!==" ")draw(pi,x+i*cellWidth,top,ch,cellWidth-1,size)});
-   };
-   // Name characters need their own vertical centering: the general text
-   // baseline offset was placing glyphs across the horizontal cell rules.
-   const nameGrid=(pi,x,top,value,columns=boxColumns,cellWidth=cell,size=5.2)=>{
-    const chars=[...String(value??"").trim().toUpperCase()];
-    const page=pages[pi],cellHeight=13.7;
-    chars.slice(0,columns).forEach((ch,i)=>{
-     if(ch===" ")return;
-     let fs=size;while(fs>4.2&&font.widthOfTextAtSize(ch,fs)>cellWidth-1)fs-=.2;
-     // Center each glyph in the actual PDF cell, like CSS flex align-items/
-     // justify-content:center. Use the embedded font's measured glyph height,
-     // not the nominal font-size, to avoid the baseline drifting across rules.
-     const glyphHeight=font.heightAtSize(fs);
-     const cellTop=top+FORM93_TEXT_Y_CORRECTION;
-     const y=page.getHeight()-cellTop-(cellHeight+glyphHeight)/2;
-     page.drawText(ch,{x:x+i*cellWidth,y,font,size:fs,color:rgb(.04,.04,.04),maxWidth:cellWidth-1});
-    });
-   };
-   const name=(pi,top,value)=>{
-    const words=String(value||"").trim().replace(/\s+/g," ").split(" ").filter(Boolean);
-    [words[0]||"",words[1]||"",words.slice(2).join(" ")].forEach((line,i)=>nameGrid(pi,180,top+i*13.7,line,boxColumns,cell,5.2));
-   };
-   const aadhaarNameGrid=value=>nameGrid(0,180,239.5,value,boxColumns,cell,5.2);
-   // Address fields use the same character-cell spacing as the printed Form 93.
-   const addr=(pi,prefix,top)=>{
-    ["flat","road","post","area","district"].forEach((k,i)=>grid(pi,180,top+i*13.7,r[prefix+"_"+k],boxColumns,cell,5.4));
-    grid(pi,132,top+5*13.7,r[prefix+"_state"],8,cell,5.2);
-    grid(pi,285,top+5*13.7,r[prefix+"_country"]||"India",12,cell,5.2);
-    grid(pi,455,top+5*13.7,r[prefix+"_pin"],10,cell,5.2);
-   };
-   // Page 1: coordinates matched to the printed Form 93 rows.
-   name(0,183.5,r.name);aadhaarNameGrid(r.name_as_aadhaar||r.name);
-   const genderX={Male:183,Female:229,Transgender:290};draw(0,genderX[r.gender]||183,282,"X",10,6.5);
-   if(r.dob){const [yy,mm,dd]=r.dob.split("-");draw(0,185,294,dd+mm+yy,80,5.8)}
-   draw(0,185,307,r.aadhaar,170,5.8);
-   addr(0,"res",342);
-   if(r.office_flat||r.office_road||r.office_pin)addr(0,"office",435);
-   const sx={"Resident":213,"Non-resident":275,"Resident but not ordinarily resident":352};draw(0,sx[r.residential_status]||213,523,"X",10,6.5);
-   draw(0,345,547,r.passport,160,5.8);draw(0,345,563,r.tin,180,5.8);
-   grid(0,240,598,"91",3,10.62,5.4);grid(0,375,598,r.mobile,10,10.62,5.4);draw(0,150,610,r.email,380,5.8);grid(0,240,624,String(r.landline||"").replace(/\\D/g,""),4,10.62,5.2);
-   const income={"Salary":[181,637],"Income from Business / Profession":[258,637],"Income from House Property":[397,637],"Capital Gains":[181,652],"Income from Other Sources":[258,652],"No Income":[397,652]};
-   (r.income_sources||[]).forEach(v=>{if(income[v])draw(0,income[v][0],income[v][1],"X",10,6.5)});
-   draw(0,r.single_parent==="Yes"?243:304,675,"X",10,6.5);name(0,698,[r.father_first,r.father_middle,r.father_last].filter(Boolean).join(" "));
-   // Page 2: mother, AO, RA, communication and declaration.
-   name(1,9.5,[r.mother_first,r.mother_middle,r.mother_last].filter(Boolean).join(" "));draw(1,r.parent==="Father"?335:397,53.5,"X",10,6.5);
-   draw(1,235,93.5,r.ao_area,45,5.8);draw(1,395,93.5,r.ao_type,32,5.8);draw(1,235,107.5,r.ao_range,45,5.8);draw(1,395,107.5,r.ao_number,32,5.8);
-   name(1,155,r.ra_name);draw(1,180,196,r.ra_pan,160,5.8);draw(1,280,211,r.ra_aadhaar,175,5.8);
-   addr(1,"ra",240);
-   draw(1,240,339.5,"91",22,5.5);draw(1,355,339.5,r.ra_mobile,150,5.8);draw(1,240,353.5,r.ra_email,350,5.8);draw(1,240,367.5,r.ra_landline,170,5.8);
-   const comm={"Residence":216,"Representative Assessee Address":302,"Office":448};draw(1,comm[r.communication_address]||367,402.5,"X",10,6.5);
-   const proofX=[70,169,270,70,169];["proof_identity","proof_address","proof_dob","ra_proof_identity","ra_proof_address"].forEach((k,i)=>{if(r[k])draw(1,proofX[i],460.5+(i>=3?37:0),"X",10,6.5)});
-   draw(1,110,547.5,r.declarant_name,220,6);
-   draw(1,110,608.5,r.place,140,6);draw(1,110,623.5,r.declaration_date,140,6);
-   draw(1,390,766,r.declarant_name,125,6);draw(1,410,793,r.declarant_designation,105,6);
-   const image=async(data,pi,x,top,w,h)=>{if(!data)return;const raw=data.split(",")[1];if(!raw)return;const bin=atob(raw),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);const img=data.startsWith("data:image/png")?await pdf.embedPng(u):await pdf.embedJpg(u);pages[pi].drawImage(img,{x,y:pages[pi].getHeight()-top-h,width:w,height:h});};
-   // Both photo boxes are 4.5 x 3.5 cm; left photo carries the applicant signature across it.
-   await image(r.photo,0,46,23,100,128);await image(r.photo,0,443,23,100,128);
-   if(r.signature){await image(r.signature,0,49,108,94,30);await image(r.signature,1,329,620,200,65);}
-   const out=await pdf.save(),url=URL.createObjectURL(new Blob([out],{type:"application/pdf"}));
-   await showPanPreview(url,r);
-  }catch(error){console.error(error);alert("PDF generation failed: "+(error.message||"Please try again."))}
-  finally{if(btn){btn.disabled=false;btn.textContent=original||"Save Details & Preview Form"}}
+  if(btn){btn.disabled=true;btn.textContent="Preparing legacy preview…";}
+  try{await showPanPreview("",r)}finally{if(btn){btn.disabled=false;btn.textContent=original||"Save Details & Preview Form"}}
  }
+ async function print(r){return showForm93HtmlPreview(r)}
+ async function showForm93HtmlPreview(r){
+  const previous=$("pan-preview-overlay");if(previous)previous.remove();
+  const overlay=document.createElement("div");overlay.id="pan-preview-overlay";overlay.className="pan-preview-overlay";
+  overlay.innerHTML='<section class="pan-preview-modal" role="dialog" aria-modal="true" aria-label="PAN Form 93 preview"><header class="pan-preview-header"><div><strong>Form 93 Preview · HTML overlay</strong><small>'+esc(r.name||"Applicant")+' · '+esc(r.temp_ack||"")+'</small></div><div class="pan-preview-actions"><button type="button" class="secondary-btn" id="pan-preview-print" disabled>Print</button><button type="button" class="danger-btn" id="pan-preview-close">Close</button></div></header><div class="pan-preview-pages" id="pan-preview-pages"><p class="pan-preview-loading">Loading official Form 93 background…</p></div></section>';
+  document.body.appendChild(overlay);
+  const close=()=>overlay.remove();overlay.querySelector("#pan-preview-close").onclick=close;overlay.addEventListener("click",e=>{if(e.target===overlay)close()});
+  const key=e=>{if(e.key==="Escape"&&$("pan-preview-overlay")){close();document.removeEventListener("keydown",key)}};document.addEventListener("keydown",key);
+  try{
+   if(!window.pdfjsLib)await new Promise((resolve,reject)=>{const sc=document.createElement("script");sc.src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js";sc.onload=resolve;sc.onerror=()=>reject(new Error("Preview engine could not load"));document.head.appendChild(sc)});
+   window.pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+   const response=await fetch("https://fvjtbefsuzhrjimpmdop.supabase.co/functions/v1/form93-template");if(!response.ok)throw new Error("Official Form 93 template unavailable");
+   const bytes=await response.arrayBuffer(),doc=await window.pdfjsLib.getDocument({data:bytes}).promise,pagesEl=overlay.querySelector("#pan-preview-pages");pagesEl.innerHTML="";
+   const pageModels=[];
+   for(let n=1;n<=Math.min(2,doc.numPages);n++){
+    const page=await doc.getPage(n),vp=page.getViewport({scale:1.5}),canvas=document.createElement("canvas");canvas.width=Math.ceil(vp.width);canvas.height=Math.ceil(vp.height);canvas.className="pan-html-page-bg";
+    await page.render({canvasContext:canvas.getContext("2d"),viewport:vp}).promise;
+    const wrap=document.createElement("div");wrap.className="pan-html-page";wrap.style.aspectRatio=vp.width+"/"+vp.height;wrap.appendChild(canvas);
+    const layer=document.createElement("div");layer.className="pan-html-overlay";wrap.appendChild(layer);pagesEl.appendChild(wrap);
+    pageModels.push({page,wrap,layer,width:vp.width,height:vp.height,scale:vp.scale});
+   }
+   const correction=13.5,cellW=10.62,cellH=13.7;
+   const put=(pi,x,top,w,h,content,cls="pan-html-text")=>{
+    const m=pageModels[pi];if(!m||content===null||content===undefined||String(content)==="")return null;
+    const el=document.createElement("div");el.className=cls;el.style.left=(x/m.width*100)+"%";el.style.top=((top+correction)/m.height*100)+"%";el.style.width=(w/m.width*100)+"%";el.style.height=(h/m.height*100)+"%";el.textContent=String(content);m.layer.appendChild(el);return el;
+   };
+   const text=(pi,x,top,value,w=120,size=6)=>{const el=put(pi,x,top,w,12,value);if(el)el.style.fontSize=(size*mScale(pageModels[pi]))+"px"};
+   const mScale=m=>m.width/(m.page.view[2]-m.page.view[0]);
+   const grid=(pi,x,top,value,cols=36,cw=cellW,size=5.4)=>{
+    [...String(value??"").trim().toUpperCase()].slice(0,cols).forEach((ch,i)=>{if(ch===" ")return;const el=put(pi,x+i*cw,top,cw,cellH,ch,"pan-html-char");if(el)el.style.fontSize=(size*mScale(pageModels[pi]))+"px"});
+   };
+   const name=(pi,top,value)=>{const words=String(value||"").trim().replace(/\s+/g," ").split(" ").filter(Boolean);[words[0]||"",words[1]||"",words.slice(2).join(" ")].forEach((v,i)=>grid(pi,180,top+i*13.7,v,36,cellW,5.2))};
+   const addr=(pi,p,top)=>{["flat","road","post","area","district"].forEach((k,i)=>grid(pi,180,top+i*13.7,r[p+"_"+k],36,cellW,5.4));grid(pi,132,top+5*13.7,r[p+"_state"],8,cellW,5.2);grid(pi,285,top+5*13.7,r[p+"_country"]||"India",12,cellW,5.2);grid(pi,455,top+5*13.7,r[p+"_pin"],10,cellW,5.2)};
+   const mark=(pi,x,top)=>put(pi,x,top,10,12,"X","pan-html-mark");
+   // Page 1: applicant identity and contact.
+   name(0,183.5,r.name);grid(0,180,239.5,r.name_as_aadhaar||r.name);
+   mark(0,({Male:183,Female:229,Transgender:290})[r.gender]||183,282);
+   if(r.dob){const [yy,mm,dd]=r.dob.split("-");text(0,185,294,dd+mm+yy,80,5.8)}
+   grid(0,185,307,r.aadhaar,12,10.62,5.8);addr(0,"res",342);if(r.office_flat||r.office_road||r.office_pin)addr(0,"office",435);
+   mark(0,({Resident:213,"Non-resident":275,"Resident but not ordinarily resident":352})[r.residential_status]||213,523);
+   text(0,345,547,r.passport,160,5.8);text(0,345,563,r.tin,180,5.8);
+   grid(0,240,598,"91",3);grid(0,375,598,r.mobile,10);text(0,150,610,r.email,380,5.8);grid(0,240,624,String(r.landline||"").replace(/\D/g,""),4);
+   const inc={"Salary":[181,637],"Income from Business / Profession":[258,637],"Income from House Property":[397,637],"Capital Gains":[181,652],"Income from Other Sources":[258,652],"No Income":[397,652]};(r.income_sources||[]).forEach(v=>{if(inc[v])mark(0,inc[v][0],inc[v][1])});
+   mark(0,r.single_parent==="Yes"?243:304,675);name(0,698,[r.father_first,r.father_middle,r.father_last].filter(Boolean).join(" "));
+   // Page 2: mother, AO, RA, proof and declaration.
+   name(1,9.5,[r.mother_first,r.mother_middle,r.mother_last].filter(Boolean).join(" "));mark(1,r.parent==="Father"?335:397,53.5);
+   text(1,235,93.5,r.ao_area,45,5.8);text(1,395,93.5,r.ao_type,32,5.8);text(1,235,107.5,r.ao_range,45,5.8);text(1,395,107.5,r.ao_number,32,5.8);
+   name(1,155,r.ra_name);text(1,180,196,r.ra_pan,160,5.8);grid(1,280,211,r.ra_aadhaar,12);
+   addr(1,"ra",240);grid(1,240,339.5,"91",3);grid(1,355,339.5,r.ra_mobile,10);text(1,240,353.5,r.ra_email,350,5.8);grid(1,240,367.5,r.ra_landline,16);
+   mark(1,({Residence:216,"Representative Assessee Address":302,Office:448})[r.communication_address]||367,402.5);
+   const px=[70,169,270,70,169],proof=["proof_identity","proof_address","proof_dob","ra_proof_identity","ra_proof_address"];proof.forEach((k,i)=>{if(r[k])mark(1,px[i],460.5+(i>=3?37:0))});
+   text(1,110,547.5,r.declarant_name,220,6);text(1,110,608.5,r.place,140,6);text(1,110,623.5,r.declaration_date,140,6);text(1,390,766,r.declarant_name,125,6);text(1,410,793,r.declarant_designation,105,6);
+   const addImage=(pi,x,top,w,h,data)=>{if(!data)return;const el=put(pi,x,top,w,h,"","pan-html-photo");el.style.backgroundImage="url("+data+")"};
+   addImage(0,46,23,100,128,r.photo);addImage(0,443,23,100,128,r.photo);addImage(0,49,108,94,30,r.signature);addImage(1,329,620,200,65,r.signature);
+   const printBtn=overlay.querySelector("#pan-preview-print");printBtn.disabled=false;printBtn.onclick=()=>{
+    const frame=document.createElement("iframe");frame.style.cssText="position:fixed;width:1px;height:1px;right:0;bottom:0;border:0";document.body.appendChild(frame);
+    const d=frame.contentDocument;d.open();d.write('<!doctype html><html><head><title>Form 93</title><style>@page{size:A4;margin:0}body{margin:0}.pan-html-page{position:relative;width:210mm;height:297mm;page-break-after:always;overflow:hidden}.pan-html-page:last-child{page-break-after:auto}.pan-html-page-bg{position:absolute;inset:0;width:100%;height:100%}.pan-html-overlay{position:absolute;inset:0}.pan-html-char,.pan-html-mark,.pan-html-text{position:absolute;display:flex;align-items:center;justify-content:center;box-sizing:border-box;font-family:Arial,sans-serif;line-height:1;color:#111;white-space:nowrap}.pan-html-photo{position:absolute;background-size:100% 100%;background-repeat:no-repeat}</style></head><body>');
+    pageModels.forEach(m=>{const wrap=m.wrap.cloneNode(true),can=wrap.querySelector("canvas");if(can){const img=d.createElement("img");img.src=can.toDataURL("image/png");img.className="pan-html-page-bg";can.replaceWith(img)}d.body.appendChild(wrap)});d.close();setTimeout(()=>{frame.contentWindow.focus();frame.contentWindow.print();setTimeout(()=>frame.remove(),1500)},500);
+   };
+  }catch(err){console.error(err);overlay.querySelector("#pan-preview-pages").innerHTML='<p class="pan-preview-loading">Preview failed: '+esc(err.message||"Try again")+'</p>'}
+ }
+ async function showPanPreview(url,r){return showForm93HtmlPreview(r)}
+
  async function showPanPreview(url,r){
   const previous=$("pan-preview-overlay");
   if(previous){previous.remove();if(previous.dataset.objectUrl)URL.revokeObjectURL(previous.dataset.objectUrl)}
