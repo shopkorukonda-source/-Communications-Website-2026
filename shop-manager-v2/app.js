@@ -1489,6 +1489,9 @@ async function showForm93HtmlPreview(r){
   $("pan-find").onclick=run;run();
  }
  $("pan-new").onclick=()=>form("new");$("pan-corr").onclick=()=>form("correction");$("pan-search").onclick=search;form("new");
+ // Blank Form 93 preview: opens the official blank background without requiring applicant data or saving a record.
+ const blankPreviewButton=document.createElement("button");blankPreviewButton.type="button";blankPreviewButton.className="secondary-btn pan-blank-preview";blankPreviewButton.textContent="Preview blank Form 93";blankPreviewButton.title="Open a blank Form 93 preview without filling or saving applicant details.";$("pan-new").after(blankPreviewButton);
+ blankPreviewButton.addEventListener("click",async()=>{blankPreviewButton.disabled=true;const old=blankPreviewButton.textContent;blankPreviewButton.textContent="Opening blank preview…";try{await print({name:"Blank Form 93",temp_ack:"BLANK PREVIEW",income_sources:[],residential_status:"",gender:"",single_parent:"",parent:"",communication_address:"",photo:"",signature:""});}catch(error){console.error(error);alert("Could not open blank Form 93 preview: "+(error.message||"Please try again."));}finally{blankPreviewButton.disabled=false;blankPreviewButton.textContent=old;}});
  // A one-click dummy-data preview lets staff verify PDF alignment without retyping a full application.
  const sampleButton=document.createElement("button");sampleButton.type="button";sampleButton.className="secondary-btn pan-sample-preview";
  sampleButton.textContent="Preview sample alignment (test only)";
