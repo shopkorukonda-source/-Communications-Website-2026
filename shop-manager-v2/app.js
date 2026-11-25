@@ -93,7 +93,7 @@ async function loadCatalog() {
       if(assignedError)console.warn("Assigned wallet list unavailable",assignedError);
       const ids=(assigned||[]).map(x=>x.wallet_id);
       if(ids.length){
-        const {data: wallets,error:walletError}=await supabase.from("wallets").select("id,name,wallet_type,provider,current_balance,is_active").eq("is_active",true).in("id",ids).order("name");
+        const {data: wallets,error:walletError}=await supabase.from("wallets").select("id,name,wallet_type,provider,current_balance,is_active,low_balance_threshold,low_balance_alert_enabled").eq("is_active",true).in("id",ids).order("name");
         if(walletError)console.warn("Assigned wallet details unavailable",walletError);
         walletOptions=wallets||[];
       }else walletOptions=[];
@@ -930,6 +930,7 @@ async function renderQuickLinks() {
       if(saveError){alert("Could not add website: "+saveError.message);return;}
       const logoFile=$("quick-link-logo").files[0];
       if(logoFile){
+        if(!["image/png","image/jpeg","image/webp","image/svg+xml"].includes(logoFile.type)||logoFile.size>5*1024*1024){alert("Choose PNG/JPG/WEBP/SVG logo under 5 MB.");return;}
         const path="quick-links/"+saved.id+"/"+Date.now()+"-"+logoFile.name.replace(/[^a-zA-Z0-9._-]/g,"_");
         const up=await supabase.storage.from("quick-link-logos").upload(path,logoFile,{upsert:true,contentType:logoFile.type});
         if(up.error){alert("Website saved, but logo upload failed: "+up.error.message);await renderQuickLinks();return;}
