@@ -634,6 +634,7 @@ async function renderEmployeeManager(){
       <div class="admin-service-meta"><strong>${money(x.monthly_salary)} / month</strong><span class="status-pill ${x.is_active?"is-active":"is-inactive"}">${x.is_active?"Active":"Inactive"}</span></div>
       <div class="admin-service-actions">
         ${!x.profile_id?'<button data-employee-link-login="'+x.id+'">Create login</button>':'<button data-employee-migrate="'+x.id+'">Enable mobile login</button>'}
+        <button data-employee-wallets="${x.id}">Assign wallets</button>
         <button data-employee-edit="${x.id}">Edit</button>
         <button data-employee-reset="${x.id}">Reset password</button>
         <button data-employee-toggle="${x.id}" data-active="${x.is_active}">${x.is_active?"Deactivate":"Activate"}</button>
@@ -653,6 +654,16 @@ async function renderEmployeeManager(){
     try{await manageEmployee("migrate_login",{employee_id:row.id});alert("Mobile login enabled. Employee can now sign in with the 10-digit mobile number and password.");}
     catch(err){alert("Mobile login setup failed: "+(err.message||err));}
     finally{b.disabled=false;}
+  }));
+  document.querySelectorAll("[data-employee-wallets]").forEach(b=>b.addEventListener("click",async()=>{
+    const row=(data||[]).find(x=>x.id===b.dataset.employeeWallets);if(!row)return;
+    try{
+      const nav=document.querySelector('.nav-item[data-view="walletaccess"]');
+      document.querySelectorAll(".nav-item").forEach(x=>x.classList.toggle("active",x===nav));
+      $("overview-view").classList.add("hidden");$("other-view").classList.remove("hidden");$("page-title").textContent="Wallet Access";
+      await renderOperations("walletaccess",{supabase,host:$("other-view"),profile:currentProfile,$});
+      const pick=$("wa-employee");if(pick){pick.value=row.id;pick.dispatchEvent(new Event("change"));}
+    }catch(err){alert("Unable to open wallet assignment: "+(err.message||err));}
   }));
   document.querySelectorAll("[data-employee-edit]").forEach(b=>b.addEventListener("click",async()=>{
     const row=(data||[]).find(x=>x.id===b.dataset.employeeEdit);if(!row)return;
