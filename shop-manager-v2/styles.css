@@ -602,3 +602,6 @@ body{background:radial-gradient(ellipse at 8% 0%,#fbf8f0 0,transparent 36%),var(
  .profile-trigger .user-meta{display:none}
  .profile-dropdown{right:0;width:180px}
 }
+
+.pan-calibration-handle[data-kind="space"]{border-color:#a16207;background:rgba(234,179,8,.12);border-style:solid}
+.pan-calibration-handle[data-kind="space"]::after{content:attr(data-number) " · SPACE";color:#713f12;border-color:#a16207;background:#fef3c7;white-space:nowrap;font-size:8px}
