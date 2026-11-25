@@ -139,12 +139,14 @@ export async function renderOperations(view, ctx) {
 
   if(view==="ucl"){
     const employee=await getEmployee();
-    const [codes,em,walletRes]=await Promise.all([
-      admin?supabase.from("ucl_codes").select("id,code,label,is_active,linked_employee_id,is_issued,issued_to_employee_id,issued_at,source,import_batch,purchase_cost").order("created_at",{ascending:false}).limit(1000):Promise.resolve({data:[],error:null}),
+    const [codes,em,walletRes,serviceRes,creditRuleRes]=await Promise.all([
+      admin?supabase.from("ucl_codes").select("id,code,label,is_active,linked_employee_id,is_issued,issued_to_employee_id,issued_at,source,import_batch,purchase_cost,service_id,credit_wallet_id,credited_amount").order("created_at",{ascending:false}).limit(1000):Promise.resolve({data:[],error:null}),
       admin?supabase.from("employees").select("id,full_name").eq("is_active",true).order("full_name"):Promise.resolve({data:[],error:null}),
-      admin?supabase.from("wallets").select("id,name,wallet_type,provider,current_balance").eq("is_active",true).order("name"):Promise.resolve({data:[],error:null})
+      admin?supabase.from("wallets").select("id,name,wallet_type,provider,current_balance").eq("is_active",true).order("name"):Promise.resolve({data:[],error:null}),
+      supabase.from("services").select("id,name,code,is_active").eq("is_active",true).order("name"),
+      admin?supabase.from("ucl_service_credit_rules").select("service_id,wallet_id,credit_amount,is_active"):Promise.resolve({data:[],error:null})
     ]);
-    if(codes.error||em.error||walletRes.error){host.innerHTML=head("UCL Codes","Unable to load CSC codes.")+'<p>'+esc((codes.error||em.error||walletRes.error).message)+'</p>';return;}
+    if(codes.error||em.error||walletRes.error||serviceRes.error||creditRuleRes.error){host.innerHTML=head("UCL Codes","Unable to load CSC codes or service credit rules.")+'<p>'+esc((codes.error||em.error||walletRes.error||serviceRes.error||creditRuleRes.error).message)+'</p>';return;}
     if(!admin){
       host.innerHTML=head("CSC UCL Code","Get one preserved CSC-generated UCL code at a time. Each code is issued once and will not be repeated.")+
        '<div class="admin-editor"><h3>Get next available code</h3><p class="muted">Type CODE and press Enter, or tap the button. Each request issues exactly one code.</p><form id="ucl-next-form" class="service-form"><label>Enter keyword<input id="ucl-trigger-input" placeholder="Type CODE" autocomplete="off"></label><div id="ucl-next-result" class="message"></div><button class="primary-btn" id="ucl-next-btn" type="submit">Get Next Code</button><button class="secondary-btn" id="ucl-copy-btn" type="button" disabled>Copy Code</button></form></div>';
