@@ -104,11 +104,19 @@ async function loadCatalog() {
   }
   $("service-count").textContent = services.length;
   renderCategories();
+  renderEmployeeWallets();
   renderWalletAlerts();
   await loadOverviewStats();
 }
 
 const icons = ["▣","◉","↗","▤","◇","✦"];
+
+function renderEmployeeWallets(){
+ const host=$("employee-wallets");if(!host)return;
+ if(currentProfile?.role!=="employee"){host.innerHTML="";return;}
+ if(!walletOptions.length){host.innerHTML='<div class="announcement-heading"><div><div class="eyebrow">MY ASSIGNED WALLETS</div><h3>No wallets assigned</h3></div></div>';return;}
+ host.innerHTML='<div class="announcement-heading"><div><div class="eyebrow">MY ASSIGNED WALLETS</div><h3>Wallet balances</h3></div></div><div class="employee-wallet-grid">'+walletOptions.map(w=>'<article class="employee-wallet-card"><div><strong>'+escapeHtml(w.name)+'</strong><small>'+escapeHtml(w.provider||w.wallet_type||"Wallet")+'</small></div><b>'+money(w.current_balance)+'</b></article>').join("")+'</div>';
+}
 function renderWalletAlerts(){
  const host=$("wallet-alerts");if(!host)return;
  const low=walletOptions.filter(w=>w.low_balance_alert_enabled!==false&&Number(w.current_balance||0)<=Number(w.low_balance_threshold||0));
