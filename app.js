@@ -92,12 +92,16 @@ async function loadCatalog() {
       if (walletError) console.warn("Wallet list unavailable", walletError);
       walletOptions = wallets || [];
     }else if(currentEmployee?.id){
-      const {data: assigned, error: assignedError}=await supabase.from("employee_wallet_access").select("wallet_id").eq("employee_id",currentEmployee.id).eq("is_active",true);
+      const [{data: assigned, error: assignedError},{data: profitRules,error:profitRulesError}]=await Promise.all([
+        supabase.from("employee_wallet_access").select("wallet_id").eq("employee_id",currentEmployee.id).eq("is_active",true),
+        supabase.from("service_profit_wallet_rules").select("wallet_id")
+      ]);
       if(assignedError)console.warn("Assigned wallet list unavailable",assignedError);
-      const ids=(assigned||[]).map(x=>x.wallet_id);
+      if(profitRulesError)console.warn("Service profit wallet list unavailable",profitRulesError);
+      const ids=[...new Set([...(assigned||[]).map(x=>x.wallet_id),...(profitRules||[]).map(x=>x.wallet_id)])];
       if(ids.length){
         const {data: wallets,error:walletError}=await supabase.from("wallets").select("id,name,wallet_type,provider,current_balance,is_active,low_balance_threshold,low_balance_alert_enabled").eq("is_active",true).in("id",ids).order("name");
-        if(walletError)console.warn("Assigned wallet details unavailable",walletError);
+        if(walletError)console.warn("Assigned and service profit wallet details unavailable",walletError);
         walletOptions=wallets||[];
       }else walletOptions=[];
     }else walletOptions=[];
