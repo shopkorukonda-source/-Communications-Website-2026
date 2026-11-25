@@ -311,7 +311,6 @@ document.querySelectorAll(".nav-item").forEach(btn=>btn.addEventListener("click"
     }
   }
   document.querySelectorAll(".nav-item").forEach(item=>item.classList.toggle("active",item===btn));
-  const view = btn.dataset.view;
   $("overview-view").classList.toggle("hidden",view!=="overview");
   $("other-view").classList.toggle("hidden",view==="overview");
   if(view==="overview"){ $("page-title").textContent=currentProfile?.role==="employee"?"My Dashboard":"Overview"; return; }
