@@ -852,8 +852,11 @@ function updateBillingTotals(){
   });
   $("billing-totals").innerHTML='<div><small>Gross / base</small><strong>'+money(base+charges)+'</strong></div><div><small>Service charges</small><strong>'+money(charges)+'</strong></div><div><small>Customer total</small><strong>'+money(total)+'</strong></div>';
   const received=Number($("bill-received").value||0);
-  const balance=Math.max(0,total-received),change=Math.max(0,received-total);
-  $("bill-change").textContent=change>0?"Return to customer: "+money(change):balance>0?"Balance to collect: "+money(balance):"Payment settled · Return: "+money(0);
+  const balance=Math.max(0,total-received),change=Math.max(0,received-total),status=$("bill-change");
+  status.classList.remove("payment-short","payment-exact","payment-change");
+  if(received<total){status.classList.add("payment-short");status.textContent="BALANCE TO COLLECT  ·  "+money(balance);}
+  else if(received===total){status.classList.add("payment-exact");status.textContent="PAYMENT SETTLED  ·  "+money(0);}
+  else{status.classList.add("payment-change");status.textContent="RETURN TO CUSTOMER  ·  "+money(change);}
 }
 function updatePaymentFields(){
   const mode=$("bill-mode").value;
