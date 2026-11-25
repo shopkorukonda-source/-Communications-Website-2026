@@ -284,6 +284,7 @@ supabase.auth.onAuthStateChange((event,session)=>{
 $("signout-btn").addEventListener("click",async()=>{await supabase.auth.signOut();showLogin();});
 $("service-search").addEventListener("input",renderServices);
 document.querySelectorAll(".nav-item").forEach(btn=>btn.addEventListener("click",async()=>{
+  if(currentProfile?.role!=="admin" && btn.classList.contains("admin-only")) return;
   document.querySelectorAll(".nav-item").forEach(item=>item.classList.toggle("active",item===btn));
   const view = btn.dataset.view;
   $("overview-view").classList.toggle("hidden",view!=="overview");
