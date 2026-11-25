@@ -370,3 +370,13 @@ body{background:radial-gradient(ellipse at 8% 0%,#fbf8f0 0,transparent 36%),var(
 /* Role-based sidebar visibility: keep admin-only navigation hidden for employees. */
 .nav-item.admin-only{display:none!important}
 .admin-mode .nav-item.admin-only{display:flex!important}
+
+/* Current Bills multi-amount entry grid */
+.current-bills-grid-wrap{grid-column:1/-1;overflow-x:auto;border:1px solid var(--line);border-radius:9px;background:#fff}
+.current-bills-grid{width:100%;border-collapse:collapse;min-width:560px;font-size:12px}
+.current-bills-grid th{background:#f7f5ef;color:#76633e;text-align:left;font-size:10px;letter-spacing:.3px;padding:11px;border-bottom:1px solid var(--line)}
+.current-bills-grid td{padding:8px 11px;border-bottom:1px solid #f0eee9;vertical-align:middle}
+.current-bills-grid tr:last-child td{border-bottom:0}
+.current-bills-grid td input{width:100%;min-width:110px;border:1px solid #deddd8;border-radius:7px;padding:9px;font-size:12px}
+.current-bills-grid td strong{white-space:nowrap}
+.billing-row-fields:has(.current-bills-grid-wrap){grid-template-columns:1fr}
