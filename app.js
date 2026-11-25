@@ -1232,7 +1232,7 @@ async function showForm93HtmlPreview(r){
    const addImage=(pi,x,top,w,h,data)=>{if(!data)return;const el=put(pi,x,top-correction,w,h,"","pan-html-photo");el.style.backgroundImage="url("+data+")"};
    addImage(0,46,23,100,128,r.photo);addImage(0,443,23,100,128,r.photo);addImage(0,49,108,94,30,r.signature);addImage(1,329,620,200,65,r.signature);
    if(currentProfile?.role==="admin"){
-    const tools=document.createElement("div");tools.className="pan-calibration-toolbar";tools.innerHTML='<button type="button" class="secondary-btn" id="pan-calibrate-toggle">Adjust field positions</button><select id="pan-calibrate-mode" class="secondary-btn" aria-label="Adjustment mode"><option value="field">Whole field</option><option value="word">Each word</option><option value="letter">Each letter</option></select><select id="pan-name-spacing" class="secondary-btn" aria-label="Name letter spacing"><option value="normal">Normal spacing</option><option value="compact">Compress letters</option><option value="expand">Expand letters</option></select><select id="pan-calibrate-size" class="secondary-btn" aria-label="Lettering size"><option value="4">Size 4</option><option value="5">Size 5</option><option value="6" selected>Size 6</option><option value="7">Size 7</option><option value="8">Size 8</option></select><button type="button" class="secondary-btn" id="pan-calibrate-apply-size" disabled>Apply size to selected</button><button type="button" class="secondary-btn" id="pan-calibrate-save" hidden>Save layout</button><button type="button" class="secondary-btn" id="pan-calibrate-reset" hidden>Reset positions</button><small id="pan-calibrate-help">Choose Whole field, Each word, or Each letter, then drag the blue outline.</small>';overlay.querySelector(".pan-preview-header").after(tools);
+    const tools=document.createElement("div");tools.className="pan-calibration-toolbar";tools.innerHTML='<button type="button" class="secondary-btn" id="pan-calibrate-toggle">Adjust field positions</button><select id="pan-calibrate-mode" class="secondary-btn" aria-label="Adjustment mode"><option value="field">Whole field</option><option value="word">Each word</option><option value="letter">Each letter / space</option></select><select id="pan-name-spacing" class="secondary-btn" aria-label="Name letter spacing"><option value="normal">Normal spacing</option><option value="compact">Compress letters</option><option value="expand">Expand letters</option></select><select id="pan-calibrate-size" class="secondary-btn" aria-label="Lettering size"><option value="4">Size 4</option><option value="5">Size 5</option><option value="6" selected>Size 6</option><option value="7">Size 7</option><option value="8">Size 8</option></select><button type="button" class="secondary-btn" id="pan-calibrate-apply-size" disabled>Apply size to selected</button><button type="button" class="secondary-btn" id="pan-calibrate-save" hidden>Save layout</button><button type="button" class="secondary-btn" id="pan-calibrate-reset" hidden>Reset positions</button><small id="pan-calibrate-help">Admin only: choose Each letter / space to see position numbers. Spaces keep a blank box but consume a number.</small>';overlay.querySelector(".pan-preview-header").after(tools);
     let calibration=false,drag=null;
     const toggle=tools.querySelector("#pan-calibrate-toggle"),save=tools.querySelector("#pan-calibrate-save"),reset=tools.querySelector("#pan-calibrate-reset");
     const handles=[],modeSelect=tools.querySelector("#pan-calibrate-mode"),sizeSelect=tools.querySelector("#pan-calibrate-size"),applySize=tools.querySelector("#pan-calibrate-apply-size"),spacingSelect=tools.querySelector("#pan-name-spacing");spacingSelect.value=form93LayoutSettings.__nameSpacing||"normal";spacingSelect.addEventListener("change",()=>{form93LayoutSettings.__nameSpacing=spacingSelect.value;overlay.remove();showForm93HtmlPreview(r)});let selectedCalibration=null;
@@ -1247,7 +1247,7 @@ async function showForm93HtmlPreview(r){
           const h=document.createElement("div");h.className="pan-calibration-handle";h.dataset.key=key;
           h.style.left=((left-m.wrap.getBoundingClientRect().left)/m.wrap.clientWidth*100)+"%";h.style.top=((top-m.wrap.getBoundingClientRect().top)/m.wrap.clientHeight*100)+"%";
           h.style.width=Math.max(mode==="letter"?1:2,(right-left)/m.wrap.clientWidth*100)+"%";h.style.height=Math.max(mode==="letter"?0.8:1.5,(bottom-top)/m.wrap.clientHeight*100)+"%";
-          const ordinal=Number(els[0]?.dataset.letterNumber||0),ordinalLabel=ordinal?ordinal+(ordinal%100>=11&&ordinal%100<=13?"th":({1:"st",2:"nd",3:"rd"}[ordinal%10]||"th"))+" letter":"";if(mode==="letter"&&ordinal)h.dataset.number=String(ordinal);h.title=mode==="letter"?(els[0]?.classList.contains("pan-html-space-marker")?"Adjust space "+ordinal+" position · drag to move":"Adjust "+ordinalLabel+" position · drag to move"):mode==="word"?"Tap to select this word, drag to move":"Tap to select this field, drag to move";h.addEventListener("click",()=>{selectedCalibration={key,els,mode};handles.forEach(x=>x.classList.toggle("selected",x===h));applySize.disabled=false});
+          const ordinal=Number(els[0]?.dataset.letterNumber||0),ordinalLabel=ordinal?ordinal+(ordinal%100>=11&&ordinal%100<=13?"th":({1:"st",2:"nd",3:"rd"}[ordinal%10]||"th"))+" letter":"";const isSpace=els[0]?.classList.contains("pan-html-space-marker");if(mode==="letter"&&ordinal){h.dataset.number=String(ordinal);if(isSpace)h.dataset.kind="space";}h.title=mode==="letter"?(isSpace?"Position "+ordinal+" · SPACE (blank box) · drag to move":"Position "+ordinal+" · "+ordinalLabel+" · drag to move"):mode==="word"?"Tap to select this word, drag to move":"Tap to select this field, drag to move";h.addEventListener("click",()=>{selectedCalibration={key,els,mode};handles.forEach(x=>x.classList.toggle("selected",x===h));applySize.disabled=false});
           h.addEventListener("pointerdown",e=>{if(!calibration)return;e.preventDefault();h.setPointerCapture(e.pointerId);drag={key,els,startX:e.clientX,startY:e.clientY,dx:0,dy:0}});
           h.addEventListener("pointermove",e=>{if(!drag||drag.key!==key)return;const dx=e.clientX-drag.startX,dy=e.clientY-drag.startY;drag.dx=dx;drag.dy=dy;els.forEach(el=>el.style.transform="translate("+dx+"px,"+dy+"px)")});
           h.addEventListener("pointerup",()=>{if(!drag||drag.key!==key)return;const scale=m.scale,prev=form93LayoutSettings[key]||{};form93LayoutSettings[key]={...prev,dx:Number(prev.dx||0)+drag.dx/scale,dy:Number(prev.dy||0)+drag.dy/scale};
@@ -1258,7 +1258,7 @@ async function showForm93HtmlPreview(r){
     };
     modeSelect.addEventListener("change",()=>{selectedCalibration=null;applySize.disabled=true;if(calibration)makeHandles()});
     applySize.addEventListener("click",()=>{if(!selectedCalibration)return;const {key,els}=selectedCalibration,prev=form93LayoutSettings[key]||{},size=Number(sizeSelect.value);form93LayoutSettings[key]={...prev,size};els.forEach(el=>{const pi=Number(el.dataset.pageIndex||0);el.style.fontSize=(size*mScale(pageModels[pi]))+"px"});});
-    toggle.onclick=()=>{calibration=!calibration;overlay.classList.toggle("pan-calibrating",calibration);toggle.textContent=calibration?"Finish adjusting":"Adjust field positions";save.hidden=!calibration;reset.hidden=!calibration;tools.querySelector("#pan-calibrate-help").textContent=calibration?"Mode: "+modeSelect.options[modeSelect.selectedIndex].text+". Drag blue outlines; save when finished.":"Choose Whole field, Each word, or Each letter, then drag the blue outline.";if(calibration)makeHandles();else{handles.forEach(h=>h.remove());handles.length=0}};
+    toggle.onclick=()=>{calibration=!calibration;overlay.classList.toggle("pan-calibrating",calibration);toggle.textContent=calibration?"Finish adjusting":"Adjust field positions";save.hidden=!calibration;reset.hidden=!calibration;tools.querySelector("#pan-calibrate-help").textContent=calibration?"Mode: "+modeSelect.options[modeSelect.selectedIndex].text+". Number tags include spaces; drag each blue outline to its matching box, then save.":"Admin only: choose Each letter / space to see position numbers. Spaces keep a blank box but consume a number.";if(calibration)makeHandles();else{handles.forEach(h=>h.remove());handles.length=0}};
     save.onclick=async()=>{save.disabled=true;try{await saveForm93LayoutSettings();save.textContent="Saved for all applicants";setTimeout(()=>save.textContent="Save layout",1600)}catch(e){alert("Could not save applicant layout to cloud: "+e.message)}finally{save.disabled=false}};
     reset.onclick=async()=>{if(!confirm("Reset the shared Form 93 layout adjustments for all applicants?"))return;form93LayoutSettings={};try{await saveForm93LayoutSettings();overlay.remove();await print(r)}catch(e){alert("Could not reset applicant layout: "+e.message)}};
    }
@@ -1593,3 +1593,24 @@ async function renderAnnouncementManager(){
  host.querySelectorAll("[data-ann-delete]").forEach(btn=>btn.onclick=async()=>{if(!confirm("Delete this announcement?"))return;const {error:e}=await supabase.from("shop_announcements").delete().eq("id",btn.dataset.annDelete);if(e)alert(e.message);else await renderAnnouncementManager()});
 }
 window.__slvAppReady = true;
+
+
+/* Profile dropdown: account actions live beside the user identity */
+const profileTrigger=$("profile-trigger"),profileDropdown=$("profile-dropdown"),profileMenu=$("profile-menu");
+profileTrigger?.addEventListener("click",()=>{
+  const opening=profileDropdown?.classList.contains("hidden");
+  profileDropdown?.classList.toggle("hidden",!opening);
+  profileTrigger.setAttribute("aria-expanded",String(!!opening));
+});
+document.addEventListener("click",e=>{
+  if(profileMenu&&!profileMenu.contains(e.target)){
+    profileDropdown?.classList.add("hidden");
+    profileTrigger?.setAttribute("aria-expanded","false");
+  }
+});
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"){
+    profileDropdown?.classList.add("hidden");
+    profileTrigger?.setAttribute("aria-expanded","false");
+  }
+});
