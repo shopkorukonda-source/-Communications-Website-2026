@@ -522,3 +522,17 @@ body{background:radial-gradient(ellipse at 8% 0%,#fbf8f0 0,transparent 36%),var(
 .service-form .wallet-map-box>strong,.service-form .wallet-choice span{font-size:12px!important;font-weight:800!important;color:#111!important}
 .service-form .wallet-map-box>p,.service-form .wallet-choice small{color:#555!important;font-size:11px!important}
 .admin-form-grid{gap:15px!important}
+
+/* Workspace section labels: crisp pure white */
+.sidebar .nav-label,.sidebar .nav-label.nav-gap{color:#fff!important;font-weight:800!important;opacity:1!important}
+.sidebar .sidebar-bottom,.sidebar .sidebar-bottom span{color:#fff!important}
+.sidebar .sidebar-brand small{color:#fff!important}
+.wa-toolbar{display:flex;align-items:end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.wa-toolbar>label{display:grid;gap:8px;min-width:min(100%,340px);font-size:13px;font-weight:800;color:#111}
+.wa-toolbar select{min-width:280px;border:1.5px solid #777;border-radius:8px;padding:12px;font-size:14px;font-weight:600;color:#111;background:#fff}
+.wa-actions{display:flex;gap:8px}
+.wa-summary{font-size:13px;font-weight:800;color:#111;border:1px solid #888;background:#fafafa;border-radius:8px;padding:11px 13px;margin-bottom:14px}
+#wa-wallet-list .wallet-choice{min-height:56px}
+#wa-wallet-list .wallet-choice b{display:block;font-size:13px;color:#111}
+#wa-wallet-list .wallet-choice small{display:block;font-size:11px;color:#555;margin-top:4px}
+#wa-save{max-width:260px}
