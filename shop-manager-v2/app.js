@@ -604,11 +604,19 @@ async function renderEmployeeManager(){
       <div class="admin-service-main"><strong>${escapeHtml(x.full_name)}</strong><small>${escapeHtml(x.phone||"No mobile")} · ${escapeHtml(x.employee_code||"No code")} · ${x.profile_id?"Login linked":"Login not linked"}</small></div>
       <div class="admin-service-meta"><strong>${money(x.monthly_salary)} / month</strong><span class="status-pill ${x.is_active?"is-active":"is-inactive"}">${x.is_active?"Active":"Inactive"}</span></div>
       <div class="admin-service-actions">
+        ${!x.profile_id?'<button data-employee-link-login="'+x.id+'">Create login</button>':""}
         <button data-employee-edit="${x.id}">Edit</button>
         <button data-employee-reset="${x.id}">Reset password</button>
         <button data-employee-toggle="${x.id}" data-active="${x.is_active}">${x.is_active?"Deactivate":"Activate"}</button>
       </div>
     </div>`).join(""):'<div class="empty-state">No employees added yet.</div>';
+  document.querySelectorAll("[data-employee-link-login]").forEach(b=>b.addEventListener("click",async()=>{
+    const row=(data||[]).find(x=>x.id===b.dataset.employeeLinkLogin);if(!row)return;
+    const pwd=prompt("Set initial password for "+row.full_name+" (minimum 8 characters):");if(pwd===null)return;
+    if(pwd.length<8){alert("Password must contain at least 8 characters.");return;}
+    try{await manageEmployee("link_existing",{employee_id:row.id,password:pwd,full_name:row.full_name});await renderEmployeeManager();alert("Employee login linked successfully.");}
+    catch(err){alert("Login creation failed: "+(err.message||err));}
+  }));
   document.querySelectorAll("[data-employee-edit]").forEach(b=>b.addEventListener("click",async()=>{
     const row=(data||[]).find(x=>x.id===b.dataset.employeeEdit);if(!row)return;
     const name=prompt("Employee full name:",row.full_name);if(name===null)return;
