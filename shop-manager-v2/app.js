@@ -782,7 +782,7 @@ async function setBillingRows(n){
   const {data:profitRules,error:profitRulesError}=await supabase.from("service_profit_wallet_rules").select("service_id,wallet_id").order("wallet_id");
   if(profitRulesError)throw profitRulesError;
   billingProfitWalletRules={};(profitRules||[]).forEach(x=>(billingProfitWalletRules[x.service_id]??=[]).push(x.wallet_id));
-  billingRows=Array.from({length:n},(_,i)=>billingRows[i]||({service_id:"",base:"",charge:"",cost:"",bank:"",quantity:1,unit_count:"",sets:1,item_label:"",discount:0,wallet_debits:[]}));
+  billingRows=Array.from({length:n},(_,i)=>billingRows[i]||({service_id:"",base:"",charge:"",cost:"",bank:"",quantity:1,unit_count:"",sets:1,item_label:"",discount:0,wallet_debits:[],bill_count:1,bill_amounts:[""]}));
   $("billing-rows").innerHTML=billingRows.map((r,i)=>{
     const serviceOptions=services.filter(s=>s.is_active).map(s=>'<option value="'+s.id+'" '+(s.id===r.service_id?"selected":"")+'>'+escapeHtml(s.name)+'</option>').join("");
     const svc=services.find(s=>s.id===r.service_id),special=isPaperPageService(svc),alloc=automaticWalletDebits(r,svc);
@@ -910,7 +910,12 @@ async function saveQuickBilling(){
     if(error)throw error;
     msg.textContent="Bills saved successfully. Transaction ID: "+data;
     $("bill-received").value="0";$("bill-cash").value="0";$("bill-upi").value="0";
-    await setBillingRows(Number($("bill-count").value||1));await loadRecentBills();
+    $("bill-customer").value="";$("bill-phone").value="";
+    billingRows=[];
+    const freshCount=Math.max(1,Math.min(100,Number($("bill-count").value)||1));
+    $("bill-count").value=freshCount;
+    await setBillingRows(freshCount);
+    updatePaymentFields();await loadRecentBills();
   }catch(e){msg.textContent=e.message||"Unable to save bills.";console.error(e);}
   finally{btn.disabled=false;}
 }
