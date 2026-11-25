@@ -859,11 +859,12 @@ async function setBillingRows(n){
     input.addEventListener("focus",showMatches);input.addEventListener("input",showMatches);
     input.addEventListener("keydown",e=>{if(e.key==="Escape")menu.classList.add("hidden");if(e.key==="Enter"){const first=menu.querySelector("[data-service-option]");if(first){e.preventDefault();first.click();}}});
   });
-  $("billing-rows").querySelectorAll("[data-service-option]").forEach(btn=>btn.addEventListener("click",()=>{
+  $("billing-rows").addEventListener("click",e=>{
+    const btn=e.target.closest("[data-service-option]");if(!btn)return;
     const idx=Number(btn.dataset.rowIndex),svc=services.find(s=>s.id===btn.dataset.serviceOption);if(!svc)return;
     billingRows[idx].service_id=svc.id;billingRows[idx].base=svc.billing_config?.base_amount??"";billingRows[idx].charge=svc.billing_config?.customer_charge??"";billingRows[idx].cost=svc.processing_cost_config?.fixed_amount??"";billingRows[idx].charge_percent=svc.billing_config?.charge_percent??2;billingRows[idx].profit_wallet_id="";billingRows[idx].quantity=1;billingRows[idx].unit_count="";billingRows[idx].sets=1;billingRows[idx].item_label="";billingRows[idx].discount=0;billingRows[idx].wallet_debits=[];billingRows[idx].bill_count=1;billingRows[idx].bill_amounts=[""];
     setBillingRows(billingRows.length);
-  }));
+  });
   updateBillingTotals();
 }
 function onBillingRowChange(e){
