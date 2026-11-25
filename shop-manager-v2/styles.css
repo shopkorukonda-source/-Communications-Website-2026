@@ -380,3 +380,10 @@ body{background:radial-gradient(ellipse at 8% 0%,#fbf8f0 0,transparent 36%),var(
 .current-bills-grid td input{width:100%;min-width:110px;border:1px solid #deddd8;border-radius:7px;padding:9px;font-size:12px}
 .current-bills-grid td strong{white-space:nowrap}
 .billing-row-fields:has(.current-bills-grid-wrap){grid-template-columns:1fr}
+
+/* Prominent payment balance indicator */
+#bill-change{width:min(100%,520px);min-height:58px;margin:18px auto 22px;padding:16px 20px;border:1px solid var(--line);border-radius:12px;text-align:center;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;letter-spacing:.25px;background:#fff;color:#333;box-shadow:0 3px 12px rgba(0,0,0,.045)}
+#bill-change.payment-short{background:#fff0ef;border:1px solid #e6a19d;color:#bd3028}
+#bill-change.payment-exact{background:#fff;border:1px solid #e4e1da;color:#333}
+#bill-change.payment-change{background:#eaf7ef;border:1px solid #91cba5;color:#187344}
+@media(max-width:600px){#bill-change{min-height:54px;padding:14px 10px;font-size:13px}}
