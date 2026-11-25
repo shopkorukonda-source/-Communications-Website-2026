@@ -276,7 +276,7 @@ document.querySelectorAll(".nav-item").forEach(btn=>btn.addEventListener("click"
     await renderReports();
   } else if(view==="employees") {
     await renderEmployeeManager();
-  } else if(["drawers","attendance","leave","payroll","incentives","ucl","expenses","settlement"].includes(view)) {
+  } else if(["drawers","attendance","leave","payroll","incentives","ucl","inventory","expenses","settlement"].includes(view)) {
     await renderOperations(view,{supabase,host:$("other-view"),profile:currentProfile,$});
   } else {
     $("other-view").innerHTML='<div class="empty-panel"><div class="empty-icon">✦</div><h2 id="other-title"></h2><p>This module will be enabled after its complete workflow and safety checks are ready.</p></div>';
