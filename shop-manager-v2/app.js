@@ -65,7 +65,7 @@ async function showApp(user) {
     document.querySelector(".stat-card:nth-child(2) small").textContent = "Shop Cash wallet balance";
   }
   await loadCatalog();
-  if (profile.role === "employee") await loadEmployeeAnnouncements();
+  if (profile.role === "employee") { await loadEmployeeAnnouncements(); await loadEmployeeTaskReminders(); }
 }
 
 async function loadCatalog() {
@@ -84,9 +84,20 @@ async function loadCatalog() {
   categories = cats || [];
   services = (rows || []).filter(s => currentProfile?.role === "admin" || s.is_active);
   {
-    const {data: wallets, error: walletError} = await supabase.from("wallets").select("id,name,wallet_type,provider,current_balance,is_active").eq("is_active",true).order("name");
-    if (walletError) console.warn("Wallet list unavailable", walletError);
-    walletOptions = wallets || [];
+    if(currentProfile?.role==="admin"){
+      const {data: wallets, error: walletError} = await supabase.from("wallets").select("id,name,wallet_type,provider,current_balance,is_active").eq("is_active",true).order("name");
+      if (walletError) console.warn("Wallet list unavailable", walletError);
+      walletOptions = wallets || [];
+    }else if(currentEmployee?.id){
+      const {data: assigned, error: assignedError}=await supabase.from("employee_wallet_access").select("wallet_id").eq("employee_id",currentEmployee.id).eq("is_active",true);
+      if(assignedError)console.warn("Assigned wallet list unavailable",assignedError);
+      const ids=(assigned||[]).map(x=>x.wallet_id);
+      if(ids.length){
+        const {data: wallets,error:walletError}=await supabase.from("wallets").select("id,name,wallet_type,provider,current_balance,is_active").eq("is_active",true).in("id",ids).order("name");
+        if(walletError)console.warn("Assigned wallet details unavailable",walletError);
+        walletOptions=wallets||[];
+      }else walletOptions=[];
+    }else walletOptions=[];
   }
   $("service-count").textContent = services.length;
   renderCategories();
@@ -276,7 +287,7 @@ document.querySelectorAll(".nav-item").forEach(btn=>btn.addEventListener("click"
     await renderReports();
   } else if(view==="employees") {
     await renderEmployeeManager();
-  } else if(["drawers","attendance","leave","payroll","incentives","ucl","inventory","expenses","settlement"].includes(view)) {
+  } else if(["drawers","attendance","leave","payroll","incentives","ucl","walletaccess","tasks","inventory","expenses","settlement"].includes(view)) {
     await renderOperations(view,{supabase,host:$("other-view"),profile:currentProfile,$});
   } else {
     $("other-view").innerHTML='<div class="empty-panel"><div class="empty-icon">✦</div><h2 id="other-title"></h2><p>This module will be enabled after its complete workflow and safety checks are ready.</p></div>';
@@ -1306,6 +1317,16 @@ const announcementMeta={
  holiday:{label:"Holiday Declaration",icon:"📅"},
  important:{label:"Important Announcement",icon:"📢"}
 };
+async function loadEmployeeTaskReminders(){
+ const host=$("employee-task-reminders");
+ if(!host||currentProfile?.role!=="employee"||!currentEmployee?.id){if(host)host.innerHTML="";return;}
+ const {data,error}=await supabase.from("employee_tasks").select("id,title,details,due_date,priority,status")
+  .eq("employee_id",currentEmployee.id).in("status",["pending","in_progress"])
+  .order("due_date",{ascending:true}).limit(8);
+ if(error){host.innerHTML="";console.warn("Task reminders unavailable",error);return;}
+ const rows=data||[];
+ host.innerHTML=rows.length?'<div class="announcement-heading"><div><div class="eyebrow">YOUR ASSIGNED WORK</div><h3>Pending Work Reminders</h3></div></div><div class="announcement-list">'+rows.map(t=>'<article class="announcement-card"><div class="announcement-icon">'+(t.priority==="urgent"?"!":t.priority==="high"?"↑":"•")+'</div><div class="announcement-copy"><div class="announcement-type">'+escapeHtml(t.priority.toUpperCase())+(t.due_date?' · Due '+escapeHtml(t.due_date):'')+'</div><strong>'+escapeHtml(t.title)+'</strong><p>'+escapeHtml(t.details||"")+'</p></div></article>').join("")+'</div>':'';
+}
 async function loadEmployeeAnnouncements(){
  const host=$("employee-announcements");if(!host||currentProfile?.role!=="employee")return;
  const {data,error}=await supabase.from("shop_announcements")
