@@ -914,7 +914,7 @@ async function renderQuickLinks() {
     </div>`:''}
     <div class="quick-link-grid">
       ${visible.length?visible.map(link=>`<article class="quick-link-card">
-        <div class="quick-link-mark">${link.logo_url?`<img src="${"${escapeHtml(link.logo_url)}"}" alt="" style="width:42px;height:42px;object-fit:contain">`:"↗"}</div><div class="quick-link-info"><strong>${escapeHtml(link.name)}</strong><small>${escapeHtml(link.category||"General")}</small></div>
+        <div class="quick-link-mark">${link.logo_url?`<img src="${escapeHtml(link.logo_url)}" alt="" style="width:42px;height:42px;object-fit:contain">`:"↗"}</div><div class="quick-link-info"><strong>${escapeHtml(link.name)}</strong><small>${escapeHtml(link.category||"General")}</small></div>
         <a class="primary-btn quick-link-open" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">Open Website ↗</a>
         ${admin?`<div class="quick-link-admin"><span>${link.is_active?"Active":"Hidden for employees"}</span><label class="secondary-btn">Upload logo<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" data-link-logo="${link.id}" style="display:none"></label><button type="button" class="secondary-btn" data-link-toggle="${link.id}" data-active="${link.is_active}">${link.is_active?"Hide":"Show"}</button><button type="button" class="danger-btn" data-link-delete="${link.id}">Delete</button></div>`:''}
       </article>`).join(""):'<div class="empty-state">No websites are available yet. Ask Admin to add a website.</div>'}
