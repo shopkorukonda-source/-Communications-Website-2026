@@ -117,9 +117,11 @@ const icons = ["▣","◉","↗","▤","◇","✦"];
 
 function renderEmployeeWallets(){
  const host=$("employee-wallets");if(!host)return;
- if(currentProfile?.role!=="employee"){host.innerHTML="";return;}
- if(!walletOptions.length){host.innerHTML='<div class="announcement-heading"><div><div class="eyebrow">MY ASSIGNED WALLETS</div><h3>No wallets assigned</h3></div></div>';return;}
- host.innerHTML='<div class="announcement-heading"><div><div class="eyebrow">MY ASSIGNED WALLETS</div><h3>Wallet balances</h3></div></div><div class="employee-wallet-grid">'+walletOptions.map(w=>'<article class="employee-wallet-card"><div><strong>'+escapeHtml(w.name)+'</strong><small>'+escapeHtml(w.provider||w.wallet_type||"Wallet")+'</small></div><b>'+money(w.current_balance)+'</b></article>').join("")+'</div>';
+ const isAdmin=currentProfile?.role==="admin";
+ const heading=isAdmin?"ALL SHOP WALLETS":"MY ASSIGNED WALLETS";
+ const title=isAdmin?"Wallet balances":"Assigned wallet balances";
+ if(!walletOptions.length){host.innerHTML='<div class="announcement-heading"><div><div class="eyebrow">'+heading+'</div><h3>'+(isAdmin?"No active wallets created":"No wallets assigned")+'</h3></div></div>';return;}
+ host.innerHTML='<div class="announcement-heading"><div><div class="eyebrow">'+heading+'</div><h3>'+title+'</h3></div></div><div class="employee-wallet-grid">'+walletOptions.filter(w=>w.is_active!==false).map(w=>'<article class="employee-wallet-card"><div><strong>'+escapeHtml(w.name)+'</strong><small>'+escapeHtml(w.provider||w.wallet_type||"Wallet")+'</small></div><b>'+money(w.current_balance)+'</b></article>').join("")+'</div>';
 }
 function renderWalletAlerts(){
  const host=$("wallet-alerts");if(!host)return;
@@ -845,12 +847,24 @@ async function setBillingRows(n){
       : isCreditCard
         ? '<label>Transfer amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0.01" step="0.01" value="'+escapeHtml(r.base||"")+'" placeholder="Enter amount"></label><label>Service charge (%)<input data-field="charge_percent" data-i="'+i+'" type="number" min="0.01" max="100" step="0.01" value="'+escapeHtml(r.charge_percent??svc.billing_config?.charge_percent??2)+'"></label><label>Profit wallet<select data-field="profit_wallet_id" data-i="'+i+'"><option value="">Select wallet</option>'+ccWalletIds.map(id=>{const w=walletOptions.find(x=>x.id===id&&x.is_active);return w?'<option value="'+w.id+'" '+(r.profit_wallet_id===w.id?"selected":"")+'>'+escapeHtml(w.name)+' · '+money(w.current_balance)+'</option>':"";}).join("")+'</select></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label>'
         : '<label>Bill / Transfer Amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.base)+'"></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label><label>Service charge (₹)<input data-field="charge" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.charge||"")+'"></label><label class="bank-field">Bank (AEPS)<input data-field="bank" data-i="'+i+'" value="'+escapeHtml(r.bank)+'" placeholder="Bank name"></label><label>Manual processing cost (₹)<input data-field="cost" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.cost)+'"></label>';
-    return '<div class="billing-row" data-row="'+i+'"><div class="billing-row-head"><strong>Item '+(i+1)+'</strong><span class="billing-row-total" id="row-total-'+i+'">₹0.00</span></div><div class="billing-row-fields"><label>Service<select data-field="service_id" data-i="'+i+'"><option value="">Select service</option>'+serviceOptions+'</select></label>'+serviceFields+'</div><div class="wallet-map-box"><strong>Processing wallet (automatic)</strong><p>Wallet and debit amount are taken from Admin service settings.</p><div class="wallet-choice-grid" id="wallet-auto-'+i+'">'+walletOptionsHtml+'</div></div><div class="billing-row-result" id="row-result-'+i+'">Service Charge: ₹0.00</div></div>';
+    return '<div class="billing-row" data-row="'+i+'"><div class="billing-row-head"><strong>Item '+(i+1)+'</strong><span class="billing-row-total" id="row-total-'+i+'">₹0.00</span></div><div class="billing-row-fields"><label>Service<div class="service-picker" data-service-picker="'+i+'"><input type="search" data-service-search="'+i+'" value="'+escapeHtml(svc?.name||"")+'" placeholder="Type one letter or service name…" autocomplete="off"><div class="service-picker-options hidden" id="service-picker-options-'+i+'"></div></div></label>'+serviceFields+'</div><div class="wallet-map-box"><strong>Processing wallet (automatic)</strong><p>Wallet and debit amount are taken from Admin service settings.</p><div class="wallet-choice-grid" id="wallet-auto-'+i+'">'+walletOptionsHtml+'</div></div><div class="billing-row-result" id="row-result-'+i+'">Service Charge: ₹0.00</div></div>';
   }).join("");
   $("billing-rows").querySelectorAll("[data-field]").forEach(el=>{
     if(el.dataset.field==="bill_count")el.addEventListener("change",onBillingRowChange);
     else {el.addEventListener("input",onBillingRowChange);el.addEventListener("change",onBillingRowChange);}
   });
+  $("billing-rows").querySelectorAll("[data-service-search]").forEach(input=>{
+    const idx=Number(input.dataset.serviceSearch),menu=$("service-picker-options-"+idx);
+    const showMatches=()=>{const q=input.value.trim().toLowerCase();const matches=services.filter(s=>s.is_active&&(!q||s.name.toLowerCase().includes(q)||String(s.code||"").toLowerCase().includes(q)));menu.innerHTML=matches.map(s=>'<button type="button" data-service-option="'+s.id+'" data-row-index="'+idx+'">'+escapeHtml(s.name)+'</button>').join("")||'<div class="service-picker-empty">No matching services</div>';menu.classList.remove("hidden");};
+    input.addEventListener("focus",showMatches);input.addEventListener("input",showMatches);
+    input.addEventListener("keydown",e=>{if(e.key==="Escape")menu.classList.add("hidden");if(e.key==="Enter"){const first=menu.querySelector("[data-service-option]");if(first){e.preventDefault();first.click();}}});
+  });
+  $("billing-rows").onclick=e=>{
+    const btn=e.target.closest("[data-service-option]");if(!btn)return;
+    const idx=Number(btn.dataset.rowIndex),svc=services.find(s=>s.id===btn.dataset.serviceOption);if(!svc)return;
+    billingRows[idx].service_id=svc.id;billingRows[idx].base=svc.billing_config?.base_amount??"";billingRows[idx].charge=svc.billing_config?.customer_charge??"";billingRows[idx].cost=svc.processing_cost_config?.fixed_amount??"";billingRows[idx].charge_percent=svc.billing_config?.charge_percent??2;billingRows[idx].profit_wallet_id="";billingRows[idx].quantity=1;billingRows[idx].unit_count="";billingRows[idx].sets=1;billingRows[idx].item_label="";billingRows[idx].discount=0;billingRows[idx].wallet_debits=[];billingRows[idx].bill_count=1;billingRows[idx].bill_amounts=[""];
+    setBillingRows(billingRows.length);
+  };
   updateBillingTotals();
 }
 function onBillingRowChange(e){
