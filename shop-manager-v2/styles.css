@@ -407,3 +407,8 @@ body{background:radial-gradient(ellipse at 8% 0%,#fbf8f0 0,transparent 36%),var(
  .slv-logo{margin-bottom:30px}
  .slv-logo-name{font-size:12px;letter-spacing:1px}
 }
+
+/* Employees must not see daily collected amount / cash position. */
+.employee-mode .stat-card:nth-child(2){display:none!important}
+.employee-mode .stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:600px){.employee-mode .stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
