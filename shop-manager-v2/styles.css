@@ -551,3 +551,36 @@ body{background:radial-gradient(ellipse at 8% 0%,#fbf8f0 0,transparent 36%),var(
 .service-picker-options button{display:block;width:100%;text-align:left;border:0;border-radius:6px;background:#fff;padding:10px 11px;font-size:13px;font-weight:700;color:#111;cursor:pointer}
 .service-picker-options button:hover,.service-picker-options button:focus{background:#f2eee5;outline:none}
 .service-picker-empty{padding:12px;font-size:12px;color:#555}
+
+
+/* SLV sky-blue theme: replace charcoal UI surfaces with sky blue and white text */
+:root{--slv-sky:#38a9df;--slv-sky-deep:#238fc9}
+.sidebar{background:linear-gradient(180deg,var(--slv-sky),var(--slv-sky-deep))!important;color:#fff}
+.sidebar-brand strong,.sidebar-brand small,.nav-label,.sidebar-bottom{color:#fff!important}
+.brand-symbol,.slv-logo-mark,.topbar-brand-mark{background:var(--slv-sky-deep)!important;border-color:#d8f2ff!important;color:#fff!important}
+.nav-item{color:#fff!important}
+.nav-item span{color:#fff!important}
+.nav-item.active,.nav-item:hover{background:rgba(255,255,255,.22)!important;color:#fff!important;border-color:rgba(255,255,255,.3)!important}
+.sidebar-bottom{border-color:rgba(255,255,255,.28)!important}
+.primary-btn{background:var(--slv-sky)!important;color:#fff!important;box-shadow:0 7px 18px rgba(35,143,201,.2)!important}
+.primary-btn:hover{background:var(--slv-sky-deep)!important;color:#fff!important}
+.primary-btn span{color:#fff!important}
+.pan-preview-header{background:var(--slv-sky)!important;color:#fff!important;border-bottom-color:var(--slv-sky-deep)!important}
+.pan-preview-header small{color:#fff!important}
+.pan-step-dot.active{background:var(--slv-sky)!important;border-color:var(--slv-sky)!important;color:#fff!important}
+
+/* Normal Billing stays clean white with black text */
+.billing-editor,.billing-editor .billing-row,.billing-editor .billing-totals{
+ background:#fff!important;color:#171717!important
+}
+.billing-editor,.billing-editor *{color:#171717}
+.billing-editor input,.billing-editor select,.billing-editor textarea{
+ background:#fff!important;color:#171717!important;border-color:#d8d8d8!important
+}
+.billing-editor .billing-row-total{color:#171717!important}
+.billing-editor .primary-btn,.billing-editor button.primary-btn{
+ background:#fff!important;color:#171717!important;border:1px solid #bfc6cc!important;box-shadow:none!important
+}
+.billing-editor .primary-btn:hover,.billing-editor button.primary-btn:hover{
+ background:#f4f7f9!important;color:#171717!important
+}
