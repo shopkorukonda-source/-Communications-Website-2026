@@ -400,6 +400,12 @@ async function openServiceEditor(id=null){
         <label>Processing cost config (JSON)<textarea id="svc-cost-config" rows="3">${escapeHtml(JSON.stringify(s?.processing_cost_config||{},null,2))}</textarea></label>
         <label>Profit config (JSON)<textarea id="svc-profit-config" rows="3">${escapeHtml(JSON.stringify(s?.profit_config||{},null,2))}</textarea></label>
       </div>
+      <div class="wallet-map-box" id="printout-slab-editor" style="display:${s?.code==="PRINTOUT"?"block":"none"}">
+        <strong>Printout quantity-wise customer rates</strong>
+        <p>Set page ranges and rate per page. Leave the maximum blank for the last unlimited slab. Rate is applied to total pages (pages × sets).</p>
+        <div id="printout-slab-rows">${(s?.billing_config?.quantity_slabs||[{min_quantity:1,max_quantity:null,rate:Number(s?.billing_config?.customer_charge||0)}]).map((x)=>'<div class="admin-form-grid printout-slab-row" style="align-items:end"><label>From pages<input data-slab-min type="number" min="1" step="1" value="'+Number(x.min_quantity??x.min??1)+'"></label><label>To pages (blank = unlimited)<input data-slab-max type="number" min="1" step="1" value="'+(x.max_quantity??x.max??"")+'"></label><label>Rate per page (₹)<input data-slab-rate type="number" min="0" step="0.01" value="'+Number(x.rate??x.customer_charge??0)+'"></label><button type="button" class="text-btn" data-remove-printout-slab>Remove</button></div>').join("")}</div>
+        <button type="button" class="secondary-btn" id="add-printout-slab">+ Add rate slab</button>
+      </div>
       <div class="wallet-map-box" id="credit-profit-wallet-box" style="display:${s?.code==="CREDIT_CARD_BANK"?"block":"none"}"><strong>Credit Card profit wallets</strong><p>Select all wallets employees may choose. Each bill's calculated profit is credited to the selected wallet.</p><div class="wallet-choice-grid">${walletOptions.map(w=>`<label class="wallet-choice"><input type="checkbox" data-profit-wallet-check value="${w.id}" ${selectedProfitWallets.includes(w.id)?"checked":""} ${w.is_active?"":"disabled"}><span>${escapeHtml(w.name)} <small>${escapeHtml(w.provider||w.wallet_type)}</small></span></label>`).join("")||'<small>No wallets created yet. Add wallets from Wallets section.</small>'}</div></div>
       <div class="wallet-map-box"><strong>Processing wallets</strong><p>Admin selects the wallet and debit formula for each service.</p><div class="wallet-choice-grid">${walletOptions.map(w=>{const rule=selectedWalletRules.find(x=>x.wallet_id===w.id),cfg=rule?.debit_config||{},mode=cfg.mode||(cfg.fixed_amount!=null?"fixed_amount":"processing_cost"),value=mode==="percentage"?(cfg.percentage??""):(cfg.fixed_amount??"");return `<label class="wallet-choice"><input type="checkbox" data-admin-wallet-check value="${w.id}" ${rule?"checked":""} ${w.is_active?"":"disabled"}><span>${escapeHtml(w.name)} <small>${escapeHtml(w.provider||w.wallet_type)}</small><select data-admin-wallet-mode="${w.id}" ${rule?"":"disabled"}><option value="processing_cost" ${mode==="processing_cost"?"selected":""}>Processing cost</option><option value="base_amount" ${mode==="base_amount"?"selected":""}>Bill amount</option><option value="base_plus_processing_cost" ${mode==="base_plus_processing_cost"?"selected":""}>Bill + processing cost</option><option value="fixed_amount" ${mode==="fixed_amount"?"selected":""}>Fixed amount</option><option value="percentage" ${mode==="percentage"?"selected":""}>Percentage of bill</option></select><input type="number" min="0" step="0.01" data-admin-wallet-value="${w.id}" value="${value}" placeholder="Value for fixed / percentage" ${rule&&["fixed_amount","percentage"].includes(mode)?"":"disabled"}></span></label>`;}).join("")||'<small>No wallets created yet. Add wallets from Wallets section.</small>'}</div></div>
       <label class="inline-check"><input id="svc-active" type="checkbox" ${s?.is_active===false?"":"checked"}> Service active</label>
@@ -411,6 +417,17 @@ async function openServiceEditor(id=null){
   $("svc-profit").value=s?.profit_mode||"manual";
   const syncCreditProfitWalletBox=()=>{const box=$("credit-profit-wallet-box");if(box)box.style.display=$("svc-code").value.trim().toUpperCase()==="CREDIT_CARD_BANK"?"block":"none";};
   $("svc-code").addEventListener("input",syncCreditProfitWalletBox);syncCreditProfitWalletBox();
+  const printoutSlabBox=$("printout-slab-editor"),printoutSlabRows=$("printout-slab-rows");
+  const syncPrintoutSlabBox=()=>{if(printoutSlabBox)printoutSlabBox.style.display=$("svc-code").value.trim().toUpperCase()==="PRINTOUT"?"block":"none";};
+  const addPrintoutSlab=(slab={min_quantity:1,max_quantity:"",rate:0})=>{
+    const row=document.createElement("div");row.className="admin-form-grid printout-slab-row";row.style.alignItems="end";
+    row.innerHTML='<label>From pages<input data-slab-min type="number" min="1" step="1" value="'+Number(slab.min_quantity??slab.min??1)+'"></label><label>To pages (blank = unlimited)<input data-slab-max type="number" min="1" step="1" value="'+(slab.max_quantity??slab.max??"")+'"></label><label>Rate per page (₹)<input data-slab-rate type="number" min="0" step="0.01" value="'+Number(slab.rate??slab.customer_charge??0)+'"></label><button type="button" class="text-btn" data-remove-printout-slab>Remove</button>';
+    printoutSlabRows.appendChild(row);
+  };
+  $("svc-code").addEventListener("input",syncPrintoutSlabBox);
+  $("add-printout-slab")?.addEventListener("click",()=>{const rows=[...printoutSlabRows.querySelectorAll(".printout-slab-row")],last=rows.at(-1),next=last?Number(last.querySelector("[data-slab-max]").value||last.querySelector("[data-slab-min]").value)+1:1;addPrintoutSlab({min_quantity:next,max_quantity:"",rate:0});});
+  printoutSlabRows?.addEventListener("click",e=>{if(e.target.closest("[data-remove-printout-slab]")){const rows=printoutSlabRows.querySelectorAll(".printout-slab-row");if(rows.length>1)e.target.closest(".printout-slab-row").remove();}});
+
   const syncWalletRule=(walletId,checked)=>{const mode=editor.querySelector('[data-admin-wallet-mode="'+walletId+'"]'),value=editor.querySelector('[data-admin-wallet-value="'+walletId+'"]');if(mode)mode.disabled=!checked;if(value)value.disabled=!checked||!["fixed_amount","percentage"].includes(mode?.value);};
   editor.querySelectorAll("[data-admin-wallet-check]").forEach(ch=>ch.addEventListener("change",()=>syncWalletRule(ch.value,ch.checked)));
   editor.querySelectorAll("[data-admin-wallet-mode]").forEach(sel=>sel.addEventListener("change",()=>syncWalletRule(sel.dataset.adminWalletMode,editor.querySelector('[data-admin-wallet-check][value="'+sel.dataset.adminWalletMode+'"]')?.checked)));
@@ -426,6 +443,14 @@ async function saveService(event){
   let billingConfig,costConfig,profitConfig;
   try{billingConfig=parseConfig("svc-billing-config");costConfig=parseConfig("svc-cost-config");profitConfig=parseConfig("svc-profit-config");}
   catch(e){msg.textContent="Invalid JSON: "+e.message;return;}
+  if($("svc-code").value.trim().toUpperCase()==="PRINTOUT"){
+    const rows=[...document.querySelectorAll("#printout-slab-rows .printout-slab-row")];
+    const slabs=rows.map(el=>({min_quantity:Number(el.querySelector("[data-slab-min]").value),max_quantity:el.querySelector("[data-slab-max]").value===""?null:Number(el.querySelector("[data-slab-max]").value),rate:Number(el.querySelector("[data-slab-rate]").value)}));
+    if(!slabs.length||slabs.some(x=>!Number.isInteger(x.min_quantity)||x.min_quantity<1||x.rate<0||!Number.isFinite(x.rate)||(x.max_quantity!==null&&(!Number.isInteger(x.max_quantity)||x.max_quantity<x.min_quantity)))){msg.textContent="Enter valid printout slabs: positive page ranges and non-negative per-page rates.";return;}
+    const sorted=[...slabs].sort((a,b)=>a.min_quantity-b.min_quantity);
+    for(let i=1;i<sorted.length;i++){if(sorted[i-1].max_quantity===null||sorted[i].min_quantity<=sorted[i-1].max_quantity){msg.textContent="Printout slab ranges must not overlap.";return;}}
+    billingConfig={...billingConfig,quantity_slabs:sorted};
+  }
   const payload={category_id:$("svc-category").value,name:$("svc-name").value.trim(),code:$("svc-code").value.trim()||null,description:$("svc-description").value.trim()||null,billing_type:$("svc-billing").value,processing_cost_type:$("svc-cost").value,profit_mode:$("svc-profit").value,billing_config:billingConfig,processing_cost_config:costConfig,profit_config:profitConfig,is_active:$("svc-active").checked,updated_at:new Date().toISOString()};
   if(!payload.name){msg.textContent="Service name is required.";return;}
   btn.disabled=true;btn.textContent="Saving…";
