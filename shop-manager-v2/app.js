@@ -417,6 +417,10 @@ async function toggleService(id){
 async function renderWalletManager(){
   await loadCatalog();
   const host=$("other-view");
+  const {data:transferHistory,error:transferHistoryError}=await supabase.from("wallet_ledger")
+    .select("id,wallet_id,transfer_group_id,amount,direction,description,created_at")
+    .in("entry_type",["wallet_transfer_in","wallet_transfer_out"])
+    .order("created_at",{ascending:false}).limit(30);
   host.innerHTML=`
     <div class="admin-module-head"><div><div class="eyebrow">ADMINISTRATION</div><h2>Wallet Management</h2><p>Create wallets, load balances, recharge between wallets and configure low-balance alerts.</p></div></div>
     <div class="admin-editor"><h3>Create wallet</h3><form id="wallet-form" class="service-form">
@@ -428,7 +432,8 @@ async function renderWalletManager(){
       <div class="admin-form-grid"><label>From wallet<select id="transfer-from" required></select></label><label>To wallet<select id="transfer-to" required></select></label><label>Amount (₹)<input id="transfer-amount" type="number" min="0.01" step="0.01" required></label></div>
       <label>Note<input id="transfer-note" maxlength="200" placeholder="Optional transfer note"></label><div id="transfer-message" class="message"></div><button class="primary-btn admin-add-btn" type="submit" id="transfer-save">Recharge / Transfer</button>
     </form></div>
-    <div class="admin-table-wrap"><div class="admin-table-head"><h3>All wallets · Set low-balance alert limits</h3><input id="wallet-search" class="search-input" placeholder="Search wallets"></div><div id="wallet-rows"></div></div>`;
+    <div class="admin-table-wrap"><div class="admin-table-head"><h3>All wallets · Set low-balance alert limits</h3><input id="wallet-search" class="search-input" placeholder="Search wallets"></div><div id="wallet-rows"></div></div>
+    <div class="admin-table-wrap"><h3>Recent wallet-to-wallet transfers</h3><div id="wallet-transfer-history">${transferHistoryError?'<div class="empty-state">Transfer history unavailable.</div>':(transferHistory||[]).map(x=>{const w=walletOptions.find(y=>y.id===x.wallet_id);return '<div class="admin-service-row"><div class="admin-service-main"><strong>'+escapeHtml(w?.name||"Wallet")+' · '+(x.direction==="out"?"Sent":"Received")+'</strong><small>'+escapeHtml(x.description||"Wallet transfer")+' · '+new Date(x.created_at).toLocaleString("en-IN")+'</small></div><div class="admin-service-meta"><strong>'+(x.direction==="out"?"−":"+")+'₹'+Number(x.amount).toFixed(2)+'</strong></div></div>';}).join("")||'<div class="empty-state">No wallet-to-wallet transfers recorded yet.</div>'}</div></div>`;
   fillTransferWallets();renderWalletRows();
   $("wallet-form").addEventListener("submit",createWallet);
   $("load-wallet").innerHTML=walletOptions.filter(w=>w.is_active).map(w=>`<option value="${w.id}">${escapeHtml(w.name)}</option>`).join("");
