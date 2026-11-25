@@ -59,10 +59,7 @@ async function showApp(user) {
   if (profile.role === "employee") {
     $("page-title").textContent = "My Dashboard";
     document.querySelector(".welcome-row h1").innerHTML = "Your work, <span>in control.</span>";
-    document.querySelector(".welcome-row p").textContent = "Your daily billing, collections and shift activity.";
-    document.querySelector(".stat-card:nth-child(2) .stat-top span:first-child").textContent = "My collections";
-    document.querySelector(".stat-card:nth-child(2) .stat-icon").textContent = "₹";
-    document.querySelector(".stat-card:nth-child(2) small").textContent = "Customer collections from your bills";
+    document.querySelector(".welcome-row p").textContent = "Your daily work and shift activity.";
     $("today-bill-caption").textContent = currentEmployee ? "Bills you recorded today" : "Ask Admin to link your employee record";
   } else {
     document.querySelector(".welcome-row h1").innerHTML = "Your shop, <span>in control.</span>";
@@ -129,14 +126,13 @@ async function loadOverviewStats(){
       return;
     }
     const [{data:ownBills,count,error},sessionResult]=await Promise.all([
-      supabase.from("billing_transactions").select("id,customer_total",{count:"exact"}).eq("employee_id",currentEmployee.id).gte("created_at",start.toISOString()),
+      supabase.from("billing_transactions").select("id",{count:"exact",head:true}).eq("employee_id",currentEmployee.id).gte("created_at",start.toISOString()),
       supabase.from("drawer_sessions").select("id,status,opened_at").eq("employee_id",currentEmployee.id).eq("status","open").order("opened_at",{ascending:false}).limit(1)
     ]);
     $("today-bill-count").textContent=error?"—":String(count||0);
     $("today-bill-caption").textContent=error?"Unable to load your bills":"Bills you recorded today";
-    const collections=(ownBills||[]).reduce((sum,b)=>sum+Number(b.customer_total||0),0);
-    $("cash-position").textContent=error?"—":""+money(collections);
-    $("cash-position-caption").textContent=sessionResult.data?.[0]?"Your collections today · Shift open":"Your collections today";
+    $("cash-position").textContent="—";
+    $("cash-position-caption").textContent="";
     return;
   }
   const [{count,error},sessionResult]=await Promise.all([
