@@ -387,3 +387,23 @@ body{background:radial-gradient(ellipse at 8% 0%,#fbf8f0 0,transparent 36%),var(
 #bill-change.payment-exact{background:#fff;border:1px solid #e4e1da;color:#333}
 #bill-change.payment-change{background:#eaf7ef;border:1px solid #91cba5;color:#187344}
 @media(max-width:600px){#bill-change{min-height:54px;padding:14px 10px;font-size:13px}}
+
+
+/* SLV Communications identity on login and every authenticated page */
+.slv-logo{display:flex;align-items:center;gap:11px;margin-bottom:38px}
+.slv-logo-mark,.topbar-brand-mark{display:grid;place-items:center;width:38px;height:38px;border:1px solid #b8944b;border-radius:9px;background:#171717;color:#dfbf78;font:800 21px "Manrope",sans-serif}
+.slv-logo-name{font:800 13px "Manrope",sans-serif;letter-spacing:1.35px;color:#171717}
+.sidebar-brand strong{font-size:12px;letter-spacing:.7px;color:#dfbf78}
+.sidebar-brand small{font-size:8px;letter-spacing:1.3px}
+.topbar-heading{display:flex;align-items:center;gap:22px;min-width:0}
+.topbar-brand{display:flex;align-items:center;gap:9px;padding-right:20px;border-right:1px solid #e9e3d7;color:#8b6b35;font:800 10px "Manrope",sans-serif;letter-spacing:1.25px;white-space:nowrap}
+.topbar-brand-mark{width:30px;height:30px;border-radius:7px;font-size:16px}
+.employee-mode .nav-item[data-view="services"]{display:none!important}
+@media(max-width:600px){
+ .topbar-heading{gap:9px}
+ .topbar-brand{gap:5px;padding-right:8px;font-size:7px;letter-spacing:.45px}
+ .topbar-brand-mark{width:25px;height:25px;font-size:14px}
+ .topbar-heading>.topbar-brand+div .eyebrow{font-size:7px}
+ .slv-logo{margin-bottom:30px}
+ .slv-logo-name{font-size:12px;letter-spacing:1px}
+}
