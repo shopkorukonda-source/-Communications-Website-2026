@@ -331,6 +331,8 @@ document.querySelectorAll(".nav-item").forEach(btn=>btn.addEventListener("click"
     await renderAnnouncementManager();
   } else if(view==="services") {
     await renderServiceManager();
+  } else if(view==="printoutrates") {
+    await renderPrintoutRates();
   } else if(view==="wallets") {
     await renderWalletManager();
   } else if(view==="reports") {
@@ -345,6 +347,50 @@ document.querySelectorAll(".nav-item").forEach(btn=>btn.addEventListener("click"
   }
 }));
 
+
+async function renderPrintoutRates(){
+  const host=$("other-view");
+  if(currentProfile?.role!=="admin"){
+    host.innerHTML='<div class="empty-panel"><h2>Printout Rates</h2><p>Only Admin can manage printout rates.</p></div>';
+    return;
+  }
+  const svc=services.find(s=>(s.code||"").toUpperCase()==="PRINTOUT");
+  if(!svc){
+    host.innerHTML='<div class="admin-module-head"><div><div class="eyebrow">ADMINISTRATION</div><h2>Printout Rate Settings</h2><p>Configure quantity-based printout charges.</p></div></div><div class="empty-state">A service with code PRINTOUT was not found. Open Services, edit or add the Printout service, and set its service code to PRINTOUT.</div>';
+    return;
+  }
+  const cfg=svc.billing_config||{};
+  let slabs=Array.isArray(cfg.quantity_slabs)?cfg.quantity_slabs.map(x=>({min_quantity:Number(x.min_quantity??x.min??1),max_quantity:x.max_quantity??x.max??"",rate:Number(x.rate??x.customer_charge??0)})):[];
+  const hostMarkup=()=>'<div class="admin-module-head"><div><div class="eyebrow">ADMINISTRATION</div><h2>Printout Rate Settings</h2><p>Set the customer charge per print based on the total number of prints. These rates are used automatically in Quick Billing.</p></div></div>'+
+    '<div class="admin-editor"><h3>'+escapeHtml(svc.name)+'</h3><div class="admin-form-grid"><label>Default rate per print (₹)<input id="printout-default-rate" type="number" min="0" step="0.01" value="'+Number(cfg.customer_charge||0)+'"><small class="muted">Used when no quantity slab matches.</small></label></div><div class="admin-table-wrap"><h3>Quantity-wise rate slabs</h3><p class="muted">Example: 1–10 prints at one rate, 11–50 at another. Leave the maximum blank for unlimited prints.</p><div id="printout-slab-rows"></div><div class="admin-form-actions"><button type="button" class="secondary-btn" id="printout-add-slab">+ Add rate slab</button></div></div><div id="printout-rate-message" class="message"></div><div class="admin-form-actions"><button type="button" class="primary-btn" id="printout-save-rates">Save printout rates</button></div></div>';
+  host.innerHTML=hostMarkup();
+  const rows=$("printout-slab-rows");
+  const draw=()=>{rows.innerHTML=slabs.length?slabs.map((x,i)=>'<div class="admin-service-row printout-rate-row"><div class="admin-form-grid"><label>From prints<input data-printout-min="'+i+'" type="number" min="1" step="1" value="'+x.min_quantity+'"></label><label>To prints<input data-printout-max="'+i+'" type="number" min="1" step="1" value="'+(x.max_quantity??"")+'" placeholder="No limit"></label><label>Rate per print (₹)<input data-printout-rate="'+i+'" type="number" min="0" step="0.01" value="'+x.rate+'"></label></div><div class="admin-service-actions"><button type="button" data-printout-remove="'+i+'">Remove</button></div></div>').join(""):'<div class="empty-state">No quantity slabs added. The default rate will apply to every print.</div>';
+    rows.querySelectorAll("[data-printout-remove]").forEach(b=>b.onclick=()=>{readRows();slabs.splice(Number(b.dataset.printoutRemove),1);draw();});
+  };
+  const readRows=()=>{slabs=[...rows.querySelectorAll(".printout-rate-row")].map((el)=>({min_quantity:Number(el.querySelector("[data-printout-min]")?.value||0),max_quantity:el.querySelector("[data-printout-max]")?.value===""?null:Number(el.querySelector("[data-printout-max]")?.value),rate:Number(el.querySelector("[data-printout-rate]")?.value||0)}));};
+  draw();
+  $("printout-add-slab").onclick=()=>{readRows();slabs.push({min_quantity:slabs.length?Math.max(...slabs.map(x=>Number(x.max_quantity||x.min_quantity)))+1:1,max_quantity:"",rate:0});draw();};
+  $("printout-save-rates").onclick=async()=>{
+    readRows();
+    const msg=$("printout-rate-message"),btn=$("printout-save-rates"),defaultRate=Number($("printout-default-rate").value||0);
+    if(defaultRate<0||!Number.isFinite(defaultRate)){msg.textContent="Enter a valid default rate.";return;}
+    slabs.sort((x,y)=>x.min_quantity-y.min_quantity);
+    for(let i=0;i<slabs.length;i++){
+      const x=slabs[i];
+      if(!Number.isInteger(x.min_quantity)||x.min_quantity<1||x.rate<0||!Number.isFinite(x.rate)){msg.textContent="Check each slab's starting print count and rate.";return;}
+      if(x.max_quantity!==null&&(!Number.isInteger(x.max_quantity)||x.max_quantity<x.min_quantity)){msg.textContent="Each slab's maximum must be greater than or equal to its minimum.";return;}
+      if(i>0){const prev=slabs[i-1];if(prev.max_quantity===null||x.min_quantity<=prev.max_quantity){msg.textContent="Quantity slabs overlap. Adjust the print ranges.";return;}}
+    }
+    const next={...cfg,customer_charge:defaultRate,quantity_slabs:slabs.map(x=>({min_quantity:x.min_quantity,max_quantity:x.max_quantity,rate:x.rate}))};
+    btn.disabled=true;btn.textContent="Saving…";msg.textContent="";
+    const {error}=await supabase.from("services").update({billing_config:next,updated_at:new Date().toISOString()}).eq("id",svc.id);
+    if(error){msg.textContent=error.message;btn.disabled=false;btn.textContent="Save printout rates";return;}
+    svc.billing_config=next;
+    msg.textContent="Printout rates saved. Quick Billing will use these quantity slabs automatically.";
+    btn.disabled=false;btn.textContent="Save printout rates";
+  };
+}
 
 async function renderServiceManager() {
   const host = $("other-view");
