@@ -584,3 +584,21 @@ body{background:radial-gradient(ellipse at 8% 0%,#fbf8f0 0,transparent 36%),var(
 .billing-editor .primary-btn:hover,.billing-editor button.primary-btn:hover{
  background:#f4f7f9!important;color:#171717!important
 }
+
+
+/* Compact profile dropdown for password and sign-out actions */
+.profile-menu{position:relative}
+.profile-trigger{display:flex;align-items:center;gap:10px;padding:4px 5px 4px 10px;border:1px solid transparent;border-radius:12px;background:transparent;color:#171717;cursor:pointer;text-align:right}
+.profile-trigger:hover,.profile-trigger[aria-expanded="true"]{background:#f5f9fc;border-color:#dcecf5}
+.profile-trigger .user-meta{display:block}
+.profile-chevron{font-size:12px;color:#6d8796}
+.profile-dropdown{position:absolute;right:0;top:calc(100% + 9px);z-index:1000;width:190px;padding:7px;background:#fff;border:1px solid #dce5eb;border-radius:12px;box-shadow:0 14px 38px rgba(20,55,75,.16)}
+.profile-dropdown-heading{padding:9px 10px 7px;color:#71818a;font-size:9px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase}
+.profile-menu-item{display:flex;align-items:center;width:100%;padding:11px 10px;border:0;border-radius:8px;background:#fff;color:#171717;text-align:left;font:600 12px "DM Sans",sans-serif;cursor:pointer}
+.profile-menu-item:hover{background:#edf7fc}
+.profile-menu-item.profile-signout{color:#a43b35}
+@media(max-width:600px){
+ .profile-trigger{gap:6px;padding:3px}
+ .profile-trigger .user-meta{display:none}
+ .profile-dropdown{right:0;width:180px}
+}
