@@ -147,6 +147,42 @@ export async function renderOperations(view, ctx) {
   }
 
 
+
+  if(view==="walletaccess"){
+    if(!admin){host.innerHTML=head("Wallet Access","Admin access required.");return;}
+    const [er,wr,ar]=await Promise.all([
+      supabase.from("employees").select("id,full_name,employee_code,is_active").eq("is_active",true).order("full_name"),
+      supabase.from("wallets").select("id,name,wallet_type,is_active").eq("is_active",true).order("name"),
+      supabase.from("employee_wallet_access").select("employee_id,wallet_id,is_active")
+    ]);
+    const err=er.error||wr.error||ar.error;if(err){host.innerHTML=head("Wallet Access","Unable to load assignments.")+'<p>'+esc(err.message)+'</p>';return;}
+    const employees=er.data||[],wallets=wr.data||[],access=ar.data||[];
+    host.innerHTML=head("Employee Wallet Access","Assign only the wallets each employee is allowed to use. Employees will not see unassigned wallets in billing or wallet lists.")+
+      '<div class="admin-editor"><label>Employee<select id="wa-employee"><option value="">Select employee</option>'+employees.map(e=>'<option value="'+e.id+'">'+esc(e.full_name)+' · '+esc(e.employee_code||"")+'</option>').join("")+'</select></label><div id="wa-wallet-list" class="wallet-choice-grid"><div class="empty-state">Select an employee to manage wallet access.</div></div><div id="wa-msg" class="message"></div><button class="primary-btn" id="wa-save" disabled>Save wallet access</button></div>';
+    $("wa-employee").addEventListener("change",()=>{const id=$("wa-employee").value;const selected=new Set(access.filter(x=>x.employee_id===id&&x.is_active).map(x=>x.wallet_id));$("wa-wallet-list").innerHTML=id?wallets.map(w=>'<label class="wallet-choice"><input type="checkbox" value="'+w.id+'" '+(selected.has(w.id)?"checked":"")+'><span>'+esc(w.name)+' · '+esc(w.wallet_type)+'</span></label>').join(""):'<div class="empty-state">Select an employee.</div>';$("wa-save").disabled=!id;});
+    $("wa-save").addEventListener("click",async()=>{const id=$("wa-employee").value,ids=[...$("wa-wallet-list").querySelectorAll('input[type="checkbox"]:checked')].map(x=>x.value);const r=await supabase.rpc("set_employee_wallet_access",{p_employee_id:id,p_wallet_ids:ids});$("wa-msg").textContent=r.error?r.error.message:"Wallet access saved. Employee must refresh or sign in again to load the updated list.";if(!r.error){const current=access.filter(x=>x.employee_id!==id);ids.forEach(wallet_id=>current.push({employee_id:id,wallet_id,is_active:true}));access.splice(0,access.length,...current);}});
+    return;
+  }
+
+  if(view==="tasks"){
+    const [tr,er]=await Promise.all([
+      admin?supabase.from("employee_tasks").select("*").order("created_at",{ascending:false}).limit(200):supabase.from("employee_tasks").select("*").order("due_date",{ascending:true}).limit(100),
+      admin?supabase.from("employees").select("id,full_name").eq("is_active",true).order("full_name"):Promise.resolve({data:[]})
+    ]);
+    const err=tr.error||er.error;if(err){host.innerHTML=head("Work Reminders","Unable to load tasks.")+'<p>'+esc(err.message)+'</p>';return;}
+    const tasks=tr.data||[],employees=er.data||[];
+    const employee=await getEmployee();
+    const visible=admin?tasks:tasks.filter(t=>employee&&t.employee_id===employee.id);
+    const statusLabel=s=>s==="in_progress"?"In progress":s==="completed"?"Completed":s==="cancelled"?"Cancelled":"Pending";
+    host.innerHTML=head("Work Reminders",admin?"Assign work, due dates and priorities to employees.":"Review your assigned work and update progress.")+
+      (admin?'<div class="admin-editor"><h3>Assign new task</h3><form id="task-create" class="service-form"><div class="admin-form-grid"><label>Employee<select id="task-employee" required><option value="">Select employee</option>'+employees.map(e=>'<option value="'+e.id+'">'+esc(e.full_name)+'</option>').join("")+'</select></label><label>Task title<input id="task-title" required maxlength="160"></label><label>Due date<input id="task-due" type="date"></label><label>Priority<select id="task-priority"><option value="normal">Normal</option><option value="low">Low</option><option value="high">High</option><option value="urgent">Urgent</option></select></label></div><label>Details<textarea id="task-details" rows="3"></textarea></label><div id="task-msg" class="message"></div><button class="primary-btn">Assign task</button></form></div>':'')+
+      '<div class="admin-table-wrap"><h3>'+(admin?"All assigned tasks":"My assigned tasks")+'</h3>'+(visible.length?visible.map(t=>{const e=employees.find(x=>x.id===t.employee_id);return '<div class="admin-service-row"><div class="admin-service-main"><strong>'+esc(t.title)+'</strong><small>'+(admin?esc(e?.full_name||"Employee")+' · ':'')+(t.due_date?'Due '+esc(t.due_date):'No due date')+' · '+esc(t.priority.toUpperCase())+' · '+esc(t.details||"")+'</small></div><div class="admin-service-meta"><strong>'+statusLabel(t.status)+'</strong><span>'+(t.status!=="completed"&&t.status!=="cancelled"?'<select data-task-status="'+t.id+'"><option value="pending" '+(t.status==="pending"?"selected":"")+'>Pending</option><option value="in_progress" '+(t.status==="in_progress"?"selected":"")+'>In progress</option><option value="completed">Completed</option></select>':'')+(admin&&t.status!=="cancelled"&&t.status!=="completed"?' <button class="secondary-btn" data-task-cancel="'+t.id+'">Cancel</button>':'')+'</span></div></div>';}).join(""):'<div class="empty-state">No tasks assigned yet.</div>')+'</div>';
+    if(admin)$("task-create").addEventListener("submit",async e=>{e.preventDefault();const r=await supabase.from("employee_tasks").insert({employee_id:$("task-employee").value,title:$("task-title").value.trim(),details:$("task-details").value||null,due_date:$("task-due").value||null,priority:$("task-priority").value,created_by:uid});$("task-msg").textContent=r.error?r.error.message:"Task assigned.";if(!r.error)await renderOperations(view,ctx);});
+    host.querySelectorAll("[data-task-status]").forEach(sel=>sel.addEventListener("change",async()=>{const r=await supabase.rpc("update_employee_task_status",{p_task_id:sel.dataset.taskStatus,p_status:sel.value});if(r.error)alert(r.error.message);else await renderOperations(view,ctx);}));
+    host.querySelectorAll("[data-task-cancel]").forEach(btn=>btn.addEventListener("click",async()=>{const r=await supabase.from("employee_tasks").update({status:"cancelled",updated_at:new Date().toISOString()}).eq("id",btn.dataset.taskCancel);if(r.error)alert(r.error.message);else await renderOperations(view,ctx);}));
+    return;
+  }
+
   if(view==="inventory"){
     if(!admin){host.innerHTML=head("Inventory","Admin access required.");return;}
     const [pr,su,mv,sv,ru]=await Promise.all([
