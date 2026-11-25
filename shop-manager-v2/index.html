@@ -51,6 +51,7 @@
       <div class="nav-label nav-gap">MANAGEMENT</div>
       <button class="nav-item admin-only" data-view="wallets"><span>◉</span> Wallets</button>
       <button class="nav-item admin-only" data-view="employees"><span>♙</span> Employees</button>
+      <button class="nav-item admin-only" data-view="walletaccess"><span>◉</span> Wallet Access</button>
       <button class="nav-item admin-only" data-view="reports"><span>▥</span> Reports</button>
       <div class="nav-label nav-gap">SHOP OPERATIONS</div>
       <button class="nav-item" data-view="drawers"><span>▣</span> Cash Drawers</button>
@@ -58,6 +59,7 @@
       <button class="nav-item" data-view="leave"><span>▤</span> Leave</button>
       <button class="nav-item" data-view="payroll"><span>₹</span> Payroll</button>
       <button class="nav-item" data-view="incentives"><span>★</span> Incentives</button>
+      <button class="nav-item" data-view="tasks"><span>☑</span> Work Reminders</button>
       <button class="nav-item admin-only" data-view="ucl"><span>⌑</span> UCL Codes</button>
       <button class="nav-item admin-only" data-view="announcements"><span>✦</span> Announcements</button>
       <button class="nav-item admin-only" data-view="inventory"><span>▧</span> Inventory</button>
@@ -73,6 +75,7 @@
       <section id="overview-view" class="view">
         <div class="welcome-row"><div><h1>Your shop, <span>in control.</span></h1><p>Here’s a clear view of today’s operations.</p></div><div class="date-chip" id="today-date"></div></div>
         <div id="employee-announcements" class="employee-announcements"></div>
+        <div id="employee-task-reminders" class="employee-announcements"></div>
         <div class="stat-grid">
           <article class="stat-card"><div class="stat-top"><span>Today’s bills</span><span class="stat-icon">▤</span></div><strong id="today-bill-count">0</strong><small id="today-bill-caption">Your billing activity today</small></article>
           <article class="stat-card"><div class="stat-top"><span>Cash position</span><span class="stat-icon">₹</span></div><strong id="cash-position">₹0.00</strong><small id="cash-position-caption">Shop Cash wallet balance</small></article>
