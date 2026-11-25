@@ -139,45 +139,51 @@ export async function renderOperations(view, ctx) {
 
   if(view==="ucl"){
     const employee=await getEmployee();
-    const [codes,em]=await Promise.all([
-      admin?supabase.from("ucl_codes").select("id,code,label,is_active,linked_employee_id,is_issued,issued_to_employee_id,issued_at,source,import_batch").order("created_at",{ascending:false}).limit(1000):Promise.resolve({data:[],error:null}),
-      admin?supabase.from("employees").select("id,full_name").eq("is_active",true).order("full_name"):Promise.resolve({data:[],error:null})
+    const [codes,em,walletRes]=await Promise.all([
+      admin?supabase.from("ucl_codes").select("id,code,label,is_active,linked_employee_id,is_issued,issued_to_employee_id,issued_at,source,import_batch,purchase_cost").order("created_at",{ascending:false}).limit(1000):Promise.resolve({data:[],error:null}),
+      admin?supabase.from("employees").select("id,full_name").eq("is_active",true).order("full_name"):Promise.resolve({data:[],error:null}),
+      admin?supabase.from("wallets").select("id,name,wallet_type,provider,current_balance").eq("is_active",true).order("name"):Promise.resolve({data:[],error:null})
     ]);
-    if(codes.error||em.error){host.innerHTML=head("UCL Codes","Unable to load CSC codes.");return;}
+    if(codes.error||em.error||walletRes.error){host.innerHTML=head("UCL Codes","Unable to load CSC codes.")+'<p>'+esc((codes.error||em.error||walletRes.error).message)+'</p>';return;}
     if(!admin){
       host.innerHTML=head("CSC UCL Code","Get one preserved CSC-generated UCL code at a time. Each code is issued once and will not be repeated.")+
        '<div class="admin-editor"><h3>Get next available code</h3><p class="muted">Type CODE and press Enter, or tap the button. Each request issues exactly one code.</p><form id="ucl-next-form" class="service-form"><label>Enter keyword<input id="ucl-trigger-input" placeholder="Type CODE" autocomplete="off"></label><div id="ucl-next-result" class="message"></div><button class="primary-btn" id="ucl-next-btn" type="submit">Get Next Code</button><button class="secondary-btn" id="ucl-copy-btn" type="button" disabled>Copy Code</button></form></div>';
       $("ucl-next-form").addEventListener("submit",async e=>{e.preventDefault();if($("ucl-trigger-input").value.trim().toUpperCase()!=="CODE"){$("ucl-next-result").textContent="Type CODE to request the next CSC code.";return;}const btn=$("ucl-next-btn");btn.disabled=true;$("ucl-next-result").textContent="Fetching next code…";const r=await supabase.rpc("get_next_ucl_code");if(r.error){$("ucl-next-result").textContent=r.error.message;btn.disabled=false;return;}const row=r.data?.[0];if(!row){$("ucl-next-result").textContent="No available code. Ask Admin to upload more CSC codes.";btn.disabled=false;return;}$("ucl-next-result").innerHTML='<strong style="font-size:24px;letter-spacing:2px">'+esc(row.code)+'</strong><p>Remaining available codes: '+row.remaining_count+'</p>';const copy=$("ucl-copy-btn");copy.disabled=false;copy.onclick=()=>navigator.clipboard.writeText(row.code);$("ucl-trigger-input").value="";btn.disabled=false;});
       return;
     }
-    host.innerHTML=head("UCL Code Management","Preserve CSC-generated codes. Upload new Excel files whenever CSC generates more codes; existing issued status and employee assignments are retained.")+
-      '<div class="admin-editor"><h3>Import CSC UCL codes from Excel / CSV</h3><form id="ucl-import-form" class="service-form"><label>Excel / CSV file<input id="ucl-import-file" type="file" accept=".xlsx,.xls,.csv" required></label><p class="muted">The first worksheet is read. A column named Code / UCL Code is preferred; otherwise the first column is used. Duplicate codes in the same file are ignored. Existing codes are updated without resetting their issued status.</p><div id="ucl-import-msg" class="message"></div><button class="primary-btn">Import and preserve codes</button></form></div>'+
+    const walletOptions=(walletRes.data||[]).map(w=>'<option value="'+w.id+'">'+esc(w.name)+' · '+esc(w.wallet_type)+' · Balance ₹'+money(w.current_balance)+'</option>').join("");
+    const allCodes=codes.data||[];
+    host.innerHTML=head("UCL Code Management","Import CSC-generated codes in batches. Every new code is purchased at the same unit cost and debited from the selected CSC wallet once.")+
+      '<div class="admin-editor"><h3>Import CSC UCL codes from Excel / CSV</h3><form id="ucl-import-form" class="service-form"><label>Excel / CSV file<input id="ucl-import-file" type="file" accept=".xlsx,.xls,.csv" required></label><div class="admin-form-grid"><label>One code purchase cost (₹)<input id="ucl-unit-cost" type="number" min="0" step=".01" value="0" required></label><label>Debit from CSC wallet<select id="ucl-csc-wallet" required><option value="">Select CSC wallet</option>'+walletOptions+'</select></label></div><p class="muted">Upload the file, enter one common purchase cost for every code, and select the CSC wallet. Duplicate codes are skipped and never charged again. The wallet debit and code import are processed together.</p><div id="ucl-import-preview" class="muted"></div><div id="ucl-import-msg" class="message"></div><button class="primary-btn">Import codes & debit CSC wallet</button></form></div>'+
       '<div class="admin-editor"><h3>Add codes manually</h3><form id="op-ucl" class="service-form"><label>One code per line<textarea id="op-ucl-list" rows="4"></textarea></label><label>Label<input id="op-ucl-label"></label><label>Assign employee<select id="op-ucl-emp"><option value="">Unassigned</option>'+(em.data||[]).map(x=>'<option value="'+x.id+'">'+esc(x.full_name)+'</option>').join("")+'</select></label><div id="op-ucl-msg" class="message"></div><button class="secondary-btn">Save new codes</button></form></div>'+
-      '<div class="admin-table-wrap"><h3>CSC UCL inventory</h3><div class="admin-service-row"><strong>Total '+(codes.data||[]).length+'</strong><strong>Available '+(codes.data||[]).filter(x=>x.is_active&&!x.is_issued).length+'</strong><strong>Issued '+(codes.data||[]).filter(x=>x.is_issued).length+'</strong></div>'+
-      ((codes.data||[]).map(x=>'<div class="admin-service-row"><div class="admin-service-main"><strong>'+esc(x.code)+'</strong><small>'+esc(x.label||"")+' · '+esc(x.source||"manual")+' · '+esc((em.data||[]).find(y=>y.id===x.linked_employee_id)?.full_name||"Unassigned")+'</small></div><div class="admin-service-meta">'+(x.is_issued?"Issued":"Available")+' · '+(x.is_active?"Active":"Inactive")+'</div><div class="admin-service-actions"><button data-op-ucl-assign="'+x.id+'" '+(x.is_issued?"disabled":"") +'>Assign</button><button data-op-ucl-toggle="'+x.id+'" data-active="'+x.is_active+'">'+(x.is_active?"Deactivate":"Activate")+'</button></div></div>').join("")||'<div class="empty-state">No UCL codes uploaded yet.</div>')+'</div>';
+      '<div class="admin-table-wrap"><h3>CSC UCL inventory</h3><div class="admin-service-row"><strong>Total '+allCodes.length+'</strong><strong>Available '+allCodes.filter(x=>x.is_active&&!x.is_issued).length+'</strong><strong>Issued '+allCodes.filter(x=>x.is_issued).length+'</strong><strong>Stock cost ₹'+money(allCodes.reduce((n,x)=>n+Number(x.purchase_cost||0),0))+'</strong></div>'+
+      (allCodes.map(x=>'<div class="admin-service-row"><div class="admin-service-main"><strong>'+esc(x.code)+'</strong><small>'+esc(x.label||"")+' · '+esc(x.source||"manual")+' · Purchase ₹'+money(x.purchase_cost)+' · '+esc((em.data||[]).find(y=>y.id===x.linked_employee_id)?.full_name||"Unassigned")+'</small></div><div class="admin-service-meta">'+(x.is_issued?"Issued":"Available")+' · '+(x.is_active?"Active":"Inactive")+'</div><div class="admin-service-actions"><button data-op-ucl-assign="'+x.id+'" '+(x.is_issued?"disabled":"") +'>Assign</button><button data-op-ucl-toggle="'+x.id+'" data-active="'+x.is_active+'">'+(x.is_active?"Deactivate":"Activate")+'</button></div></div>').join("")||'<div class="empty-state">No UCL codes uploaded yet.</div>')+'</div>';
+    $("ucl-import-file").addEventListener("change",async()=>{const file=$("ucl-import-file").files[0];if(!file)return;try{if(!window.XLSX)throw new Error("Excel reader is not loaded.");const wb=window.XLSX.read(await file.arrayBuffer(),{type:"array"}),sheet=wb.Sheets[wb.SheetNames[0]],rows=window.XLSX.utils.sheet_to_json(sheet,{header:1,defval:"",raw:false});if(!rows.length)throw new Error("Selected file is empty.");const hdr=rows[0].map(x=>String(x||"").trim().toLowerCase());let col=hdr.findIndex(x=>["code","ucl code","ucl_code","uclcode","ucl"].includes(x));const startRow=col>=0?1:0;if(col<0)col=0;const count=new Set(rows.slice(startRow).map(r=>String(r[col]||"").trim()).filter(Boolean)).size;$("ucl-import-preview").textContent="Codes detected: "+count+" · Estimated CSC debit: ₹"+(count*Number($("ucl-unit-cost").value||0)).toFixed(2);}catch(err){$("ucl-import-preview").textContent=err.message||String(err);}});
+    $("ucl-unit-cost").addEventListener("input",()=> $("ucl-import-file").dispatchEvent(new Event("change")));
     $("ucl-import-form").addEventListener("submit",async e=>{
-      e.preventDefault();const msg=$("ucl-import-msg"),file=$("ucl-import-file").files[0];msg.textContent="Reading CSC file…";
+      e.preventDefault();const msg=$("ucl-import-msg"),file=$("ucl-import-file").files[0];msg.textContent="Reading and validating CSC file…";
       try{
+        if(!file)throw new Error("Select an Excel / CSV file.");
         if(!window.XLSX)throw new Error("Excel reader is not loaded. Refresh the page and try again.");
-        const data=await file.arrayBuffer(),wb=window.XLSX.read(data,{type:"array"}),sheet=wb.Sheets[wb.SheetNames[0]];
-        const rows=window.XLSX.utils.sheet_to_json(sheet,{header:1,defval:"",raw:false});
+        const wb=window.XLSX.read(await file.arrayBuffer(),{type:"array"}),sheet=wb.Sheets[wb.SheetNames[0]],rows=window.XLSX.utils.sheet_to_json(sheet,{header:1,defval:"",raw:false});
         if(!rows.length)throw new Error("The selected file is empty.");
-        const first=rows[0].map(x=>String(x||"").trim().toLowerCase());
-        let col=first.findIndex(x=>["code","ucl code","ucl_code","uclcode","ucl"].includes(x)),start=0;
-        if(col>=0)start=1;else col=0;
-        const values=[...new Set(rows.slice(start).map(r=>String(r[col]||"").trim()).filter(x=>x&&x.toLowerCase()!=="code"&&x.toLowerCase()!=="ucl code"))];
+        const hdr=rows[0].map(x=>String(x||"").trim().toLowerCase());let col=hdr.findIndex(x=>["code","ucl code","ucl_code","uclcode","ucl"].includes(x)),startRow=col>=0?1:0;if(col<0)col=0;
+        const values=[...new Set(rows.slice(startRow).map(r=>String(r[col]||"").trim()).filter(x=>x&&x.toLowerCase()!=="code"&&x.toLowerCase()!=="ucl code"))];
         if(!values.length)throw new Error("No UCL codes found in the first worksheet.");
-        const batch="CSC-"+new Date().toISOString().replace(/[-:.TZ]/g,"").slice(0,14);
-        const payload=values.map(code=>({code,source:"CSC Excel Import",import_batch:batch,imported_at:new Date().toISOString()}));
-        const result=await supabase.from("ucl_codes").upsert(payload,{onConflict:"code",ignoreDuplicates:false});
+        const unitCost=Number($("ucl-unit-cost").value),walletId=$("ucl-csc-wallet").value;
+        if(!Number.isFinite(unitCost)||unitCost<0)throw new Error("Enter a valid common purchase cost.");
+        if(!walletId)throw new Error("Select the CSC wallet to debit.");
+        msg.textContent="Importing "+values.length+" codes and calculating the one-time CSC debit…";
+        const result=await supabase.rpc("import_ucl_code_batch",{p_codes:values,p_unit_cost:unitCost,p_wallet_id:walletId,p_source_file_name:file.name});
         if(result.error)throw result.error;
-        msg.textContent=values.length+" unique codes imported/updated. Existing issued status and assignments are preserved.";
+        const out=result.data||{};
+        msg.textContent="Import complete · New codes: "+out.imported_count+" · Duplicates skipped: "+out.duplicate_count+" · Unit cost: ₹"+money(out.unit_cost)+" · CSC wallet debited once: ₹"+money(out.total_cost)+".";
         await renderOperations(view,ctx);
       }catch(err){msg.textContent=err.message||String(err);}
     });
     $("op-ucl").addEventListener("submit",async e=>{e.preventDefault();const list=[...new Set($("op-ucl-list").value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean))];if(!list.length){$("op-ucl-msg").textContent="Enter at least one code.";return;}const r=await supabase.from("ucl_codes").upsert(list.map(code=>({code,label:$("op-ucl-label").value||null,linked_employee_id:$("op-ucl-emp").value||null,source:"manual"})),{onConflict:"code",ignoreDuplicates:true});$("op-ucl-msg").textContent=r.error?r.error.message:list.length+" codes processed; existing records were preserved.";if(!r.error)await renderOperations(view,ctx);});
     host.querySelectorAll("[data-op-ucl-toggle]").forEach(b=>b.addEventListener("click",async()=>{const r=await supabase.from("ucl_codes").update({is_active:b.dataset.active!=="true"}).eq("id",b.dataset.opUclToggle);if(r.error)alert(r.error.message);else await renderOperations(view,ctx);}));
-    host.querySelectorAll("[data-op-ucl-assign]").forEach(b=>b.addEventListener("click",async()=>{const pick=prompt("Enter employee number to assign:\n"+(em.data||[]).map((x,i)=>(i+1)+". "+x.full_name).join("\n"));const emp=(em.data||[])[Number(pick)-1];if(!emp)return;const r=await supabase.from("ucl_codes").update({linked_employee_id:emp.id}).eq("id",b.dataset.opUclAssign);if(r.error)alert(r.error.message);else await renderOperations(view,ctx);}));
+    host.querySelectorAll("[data-op-ucl-assign]").forEach(b=>b.addEventListener("click",async()=>{const pick=prompt("Enter employee number to assign:\\n"+(em.data||[]).map((x,i)=>(i+1)+". "+x.full_name).join("\\n"));const emp=(em.data||[])[Number(pick)-1];if(!emp)return;const r=await supabase.from("ucl_codes").update({linked_employee_id:emp.id}).eq("id",b.dataset.opUclAssign);if(r.error)alert(r.error.message);else await renderOperations(view,ctx);}));
     return;
   }
 
