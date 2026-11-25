@@ -502,3 +502,23 @@ body{background:radial-gradient(ellipse at 8% 0%,#fbf8f0 0,transparent 36%),var(
 #login-screen .login-card>.eyebrow{
   justify-content:center;
 }
+
+
+/* Stronger, clearer Admin service form */
+.admin-editor{border:1.5px solid #777!important;box-shadow:0 3px 12px rgba(0,0,0,.045)}
+.admin-editor>h3,.admin-editor-head h3{font-size:17px!important;font-weight:800!important;color:#111!important}
+.service-form{gap:16px!important}
+.service-form label{font-size:13px!important;font-weight:800!important;color:#171717!important;gap:8px!important}
+.service-form input:not([type=checkbox]),.service-form select,.service-form textarea{
+  border:1.5px solid #777!important;border-radius:8px!important;padding:12px 13px!important;
+  font-size:14px!important;font-weight:600!important;color:#111!important;background:#fff!important
+}
+.service-form input::placeholder,.service-form textarea::placeholder{color:#777!important;font-weight:500!important}
+.service-form input:focus,.service-form select:focus,.service-form textarea:focus{
+  outline:2px solid rgba(0,0,0,.12)!important;border-color:#111!important;box-shadow:0 0 0 2px rgba(0,0,0,.08)!important
+}
+.service-form textarea{font-size:13px!important;line-height:1.55!important}
+.service-form .wallet-map-box,.service-form .wallet-choice{border:1.5px solid #888!important}
+.service-form .wallet-map-box>strong,.service-form .wallet-choice span{font-size:12px!important;font-weight:800!important;color:#111!important}
+.service-form .wallet-map-box>p,.service-form .wallet-choice small{color:#555!important;font-size:11px!important}
+.admin-form-grid{gap:15px!important}
