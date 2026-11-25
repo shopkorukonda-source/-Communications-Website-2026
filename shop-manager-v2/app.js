@@ -945,6 +945,7 @@ function updatePaymentFields(){
   $("cash-paid-wrap").classList.toggle("hidden",mode==="upi");
   $("upi-paid-wrap").classList.toggle("hidden",mode==="cash");
 }
+let editingBillId=null;
 async function saveQuickBilling(){
   const msg=$("billing-message"),btn=$("save-billing");btn.disabled=true;msg.textContent="";
   try{
@@ -988,9 +989,9 @@ async function saveQuickBilling(){
     if(mode==="split"&&Math.abs(cash+upi-received)>0.009)throw new Error("Cash + UPI must equal amount received.");
     let activeDrawerId=null;if(currentProfile?.role==="employee"&&currentEmployee){const activeSession=await supabase.from("drawer_sessions").select("drawer_id").eq("employee_id",currentEmployee.id).eq("status","open").order("opened_at",{ascending:false}).limit(1).maybeSingle();if(activeSession.error)throw activeSession.error;activeDrawerId=activeSession.data?.drawer_id||null;}
     const payload={drawer_id:activeDrawerId,customer_name:$("bill-customer").value.trim()||null,customer_phone:$("bill-phone").value.trim()||null,payment_mode:mode,customer_total:customerTotal,amount_received:received,cash_received:cash,upi_received:upi,items};
-    const {data,error}=await supabase.rpc("create_bill",{payload});
+    const {data,error}=editingBillId?await supabase.rpc("update_bill_with_approval",{p_transaction_id:editingBillId,p_payload:{...payload,notes:null},p_edit_request_id:null}):await supabase.rpc("create_bill",{payload});
     if(error)throw error;
-    msg.textContent="Bills saved successfully. Transaction ID: "+data;
+    msg.textContent=(editingBillId?"Bill updated successfully.":"Bills saved successfully.")+" Transaction ID: "+(data||editingBillId);editingBillId=null;$("save-billing").textContent="Save one bill with all services";
     $("bill-received").value="0";$("bill-cash").value="0";$("bill-upi").value="0";
     $("bill-customer").value="";$("bill-phone").value="";
     billingRows=[];
@@ -1028,33 +1029,27 @@ async function openBillEditor(id,requestOnly){
   ]);
   if(bErr||iErr){alert((bErr||iErr).message);return;}
   const payload={customer_name:bill.customer_name,customer_phone:bill.customer_phone,payment_mode:bill.payment_mode,customer_total:Number(bill.customer_total),amount_received:Number(bill.amount_received),cash_received:Number(bill.cash_received),upi_received:Number(bill.upi_received),notes:bill.notes,items:(items||[]).map(it=>({...it,wallet_debits:it.pricing_snapshot?.wallet_debits||[]}))};
-  const host=$("recent-bills");
-  const editor=document.createElement("div");editor.className="admin-editor";editor.id="bill-edit-editor";
-  editor.innerHTML=`<div class="admin-editor-head"><div><h3>${requestOnly?"Request bill edit":"Edit bill"} </h3><p>Review the bill data before saving. Wallet debits and profit are recalculated by the database function.</p></div><button type="button" class="text-btn" id="close-bill-editor">Close</button></div>
-  <label class="service-form">Bill data (JSON)<textarea id="bill-edit-json" rows="14" spellcheck="false"></textarea></label>
-  ${requestOnly?'<label class="service-form">Reason for edit<input id="bill-edit-reason" placeholder="Explain why this bill needs correction" required></label>':""}
-  <div id="bill-edit-message" class="message"></div><div class="admin-form-actions"><button class="primary-btn" id="submit-bill-edit">${requestOnly?"Send edit request":"Save bill changes"}</button></div>`;
-  host.prepend(editor);$("bill-edit-json").value=JSON.stringify(payload,null,2);
-  $("close-bill-editor").onclick=()=>editor.remove();
-  $("submit-bill-edit").onclick=async()=>{
-    const btn=$("submit-bill-edit"),msg=$("bill-edit-message");btn.disabled=true;
-    try{
-      const proposed=JSON.parse($("bill-edit-json").value);
-      if(!Array.isArray(proposed.items)||!proposed.items.length)throw new Error("Items array is required.");
-      let result;
-      if(requestOnly){
-        const reason=$("bill-edit-reason").value.trim();if(reason.length<3)throw new Error("Please enter an edit reason.");
-        result=await supabase.rpc("request_billing_edit",{p_transaction_id:id,p_reason:reason,p_proposed_payload:proposed});
-      }else{
-        result=await supabase.rpc("update_bill_with_approval",{p_transaction_id:id,p_payload:proposed,p_edit_request_id:null});
-      }
-      if(result.error)throw result.error;
-      msg.textContent=requestOnly?"Edit request sent to Admin.":"Bill updated successfully.";
-      await loadRecentBills();
-    }catch(e){msg.textContent=e.message||"Unable to process edit.";console.error(e);}
-    finally{btn.disabled=false;}
-  };
+  if(requestOnly){
+    const host=$("recent-bills"),editor=document.createElement("div");editor.className="admin-editor";editor.id="bill-edit-editor";
+    editor.innerHTML=`<div class="admin-editor-head"><div><h3>Request bill edit</h3><p>Send the proposed changes to Admin for approval.</p></div><button type="button" class="text-btn" id="close-bill-editor">Close</button></div><label class="service-form">Bill data (JSON)<textarea id="bill-edit-json" rows="14" spellcheck="false"></textarea></label><label class="service-form">Reason for edit<input id="bill-edit-reason" placeholder="Explain why this bill needs correction" required></label><div id="bill-edit-message" class="message"></div><div class="admin-form-actions"><button class="primary-btn" id="submit-bill-edit">Send edit request</button></div>`;
+    host.prepend(editor);$("bill-edit-json").value=JSON.stringify(payload,null,2);$("close-bill-editor").onclick=()=>editor.remove();
+    $("submit-bill-edit").onclick=async()=>{const btn=$("submit-bill-edit"),msg=$("bill-edit-message");btn.disabled=true;try{const proposed=JSON.parse($("bill-edit-json").value);if(!Array.isArray(proposed.items)||!proposed.items.length)throw new Error("Items array is required.");const reason=$("bill-edit-reason").value.trim();if(reason.length<3)throw new Error("Please enter an edit reason.");const result=await supabase.rpc("request_billing_edit",{p_transaction_id:id,p_reason:reason,p_proposed_payload:proposed});if(result.error)throw result.error;msg.textContent="Edit request sent to Admin.";await loadRecentBills();}catch(e){msg.textContent=e.message||"Unable to process edit.";}finally{btn.disabled=false;}};
+    return;
+  }
+  editingBillId=id;
+  billingRows=(items||[]).map(it=>{
+    const snap=it.pricing_snapshot||{},svc=services.find(x=>x.id===it.service_id),special=isPaperPageService(svc);
+    return {service_id:it.service_id,base:String(snap.base_amount??0),charge:String(snap.service_charge??""),cost:String(it.processing_unit_cost??0),bank:snap.bank||"",quantity:Number(it.quantity||1),unit_count:special?String(snap.unit_count||""):"",sets:special?Number(snap.sets||1):1,item_label:snap.item_label||"",discount:Number(snap.discount_amount||0),wallet_debits:snap.wallet_debits||[],charge_percent:snap.charge_percent??svc?.billing_config?.charge_percent??2,profit_wallet_id:snap.profit_wallet_id||"",bill_count:1,bill_amounts:[""]};
+  });
+  $("bill-count").value=Math.max(1,billingRows.length);await setBillingRows(billingRows.length);
+  $("bill-customer").value=payload.customer_name||"";$("bill-phone").value=payload.customer_phone||"";
+  $("bill-mode").value=payload.payment_mode||"cash";$("bill-received").value=payload.amount_received;
+  $("bill-cash").value=payload.cash_received;$("bill-upi").value=payload.upi_received;
+  updatePaymentFields();updateBillingTotals();
+  $("save-billing").textContent="Save changes to Bill";$("billing-message").textContent="Editing existing bill. Review the details and save changes.";
+  $("other-view").scrollIntoView({behavior:"smooth",block:"start"});
 }
+
 async function renderEditApprovals(reqs){
   const host=$("recent-bills");if(!host)return;
   const pending=(reqs||[]).filter(r=>r.status==="pending");
