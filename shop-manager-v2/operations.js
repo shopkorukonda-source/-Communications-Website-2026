@@ -168,7 +168,7 @@ export async function renderOperations(view, ctx) {
         const values=[...new Set(rows.slice(start).map(r=>String(r[col]||"").trim()).filter(x=>x&&x.toLowerCase()!=="code"&&x.toLowerCase()!=="ucl code"))];
         if(!values.length)throw new Error("No UCL codes found in the first worksheet.");
         const batch="CSC-"+new Date().toISOString().replace(/[-:.TZ]/g,"").slice(0,14);
-        const payload=values.map(code=>({code,label:null,source:"CSC Excel Import",import_batch:batch,imported_at:new Date().toISOString()}));
+        const payload=values.map(code=>({code,source:"CSC Excel Import",import_batch:batch,imported_at:new Date().toISOString()}));
         const result=await supabase.from("ucl_codes").upsert(payload,{onConflict:"code",ignoreDuplicates:false});
         if(result.error)throw result.error;
         msg.textContent=values.length+" unique codes imported/updated. Existing issued status and assignments are preserved.";
