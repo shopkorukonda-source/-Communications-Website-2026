@@ -449,3 +449,45 @@ body{background:radial-gradient(ellipse at 8% 0%,#fbf8f0 0,transparent 36%),var(
   #login-screen .login-panel{min-height:100svh;padding:24px 18px}
   #login-screen .login-card{width:100%;max-width:420px;padding:29px 24px 24px}
 }
+
+
+/* Login header branding: one clean gold-charcoal strip, no duplicate S marks */
+#login-screen.login-shell{
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  grid-template-rows:76px minmax(0,1fr);
+  background:#fff;
+}
+#login-screen .login-brand{display:none!important}
+#login-screen .login-topbar{
+  grid-row:1;
+  width:100%;
+  min-height:76px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:14px 20px;
+  background:linear-gradient(105deg,#171717 0%,#383126 48%,#171717 100%);
+  border-bottom:3px solid #c5a15a;
+  box-shadow:0 5px 20px rgba(0,0,0,.10);
+}
+#login-screen .login-topbar span{
+  color:#e2c47e;
+  font:800 17px "Manrope","DM Sans",sans-serif;
+  letter-spacing:3px;
+  text-align:center;
+}
+#login-screen .login-panel{
+  grid-row:2;
+  min-height:calc(100vh - 76px);
+  min-height:calc(100svh - 76px);
+  background:#fff;
+  padding:30px 20px;
+}
+#login-screen .login-card{margin:auto}
+@media(max-width:650px){
+  #login-screen.login-shell{grid-template-rows:66px minmax(0,1fr)}
+  #login-screen .login-topbar{min-height:66px}
+  #login-screen .login-topbar span{font-size:14px;letter-spacing:2px}
+  #login-screen .login-panel{min-height:calc(100svh - 66px);padding:22px 16px}
+}
