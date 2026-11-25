@@ -85,7 +85,7 @@ async function loadCatalog() {
   services = (rows || []).filter(s => currentProfile?.role === "admin" || s.is_active);
   {
     if(currentProfile?.role==="admin"){
-      const {data: wallets, error: walletError} = await supabase.from("wallets").select("id,name,wallet_type,provider,current_balance,is_active").eq("is_active",true).order("name");
+      const {data: wallets, error: walletError} = await supabase.from("wallets").select("id,name,wallet_type,provider,current_balance,is_active,low_balance_threshold,low_balance_alert_enabled").eq("is_active",true).order("name");
       if (walletError) console.warn("Wallet list unavailable", walletError);
       walletOptions = wallets || [];
     }else if(currentEmployee?.id){
@@ -101,10 +101,17 @@ async function loadCatalog() {
   }
   $("service-count").textContent = services.length;
   renderCategories();
+  renderWalletAlerts();
   await loadOverviewStats();
 }
 
 const icons = ["▣","◉","↗","▤","◇","✦"];
+function renderWalletAlerts(){
+ const host=$("wallet-alerts");if(!host)return;
+ const low=walletOptions.filter(w=>w.low_balance_alert_enabled!==false&&Number(w.current_balance||0)<=Number(w.low_balance_threshold||0));
+ if(!low.length){host.innerHTML="";return;}
+ host.innerHTML='<div class="announcement-heading"><div><div class="eyebrow">WALLET BALANCE ALERT</div><h3>Recharge Required</h3></div></div><div class="announcement-list">'+low.map(w=>'<article class="announcement-card"><div class="announcement-icon">₹</div><div class="announcement-copy"><strong>'+escapeHtml(w.name)+'</strong><p>Current balance ₹'+money(w.current_balance)+' · Minimum ₹'+money(w.low_balance_threshold||0)+'</p></div></article>').join("")+'</div>';
+}
 async function loadOverviewStats(){
   const start=new Date();start.setHours(0,0,0,0);
   if(currentProfile?.role==="employee"){
@@ -411,17 +418,17 @@ async function renderWalletManager(){
   await loadCatalog();
   const host=$("other-view");
   host.innerHTML=`
-    <div class="admin-module-head"><div><div class="eyebrow">ADMINISTRATION</div><h2>Wallet Management</h2><p>Create wallets, track balances and transfer funds between wallets.</p></div></div>
+    <div class="admin-module-head"><div><div class="eyebrow">ADMINISTRATION</div><h2>Wallet Management</h2><p>Create wallets, load balances, recharge between wallets and configure low-balance alerts.</p></div></div>
     <div class="admin-editor"><h3>Create wallet</h3><form id="wallet-form" class="service-form">
       <div class="admin-form-grid"><label>Wallet name<input id="wallet-name" required maxlength="100" placeholder="e.g. IDFC Bank"></label><label>Wallet type<select id="wallet-type"><option value="bank">Bank</option><option value="upi">UPI</option><option value="provider">Provider</option><option value="cash">Cash</option><option value="other">Other</option></select></label><label>Provider / account label<input id="wallet-provider" maxlength="100" placeholder="Optional"></label></div>
       <small class="muted">New wallets always start with ₹0 opening balance.</small><div id="wallet-message" class="message"></div><button class="primary-btn admin-add-btn" type="submit" id="wallet-save">Create wallet</button>
     </form></div>
     <div class="admin-editor"><h3>Load wallet balance</h3><form id="load-form" class="service-form"><div class="admin-form-grid"><label>Wallet<select id="load-wallet" required></select></label><label>Load amount (₹)<input id="load-amount" type="number" min="0.01" step="0.01" required></label><label>Source / bank account<input id="load-source" placeholder="e.g. SBI / IDFC / cash" maxlength="100"></label></div><div id="load-message" class="message"></div><button class="primary-btn" type="submit">Record wallet load</button></form></div>
-    <div class="admin-editor"><h3>Wallet transfer</h3><form id="transfer-form" class="service-form">
+    <div class="admin-editor"><h3>Wallet-to-Wallet Recharge / Transfer</h3><form id="transfer-form" class="service-form">
       <div class="admin-form-grid"><label>From wallet<select id="transfer-from" required></select></label><label>To wallet<select id="transfer-to" required></select></label><label>Amount (₹)<input id="transfer-amount" type="number" min="0.01" step="0.01" required></label></div>
-      <label>Note<input id="transfer-note" maxlength="200" placeholder="Optional transfer note"></label><div id="transfer-message" class="message"></div><button class="primary-btn admin-add-btn" type="submit" id="transfer-save">Transfer balance</button>
+      <label>Note<input id="transfer-note" maxlength="200" placeholder="Optional transfer note"></label><div id="transfer-message" class="message"></div><button class="primary-btn admin-add-btn" type="submit" id="transfer-save">Recharge / Transfer</button>
     </form></div>
-    <div class="admin-table-wrap"><div class="admin-table-head"><h3>All wallets</h3><input id="wallet-search" class="search-input" placeholder="Search wallets"></div><div id="wallet-rows"></div></div>`;
+    <div class="admin-table-wrap"><div class="admin-table-head"><h3>All wallets · Set low-balance alert limits</h3><input id="wallet-search" class="search-input" placeholder="Search wallets"></div><div id="wallet-rows"></div></div>`;
   fillTransferWallets();renderWalletRows();
   $("wallet-form").addEventListener("submit",createWallet);
   $("load-wallet").innerHTML=walletOptions.filter(w=>w.is_active).map(w=>`<option value="${w.id}">${escapeHtml(w.name)}</option>`).join("");
@@ -439,8 +446,14 @@ function renderWalletRows(){
   const q=$("wallet-search")?.value.trim().toLowerCase()||"";
   const rows=walletOptions.filter(w=>w.name.toLowerCase().includes(q)||(w.provider||"").toLowerCase().includes(q));
   $("wallet-rows").innerHTML=rows.length?rows.map(w=>`
-    <div class="admin-service-row"><div class="admin-service-main"><strong>${escapeHtml(w.name)}</strong><small>${escapeHtml(w.provider||w.wallet_type)} · ${escapeHtml(w.wallet_type)}</small></div><div class="admin-service-meta"><strong>₹${Number(w.current_balance||0).toFixed(2)}</strong><span class="status-pill ${w.is_active?"is-active":"is-inactive"}">${w.is_active?"Active":"Inactive"}</span></div><div class="admin-service-actions"><button data-wallet-toggle="${w.id}">${w.is_active?"Deactivate":"Activate"}</button></div></div>`).join(""):'<div class="empty-state">No wallets created yet.</div>';
+    <div class="admin-service-row"><div class="admin-service-main"><strong>${escapeHtml(w.name)}</strong><small>${escapeHtml(w.provider||w.wallet_type)} · ${escapeHtml(w.wallet_type)}</small><label>Low balance alert at ₹<input type="number" min="0" step=".01" value="${Number(w.low_balance_threshold||0)}" data-wallet-threshold="${w.id}" style="width:110px"></label><label><input type="checkbox" data-wallet-alert="${w.id}" ${w.low_balance_alert_enabled!==false?"checked":""}> Alert enabled</label><button class="secondary-btn" data-wallet-threshold-save="${w.id}">Save alert</button></div><div class="admin-service-meta"><strong>₹${Number(w.current_balance||0).toFixed(2)}</strong><span class="status-pill ${w.is_active?"is-active":"is-inactive"}">${w.is_active?"Active":"Inactive"}</span></div><div class="admin-service-actions"><button data-wallet-toggle="${w.id}">${w.is_active?"Deactivate":"Activate"}</button></div></div>`).join(""):'<div class="empty-state">No wallets created yet.</div>';
   document.querySelectorAll("[data-wallet-toggle]").forEach(b=>b.addEventListener("click",()=>toggleWallet(b.dataset.walletToggle)));
+  document.querySelectorAll("[data-wallet-threshold-save]").forEach(b=>b.addEventListener("click",async()=>{
+    const id=b.dataset.walletThresholdSave,threshold=Number(document.querySelector('[data-wallet-threshold="'+id+'"]').value),enabled=document.querySelector('[data-wallet-alert="'+id+'"]').checked;
+    if(!Number.isFinite(threshold)||threshold<0){alert("Enter a valid minimum balance.");return;}
+    const {error}=await supabase.from("wallets").update({low_balance_threshold:threshold,low_balance_alert_enabled:enabled}).eq("id",id);
+    if(error){alert(error.message);return;}await loadCatalog();await renderWalletManager();
+  }));
 }
 async function createWallet(e){
   e.preventDefault();const msg=$("wallet-message"),btn=$("wallet-save");btn.disabled=true;
@@ -882,7 +895,7 @@ async function renderQuickLinks() {
   const host=$("other-view");
   const admin=currentProfile?.role==="admin";
   const {data:links,error}=await supabase.from("quick_links")
-    .select("id,name,url,category,is_active,sort_order").order("sort_order").order("name");
+    .select("id,name,url,category,is_active,sort_order,logo_url,logo_path").order("sort_order").order("name");
   if(error){
     host.innerHTML='<div class="empty-panel"><h2>Quick Links</h2><p>Unable to load saved websites. Please refresh or contact Admin.</p></div>';
     console.error(error); return;
@@ -895,14 +908,15 @@ async function renderQuickLinks() {
         <label>Website name<input id="quick-link-name" maxlength="80" required placeholder="e.g. CSC Digital Seva"></label>
         <label>Website URL<input id="quick-link-url" type="url" required placeholder="https://example.gov.in"></label>
         <label>Category<input id="quick-link-category" maxlength="50" value="General" placeholder="Government Services"></label>
+        <label>Website logo<input id="quick-link-logo" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml"></label>
         <button class="primary-btn" type="submit">+ Add Website</button>
       </form>
     </div>`:''}
     <div class="quick-link-grid">
       ${visible.length?visible.map(link=>`<article class="quick-link-card">
-        <div class="quick-link-mark">↗</div><div class="quick-link-info"><strong>${escapeHtml(link.name)}</strong><small>${escapeHtml(link.category||"General")}</small></div>
+        <div class="quick-link-mark">${link.logo_url?`<img src="${"${escapeHtml(link.logo_url)}"}" alt="" style="width:42px;height:42px;object-fit:contain">`:"↗"}</div><div class="quick-link-info"><strong>${escapeHtml(link.name)}</strong><small>${escapeHtml(link.category||"General")}</small></div>
         <a class="primary-btn quick-link-open" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">Open Website ↗</a>
-        ${admin?`<div class="quick-link-admin"><span>${link.is_active?"Active":"Hidden for employees"}</span><button type="button" class="secondary-btn" data-link-toggle="${link.id}" data-active="${link.is_active}">${link.is_active?"Hide":"Show"}</button><button type="button" class="danger-btn" data-link-delete="${link.id}">Delete</button></div>`:''}
+        ${admin?`<div class="quick-link-admin"><span>${link.is_active?"Active":"Hidden for employees"}</span><label class="secondary-btn">Upload logo<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" data-link-logo="${link.id}" style="display:none"></label><button type="button" class="secondary-btn" data-link-toggle="${link.id}" data-active="${link.is_active}">${link.is_active?"Hide":"Show"}</button><button type="button" class="danger-btn" data-link-delete="${link.id}">Delete</button></div>`:''}
       </article>`).join(""):'<div class="empty-state">No websites are available yet. Ask Admin to add a website.</div>'}
     </div>
     <div class="quick-link-note"><strong>Customer form assistance:</strong> External portals may block automatic form filling. For security, enter passwords, OTPs and CAPTCHA directly on the official website. Never save CSC login credentials here.</div>`;
@@ -912,10 +926,29 @@ async function renderQuickLinks() {
       const name=$("quick-link-name").value.trim(),url=$("quick-link-url").value.trim(),category=$("quick-link-category").value.trim()||"General";
       let parsed;try{parsed=new URL(url)}catch{return alert("Enter a valid website URL.");}
       if(parsed.protocol!=="https:")return alert("Only secure HTTPS websites are allowed.");
-      const {error:saveError}=await supabase.from("quick_links").insert({name,url:parsed.href,category,created_by:(await supabase.auth.getUser()).data.user?.id});
+      const {data:saved,error:saveError}=await supabase.from("quick_links").insert({name,url:parsed.href,category,created_by:(await supabase.auth.getUser()).data.user?.id}).select("id").single();
       if(saveError){alert("Could not add website: "+saveError.message);return;}
+      const logoFile=$("quick-link-logo").files[0];
+      if(logoFile){
+        const path="quick-links/"+saved.id+"/"+Date.now()+"-"+logoFile.name.replace(/[^a-zA-Z0-9._-]/g,"_");
+        const up=await supabase.storage.from("quick-link-logos").upload(path,logoFile,{upsert:true,contentType:logoFile.type});
+        if(up.error){alert("Website saved, but logo upload failed: "+up.error.message);await renderQuickLinks();return;}
+        const publicUrl=supabase.storage.from("quick-link-logos").getPublicUrl(path).data.publicUrl;
+        const upd=await supabase.from("quick_links").update({logo_path:path,logo_url:publicUrl}).eq("id",saved.id);
+        if(upd.error)alert("Website saved, but logo link update failed: "+upd.error.message);
+      }
       await renderQuickLinks();
     });
+    host.querySelectorAll("[data-link-logo]").forEach(input=>input.addEventListener("change",async()=>{
+      const file=input.files?.[0];if(!file)return;
+      if(!["image/png","image/jpeg","image/webp","image/svg+xml"].includes(file.type)||file.size>5*1024*1024){alert("Choose PNG/JPG/WEBP/SVG logo under 5 MB.");return;}
+      const id=input.dataset.linkLogo,path="quick-links/"+id+"/"+Date.now()+"-"+file.name.replace(/[^a-zA-Z0-9._-]/g,"_");
+      const up=await supabase.storage.from("quick-link-logos").upload(path,file,{upsert:true,contentType:file.type});
+      if(up.error){alert(up.error.message);return;}
+      const publicUrl=supabase.storage.from("quick-link-logos").getPublicUrl(path).data.publicUrl;
+      const upd=await supabase.from("quick_links").update({logo_path:path,logo_url:publicUrl}).eq("id",id);
+      if(upd.error){alert(upd.error.message);return;}await renderQuickLinks();
+    }));
     host.querySelectorAll("[data-link-toggle]").forEach(btn=>btn.addEventListener("click",async()=>{
       const {error:updateError}=await supabase.from("quick_links").update({is_active:btn.dataset.active!=="true"}).eq("id",btn.dataset.linkToggle);
       if(updateError){alert("Could not update website.");return;} await renderQuickLinks();
