@@ -38,8 +38,13 @@ async function showApp(user) {
   currentProfile = profile;
   currentEmployee = null;
   if (profile.role === "employee") {
-    const {data: employeeLink} = await supabase.from("employees").select("id,full_name,employee_code").eq("profile_id",user.id).maybeSingle();
-    currentEmployee = employeeLink || null;
+    const {data: employeeLink,error:employeeError} = await supabase.from("employees").select("id,full_name,employee_code,is_active").eq("profile_id",user.id).eq("is_active",true).maybeSingle();
+    if(employeeError || !employeeLink || !employeeLink.is_active){
+      await supabase.auth.signOut(); showLogin();
+      setMessage("Employee access is inactive or not linked. Please contact Admin.");
+      return;
+    }
+    currentEmployee = employeeLink;
   }
   loginScreen.classList.add("hidden");
   appScreen.classList.remove("hidden");
@@ -176,8 +181,14 @@ $("login-form").addEventListener("submit", async (event) => {
   button.textContent = "Signing in…";
   setMessage("", false);
   try {
+    const identity=$("email").value.trim();
+    const digits=identity.replace(/\D/g,"");
+    const isMobile=/^\d{10}$/.test(digits) && !identity.includes("@");
+    const credentials=isMobile
+      ? {phone:"+91"+digits,password:$("password").value}
+      : {email:identity,password:$("password").value};
     const authResult = await Promise.race([
-      supabase.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value}),
+      supabase.auth.signInWithPassword(credentials),
       new Promise((_,reject)=>setTimeout(()=>reject(new Error("Login request timed out. Check internet connection and try again.")),18000))
     ]);
     if (authResult.error) {
@@ -221,7 +232,8 @@ function closePasswordDialog(){
 }
 $("forgot-password-btn").addEventListener("click",async()=>{
   const email=$("email").value.trim();
-  if(!email){setMessage("Enter your account email first.");$("email").focus();return;}
+  if(/^\d{10}$/.test(email)){setMessage("Employee password reset is managed by Admin. Please contact your administrator.");return;}
+  if(!email||!email.includes("@")){setMessage("Enter your Admin email address first.");$("email").focus();return;}
   const btn=$("forgot-password-btn");btn.disabled=true;btn.textContent="Sending recovery email…";
   const {error}=await supabase.auth.resetPasswordForEmail(email,{redirectTo:"https://slv-shop-manager-v2.onrender.com/"});
   if(error)setMessage(error.message);
@@ -565,31 +577,70 @@ async function loadReportsData(){
  $("finance-expense-rows").innerHTML=expenses.slice(0,30).map(x=>'<div class="admin-service-row"><div class="admin-service-main"><strong>'+escapeHtml(x.category)+'</strong><small>'+x.expense_date+' · '+escapeHtml(x.description||"")+'</small></div><div class="admin-service-meta"><strong>'+money(x.amount)+'</strong><span>'+escapeHtml(x.payment_mode||"")+'</span></div></div>').join("")||'<div class="empty-state">No expenses in this period.</div>';
  $("report-rows").innerHTML=bills.slice(0,30).map(x=>'<div class="admin-service-row"><div class="admin-service-main"><strong>Bill #'+x.bill_number+'</strong><small>'+escapeHtml(x.customer_name||"Walk-in customer")+' · '+new Date(x.created_at).toLocaleString("en-IN")+'</small></div><div class="admin-service-meta"><strong>'+money(x.profit_total)+' income</strong><span>'+money(x.customer_total)+' collected</span></div><div class="admin-service-meta"><span>'+escapeHtml(x.payment_mode)+'</span></div></div>').join("")||'<div class="empty-state">No bills in this period.</div>';
 }
+async function manageEmployee(action,payload){
+  const {data,error}=await supabase.functions.invoke("employee-management",{body:{action,...payload}});
+  if(error)throw error;
+  if(data?.error)throw new Error(data.error);
+  return data;
+}
 async function renderEmployeeManager(){
-  const {data:profiles}=await supabase.from("profiles").select("id,display_name,phone,role").eq("is_active",true).eq("role","employee").order("display_name");
-  const {data:existingLinks}=await supabase.from("employees").select("profile_id");
-  const linkedProfileIds=new Set((existingLinks||[]).map(x=>x.profile_id).filter(Boolean));
-  const availableProfiles=(profiles||[]).filter(p=>!linkedProfileIds.has(p.id));
-  const host=$("other-view");host.innerHTML=`
-    <div class="admin-module-head"><div><div class="eyebrow">ADMINISTRATION</div><h2>Employees</h2><p>Maintain employee details and salary settings.</p></div></div>
-    <div class="admin-editor"><h3>Add employee record</h3><form id="employee-form" class="service-form"><div class="admin-form-grid"><label>Full name<input id="employee-name" required maxlength="120"></label><label>Mobile number<input id="employee-phone" maxlength="20"></label><label>Link login account<select id="employee-profile"><option value="">Not linked</option>${availableProfiles.map(p=>`<option value="${p.id}">${escapeHtml(p.display_name||p.phone||p.id)}</option>`).join("")}</select></label><label>Monthly fixed salary (₹)<input id="employee-salary" type="number" min="0" step="0.01" value="0"></label></div><div id="employee-message" class="message"></div><button class="primary-btn admin-add-btn" type="submit">Add employee</button></form></div>
-    <div class="admin-table-wrap"><h3>Employee records</h3><div id="employee-rows"></div></div>`;
+  const host=$("other-view");
+  host.innerHTML=`
+    <div class="admin-module-head"><div><div class="eyebrow">ADMINISTRATION</div><h2>Employees</h2><p>Create employee login with mobile number and password. Deactivate instead of deleting to preserve history.</p></div></div>
+    <div class="admin-editor"><h3>Add employee & login</h3><form id="employee-form" class="service-form">
+      <div class="admin-form-grid">
+        <label>Full name<input id="employee-name" required maxlength="120"></label>
+        <label>10-digit mobile number<input id="employee-phone" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" required></label>
+        <label>Monthly fixed salary (₹)<input id="employee-salary" type="number" min="0" step="0.01" value="0" required></label>
+        <label>Initial password<input id="employee-password" type="password" minlength="8" autocomplete="new-password" required></label>
+      </div><div id="employee-message" class="message"></div><button class="primary-btn admin-add-btn" type="submit">Create employee login</button>
+    </form></div>
+    <div class="admin-table-wrap"><h3>Employee records</h3><div id="employee-rows">Loading…</div></div>`;
   $("employee-form").addEventListener("submit",createEmployee);
   const {data,error}=await supabase.from("employees").select("id,employee_code,full_name,phone,monthly_salary,is_active,joined_on,profile_id").order("created_at",{ascending:false});
-  if(error){$("employee-rows").innerHTML='<div class="empty-state">Unable to load employee records.</div>';return;}
-  const linked=new Set((data||[]).map(x=>x.profile_id).filter(Boolean));
-  const profileOptions=(profiles||[]).filter(p=>!linked.has(p.id));
-  $("employee-rows").innerHTML=(data||[]).length?data.map(x=>`<div class="admin-service-row"><div class="admin-service-main"><strong>${escapeHtml(x.full_name)}</strong><small>${escapeHtml(x.phone||"No mobile")} · ${escapeHtml(x.employee_code||"No code")} · ${x.profile_id?"Login linked":"Login not linked"}</small></div><div class="admin-service-meta"><strong>${money(x.monthly_salary)} / month</strong><span class="status-pill ${x.is_active?"is-active":"is-inactive"}">${x.is_active?"Active":"Inactive"}</span></div><div class="admin-service-actions">${!x.profile_id?'<select data-employee-profile="'+x.id+'"><option value="">Select login</option>'+profileOptions.map(p=>'<option value="'+p.id+'">'+escapeHtml(p.display_name||p.phone||p.id)+'</option>').join("")+'</select><button data-employee-link="'+x.id+'">Link login</button>':""}<button data-employee-toggle="${x.id}" data-active="${x.is_active}">${x.is_active?"Deactivate":"Activate"}</button></div></div>`).join(""):'<div class="empty-state">No employees added yet.</div>';
-  document.querySelectorAll("[data-employee-link]").forEach(b=>b.addEventListener("click",async()=>{const select=document.querySelector('[data-employee-profile="'+b.dataset.employeeLink+'"]');if(!select?.value){alert("Select an employee login account first.");return;}const {error}=await supabase.from("employees").update({profile_id:select.value}).eq("id",b.dataset.employeeLink);if(error)alert(error.message);else await renderEmployeeManager();}));
-  document.querySelectorAll("[data-employee-toggle]").forEach(b=>b.addEventListener("click",async()=>{const {error}=await supabase.from("employees").update({is_active:b.dataset.active!=="true"}).eq("id",b.dataset.employeeToggle);if(error)alert(error.message);else await renderEmployeeManager();}));
+  if(error){$("employee-rows").innerHTML='<div class="empty-state">Unable to load employee records: '+escapeHtml(error.message)+'</div>';return;}
+  $("employee-rows").innerHTML=(data||[]).length?data.map(x=>`
+    <div class="admin-service-row">
+      <div class="admin-service-main"><strong>${escapeHtml(x.full_name)}</strong><small>${escapeHtml(x.phone||"No mobile")} · ${escapeHtml(x.employee_code||"No code")} · ${x.profile_id?"Login linked":"Login not linked"}</small></div>
+      <div class="admin-service-meta"><strong>${money(x.monthly_salary)} / month</strong><span class="status-pill ${x.is_active?"is-active":"is-inactive"}">${x.is_active?"Active":"Inactive"}</span></div>
+      <div class="admin-service-actions">
+        <button data-employee-edit="${x.id}">Edit</button>
+        <button data-employee-reset="${x.id}">Reset password</button>
+        <button data-employee-toggle="${x.id}" data-active="${x.is_active}">${x.is_active?"Deactivate":"Activate"}</button>
+      </div>
+    </div>`).join(""):'<div class="empty-state">No employees added yet.</div>';
+  document.querySelectorAll("[data-employee-edit]").forEach(b=>b.addEventListener("click",async()=>{
+    const row=(data||[]).find(x=>x.id===b.dataset.employeeEdit);if(!row)return;
+    const name=prompt("Employee full name:",row.full_name);if(name===null)return;
+    const phone=prompt("10-digit mobile number:",row.phone||"");if(phone===null)return;
+    const salary=prompt("Monthly fixed salary (₹):",String(row.monthly_salary||0));if(salary===null)return;
+    if(!/^\d{10}$/.test(phone.trim())||!name.trim()||!Number.isFinite(Number(salary))||Number(salary)<0){alert("Enter valid name, 10-digit mobile and salary.");return;}
+    try{await manageEmployee("update",{employee_id:row.id,full_name:name.trim(),phone:phone.trim(),monthly_salary:Number(salary)});await renderEmployeeManager();}
+    catch(err){alert("Update failed: "+(err.message||err));}
+  }));
+  document.querySelectorAll("[data-employee-reset]").forEach(b=>b.addEventListener("click",async()=>{
+    const pwd=prompt("Enter a new password (minimum 8 characters):");if(pwd===null)return;
+    if(pwd.length<8){alert("Password must contain at least 8 characters.");return;}
+    try{await manageEmployee("reset_password",{employee_id:b.dataset.employeeReset,password:pwd});alert("Employee password updated.");}
+    catch(err){alert("Password reset failed: "+(err.message||err));}
+  }));
+  document.querySelectorAll("[data-employee-toggle]").forEach(b=>b.addEventListener("click",async()=>{
+    const active=b.dataset.active!=="true";
+    if(!confirm(active?"Activate this employee login?":"Deactivate this employee login? Existing history will be preserved."))return;
+    try{await manageEmployee("set_active",{employee_id:b.dataset.employeeToggle,is_active:active});await renderEmployeeManager();}
+    catch(err){alert("Status update failed: "+(err.message||err));}
+  }));
 }
 async function createEmployee(e){
-  e.preventDefault();const msg=$("employee-message");
-  const payload={full_name:$("employee-name").value.trim(),phone:$("employee-phone").value.trim()||null,profile_id:$("employee-profile").value||null,monthly_salary:Number($("employee-salary").value)||0,is_active:true,joined_on:new Date().toISOString().slice(0,10)};
-  const {error}=await supabase.from("employees").insert(payload);
-  if(error){msg.textContent=error.message;return;}msg.textContent="Employee record created.";await renderEmployeeManager();
+  e.preventDefault();const msg=$("employee-message"),btn=e.submitter||e.currentTarget.querySelector("button[type=submit]");
+  const payload={full_name:$("employee-name").value.trim(),phone:$("employee-phone").value.trim(),monthly_salary:Number($("employee-salary").value)||0,password:$("employee-password").value};
+  if(!/^\d{10}$/.test(payload.phone)){msg.textContent="Enter a valid 10-digit Indian mobile number.";return;}
+  if(payload.password.length<8){msg.textContent="Initial password must be at least 8 characters.";return;}
+  btn.disabled=true;msg.textContent="Creating secure employee login…";
+  try{await manageEmployee("create",payload);msg.textContent="Employee login created successfully.";e.currentTarget.reset();$("employee-salary").value="0";await renderEmployeeManager();}
+  catch(err){msg.textContent=err.message||"Unable to create employee login.";}
+  finally{btn.disabled=false;}
 }
-
 
 let billingRows = [];
 let billingWalletRules = {};
