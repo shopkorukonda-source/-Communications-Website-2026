@@ -706,11 +706,13 @@ function calculateBillingRow(row){
   }
   let charge=0,cost=Number(row.cost||0),profit=0;
   if(svc.code==="CURRENT_BILLS"){
-    const cfg=svc.billing_config||{}, slabs=cfg.slabs||[];
+    const cfg=svc.billing_config||{}, costCfg=svc.processing_cost_config||{}, slabs=cfg.slabs||[];
     const slab=slabs.find(x=>amount>=Number(x.min)&&amount<=Number(x.max));
+    const costSlab=(costCfg.slabs||[]).find(x=>amount>=Number(x.min)&& (x.max==null||amount<=Number(x.max)));
     const debitTotal=(row.wallet_debits||[]).reduce((sum,x)=>sum+Number(x.amount||0),0);
-    if(slab){charge=Number(slab.customer_charge||0);cost=debitTotal>0?debitTotal-amount:(slab.wallet_extra==null?Number(row.cost||0):Number(slab.wallet_extra));}
-    else if(amount>1000){charge=10+Math.ceil((amount-1000)/100)*Number(cfg.above_1000?.extra_per_100||1);cost=debitTotal>0?debitTotal-amount:Number(row.cost||0);}
+    const configuredCost=costSlab?Number(costSlab.cost??costSlab.processing_cost??0):(slab?.wallet_extra!=null?Number(slab.wallet_extra):Number(cfg.above_1000?.wallet_extra??row.cost??0));
+    if(slab){charge=Number(slab.customer_charge||0);cost=debitTotal>0?debitTotal-amount:configuredCost;}
+    else if(amount>1000){charge=10+Math.ceil((amount-1000)/100)*Number(cfg.above_1000?.extra_per_100||1);cost=debitTotal>0?debitTotal-amount:configuredCost;}
   } else if(svc.code==="MONEY_TRANSFER"){
     charge=Math.ceil(amount/1000)*Number(svc.billing_config?.charge_per_1000||10);cost=Number(row.cost||0);
   } else if(svc.code==="PRIVATE_BUS_TICKET"){
@@ -784,8 +786,10 @@ function automaticWalletDebits(row,svc){
   const hasBaseAmount=modes.includes("base_amount");
   let autoTarget=processingCost;
   if(svc?.code==="CURRENT_BILLS"){
-    const cfg=svc.billing_config||{},slab=(cfg.slabs||[]).find(x=>amount>=Number(x.min||0)&&amount<=Number(x.max||0));
-    const extra=Number(slab?.wallet_extra??row.cost??cfg.above_1000?.wallet_extra??0);
+    const cfg=svc.billing_config||{},costCfg=svc.processing_cost_config||{};
+    const slab=(costCfg.slabs||[]).find(x=>amount>=Number(x.min||0)&&(x.max==null||amount<=Number(x.max)));
+    const billingSlab=(cfg.slabs||[]).find(x=>amount>=Number(x.min||0)&&amount<=Number(x.max||0));
+    const extra=Number(slab?.cost??slab?.processing_cost??billingSlab?.wallet_extra??row.cost??cfg.above_1000?.wallet_extra??0);
     autoTarget=hasBaseAmount?extra:amount+extra;
   }
   const allocations=rules.map((rule,i)=>{
