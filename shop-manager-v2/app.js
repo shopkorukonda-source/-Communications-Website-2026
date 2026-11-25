@@ -285,6 +285,17 @@ $("signout-btn").addEventListener("click",async()=>{await supabase.auth.signOut(
 $("service-search").addEventListener("input",renderServices);
 document.querySelectorAll(".nav-item").forEach(btn=>btn.addEventListener("click",async()=>{
   if(currentProfile?.role!=="admin" && btn.classList.contains("admin-only")) return;
+  const view = btn.dataset.view;
+  const shiftRequiredViews=["billing","quicklinks","panforms","ucl","expenses"];
+  if(currentProfile?.role==="employee" && currentEmployee && shiftRequiredViews.includes(view)){
+    const active=await supabase.from("drawer_sessions").select("id").eq("employee_id",currentEmployee.id).eq("status","open").order("opened_at",{ascending:false}).limit(1).maybeSingle();
+    if(active.error || !active.data){
+      alert("Please Start Shift at the shop first. Billing and work actions are locked until your shift is open.");
+      const drawerButton=document.querySelector('.nav-item[data-view="drawers"]');
+      if(drawerButton)drawerButton.click();
+      return;
+    }
+  }
   document.querySelectorAll(".nav-item").forEach(item=>item.classList.toggle("active",item===btn));
   const view = btn.dataset.view;
   $("overview-view").classList.toggle("hidden",view!=="overview");
