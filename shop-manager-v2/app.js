@@ -288,11 +288,20 @@ document.querySelectorAll(".nav-item").forEach(btn=>btn.addEventListener("click"
   const view = btn.dataset.view;
   const shiftRequiredViews=["billing","quicklinks","panforms","ucl","expenses"];
   if(currentProfile?.role==="employee" && currentEmployee && shiftRequiredViews.includes(view)){
-    const active=await supabase.from("drawer_sessions").select("id").eq("employee_id",currentEmployee.id).eq("status","open").order("opened_at",{ascending:false}).limit(1).maybeSingle();
+    const [active,lunch]=await Promise.all([
+      supabase.from("drawer_sessions").select("id").eq("employee_id",currentEmployee.id).eq("status","open").order("opened_at",{ascending:false}).limit(1).maybeSingle(),
+      supabase.from("attendance").select("lunch_start,lunch_end").eq("employee_id",currentEmployee.id).eq("work_date",new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Kolkata"})).maybeSingle()
+    ]);
     if(active.error || !active.data){
       alert("Please Start Shift at the shop first. Billing and work actions are locked until your shift is open.");
       const drawerButton=document.querySelector('.nav-item[data-view="drawers"]');
       if(drawerButton)drawerButton.click();
+      return;
+    }
+    if(lunch.error || (lunch.data?.lunch_start && !lunch.data?.lunch_end)){
+      alert("Lunch break is active. Please tap End Lunch before starting billing or other work.");
+      const attendanceButton=document.querySelector('.nav-item[data-view="attendance"]');
+      if(attendanceButton)attendanceButton.click();
       return;
     }
   }
