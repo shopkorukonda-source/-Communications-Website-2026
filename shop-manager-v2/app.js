@@ -49,6 +49,7 @@ async function showApp(user) {
   loginScreen.classList.add("hidden");
   appScreen.classList.remove("hidden");
   appScreen.classList.toggle("admin-mode", profile.role === "admin");
+  appScreen.classList.toggle("employee-mode", profile.role === "employee");
   $("user-name").textContent = profile.display_name || user.email;
   $("user-role").textContent = profile.role;
   $("avatar").textContent = (profile.display_name || user.email || "S").slice(0,1).toUpperCase();
@@ -284,7 +285,7 @@ supabase.auth.onAuthStateChange((event,session)=>{
 $("signout-btn").addEventListener("click",async()=>{await supabase.auth.signOut();showLogin();});
 $("service-search").addEventListener("input",renderServices);
 document.querySelectorAll(".nav-item").forEach(btn=>btn.addEventListener("click",async()=>{
-  if(currentProfile?.role!=="admin" && btn.classList.contains("admin-only")) return;
+  if(currentProfile?.role!=="admin" && (btn.classList.contains("admin-only") || btn.dataset.view==="services")) return;
   const view = btn.dataset.view;
   const shiftRequiredViews=["billing","quicklinks","panforms","ucl","expenses"];
   if(currentProfile?.role==="employee" && currentEmployee && shiftRequiredViews.includes(view)){
