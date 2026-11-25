@@ -185,7 +185,7 @@ $("login-form").addEventListener("submit", async (event) => {
     const digits=identity.replace(/\D/g,"");
     const isMobile=/^\d{10}$/.test(digits) && !identity.includes("@");
     const credentials=isMobile
-      ? {phone:"+91"+digits,password:$("password").value}
+      ? {email:"slv.employee."+digits+"@example.com",password:$("password").value}
       : {email:identity,password:$("password").value};
     const authResult = await Promise.race([
       supabase.auth.signInWithPassword(credentials),
@@ -604,7 +604,7 @@ async function renderEmployeeManager(){
       <div class="admin-service-main"><strong>${escapeHtml(x.full_name)}</strong><small>${escapeHtml(x.phone||"No mobile")} · ${escapeHtml(x.employee_code||"No code")} · ${x.profile_id?"Login linked":"Login not linked"}</small></div>
       <div class="admin-service-meta"><strong>${money(x.monthly_salary)} / month</strong><span class="status-pill ${x.is_active?"is-active":"is-inactive"}">${x.is_active?"Active":"Inactive"}</span></div>
       <div class="admin-service-actions">
-        ${!x.profile_id?'<button data-employee-link-login="'+x.id+'">Create login</button>':""}
+        ${!x.profile_id?'<button data-employee-link-login="'+x.id+'">Create login</button>':'<button data-employee-migrate="'+x.id+'">Enable mobile login</button>'}
         <button data-employee-edit="${x.id}">Edit</button>
         <button data-employee-reset="${x.id}">Reset password</button>
         <button data-employee-toggle="${x.id}" data-active="${x.is_active}">${x.is_active?"Deactivate":"Activate"}</button>
@@ -616,6 +616,14 @@ async function renderEmployeeManager(){
     if(pwd.length<8){alert("Password must contain at least 8 characters.");return;}
     try{await manageEmployee("link_existing",{employee_id:row.id,password:pwd,full_name:row.full_name});await renderEmployeeManager();alert("Employee login linked successfully.");}
     catch(err){alert("Login creation failed: "+(err.message||err));}
+  }));
+  document.querySelectorAll("[data-employee-migrate]").forEach(b=>b.addEventListener("click",async()=>{
+    const row=(data||[]).find(x=>x.id===b.dataset.employeeMigrate);if(!row)return;
+    if(!confirm("Enable mobile-number + password login for "+row.full_name+" without SMS OTP?"))return;
+    b.disabled=true;
+    try{await manageEmployee("migrate_login",{employee_id:row.id});alert("Mobile login enabled. Employee can now sign in with the 10-digit mobile number and password.");}
+    catch(err){alert("Mobile login setup failed: "+(err.message||err));}
+    finally{b.disabled=false;}
   }));
   document.querySelectorAll("[data-employee-edit]").forEach(b=>b.addEventListener("click",async()=>{
     const row=(data||[]).find(x=>x.id===b.dataset.employeeEdit);if(!row)return;
