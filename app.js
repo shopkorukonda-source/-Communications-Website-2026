@@ -148,7 +148,6 @@ async function refreshWalletBalances(){
     const {data,error}=await query;if(error)throw error;
     walletOptions=data||[];renderEmployeeWallets();renderWalletAlerts();await loadOverviewStats();
     if($("other-view")?.querySelector("#wallet-rows")){
-      renderWalletRows();
       const updateOptions=id=>{const el=$(id);if(!el)return;const selected=el.value;el.innerHTML=walletOptions.filter(w=>w.is_active).map(w=>'<option value="'+w.id+'">'+escapeHtml(w.name)+' · '+money(w.current_balance)+'</option>').join("");if(walletOptions.some(w=>w.id===selected&&w.is_active))el.value=selected;};
       updateOptions("load-wallet");updateOptions("withdraw-wallet");
       const from=$("transfer-from")?.value,to=$("transfer-to")?.value;fillTransferWallets();if(from)$("transfer-from").value=from;if(to)$("transfer-to").value=to;
