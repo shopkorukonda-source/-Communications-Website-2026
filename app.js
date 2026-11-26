@@ -888,8 +888,8 @@ function calculateBillingRow(row){
     }else charge=Math.ceil(amount/1000)*Number(bc.charge_per_1000||10);
     cost=serviceProcessingCost(amount,svc,row);
     profit=charge-cost;
-    if(svc.profit_mode==="slabs"){
-      const slab=(svc.profit_config?.slabs||[]).find(x=>amount>=Number(x.min||0)&&(x.max==null||amount<=Number(x.max)));
+    if(svc.profit_mode==="slabs"&&Array.isArray(svc.profit_config?.slabs)&&svc.profit_config.slabs.length){
+      const slab=(svc.profit_config.slabs||[]).find(x=>amount>=Number(x.min||0)&&(x.max==null||amount<=Number(x.max)));
       profit=Number(slab?.profit??slab?.amount??0);
     }
   } else {
