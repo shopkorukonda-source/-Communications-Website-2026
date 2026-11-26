@@ -1207,11 +1207,12 @@ async function saveQuickBilling(){
       const wallet_debits=walletDebitsForRow(r,svc);
       if(isManualProcessingWalletService(svc)){
         const assignedRules=billingWalletRules[r.service_id]||[];
-        const selectedWalletIds=r.processing_wallet_id?[String(r.processing_wallet_id)]:[];
         if(svc.code==="AEPS_WITHDRAWAL"){
-          if(!selectedWalletIds.length)throw new Error("Select the wallet that should receive the AEPS amount.");
-          if(!assignedRules.some(x=>String(x.wallet_id)===selectedWalletIds[0]))throw new Error("Selected AEPS credit wallet is not assigned by Admin.");
+          const selectedWalletId=String(r.processing_wallet_id||"");
+          if(!selectedWalletId)throw new Error("Select the wallet that should receive the AEPS amount.");
+          if(!assignedRules.some(x=>String(x.wallet_id)===selectedWalletId))throw new Error("Selected AEPS credit wallet is not assigned by Admin.");
         }else{
+          const selectedWalletIds=Array.isArray(r.processing_wallet_ids)?r.processing_wallet_ids.map(String):(r.processing_wallet_id?[String(r.processing_wallet_id)]:[]);
           if(!assignedRules.length)throw new Error("Admin must assign one or more processing wallets in Admin Services for "+svc.name+".");
           if(!selectedWalletIds.length)throw new Error("Select at least one transaction wallet for "+svc.name+".");
           if(selectedWalletIds.some(id=>!assignedRules.some(x=>String(x.wallet_id)===id)))throw new Error("One or more selected wallets are not assigned to "+svc.name+".");
