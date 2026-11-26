@@ -1097,6 +1097,44 @@ function updatePaymentFields(){
   $("cash-paid-wrap").classList.toggle("hidden",mode==="upi");
   $("upi-paid-wrap").classList.toggle("hidden",mode==="cash");
 }
+function showBillSavedAnimation(message){
+  let style=document.getElementById("bill-save-animation-style");
+  if(!style){
+    style=document.createElement("style");
+    style.id="bill-save-animation-style";
+    style.textContent=`
+      .bill-save-overlay{position:fixed;inset:0;z-index:100000;display:grid;place-items:center;background:rgba(15,28,24,.34);backdrop-filter:blur(5px);opacity:0;transition:opacity .22s ease;padding:20px}
+      .bill-save-overlay.is-visible{opacity:1}
+      .bill-save-overlay.is-leaving{opacity:0}
+      .bill-save-card{width:min(360px,92vw);padding:30px 24px 26px;border-radius:22px;background:#fff;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,.22);transform:translateY(12px) scale(.96);transition:transform .28s cubic-bezier(.2,.8,.2,1)}
+      .bill-save-overlay.is-visible .bill-save-card{transform:translateY(0) scale(1)}
+      .bill-save-check{width:76px;height:76px;margin:0 auto 16px;border-radius:50%;display:grid;place-items:center;background:#e7f8ef;color:#16834d}
+      .bill-save-check svg{width:42px;height:42px;stroke:currentColor;stroke-width:4;fill:none;stroke-linecap:round;stroke-linejoin:round}
+      .bill-save-check svg path{stroke-dasharray:48;stroke-dashoffset:48;animation:billSaveDraw .48s .12s ease forwards}
+      .bill-save-card h3{margin:0 0 7px;color:#173b2c;font:800 21px/1.25 Manrope, sans-serif}
+      .bill-save-card p{margin:0;color:#64746c;font:500 13px/1.5 'DM Sans',sans-serif}
+      .bill-save-next{margin-top:18px;height:4px;border-radius:8px;background:#e8eee9;overflow:hidden}
+      .bill-save-next span{display:block;width:0;height:100%;background:#16834d;animation:billSaveProgress 1.35s linear forwards}
+      @keyframes billSaveDraw{to{stroke-dashoffset:0}}
+      @keyframes billSaveProgress{to{width:100%}}
+      @media(prefers-reduced-motion:reduce){.bill-save-overlay,.bill-save-card{transition:none}.bill-save-check svg path,.bill-save-next span{animation:none;stroke-dashoffset:0;width:100%}}
+    `;
+    document.head.appendChild(style);
+  }
+  const overlay=document.createElement("div");
+  overlay.className="bill-save-overlay";
+  overlay.setAttribute("role","status");
+  overlay.setAttribute("aria-live","polite");
+  overlay.innerHTML='<div class="bill-save-card"><div class="bill-save-check"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10 25l9 9L38 14"></path></svg></div><h3>'+escapeHtml(message||"Bill Saved Successfully!")+'</h3><p>Opening a fresh billing form…</p><div class="bill-save-next"><span></span></div></div>';
+  document.body.appendChild(overlay);
+  requestAnimationFrame(()=>overlay.classList.add("is-visible"));
+  window.setTimeout(()=>{
+    overlay.classList.add("is-leaving");
+    window.setTimeout(()=>overlay.remove(),240);
+    const first= document.querySelector("#billing-rows [data-service-search]");
+    first?.focus();
+  },1400);
+}
 async function saveQuickBilling(){
   const msg=$("billing-message"),btn=$("save-billing");btn.disabled=true;msg.textContent="";
   try{
@@ -1151,19 +1189,23 @@ async function saveQuickBilling(){
       ? await supabase.rpc("update_bill_with_approval",{p_transaction_id:editingBillingTransactionId,p_payload:payload,p_edit_request_id:null})
       : await supabase.rpc("create_bill",{payload});
     if(result.error)throw result.error;
-    msg.textContent=editingBillingTransactionId
+    const wasEditing=Boolean(editingBillingTransactionId);
+    const successText=wasEditing
       ?"Bill #"+(editingBillingBillNumber||"")+" updated successfully."
-      :"Bills saved successfully. Transaction ID: "+result.data;
+      :"Bill saved successfully.";
+    msg.textContent=successText;
     editingBillingTransactionId=null;editingBillingBillNumber=null;
     const heading=$("other-view")?.querySelector(".admin-module-head h2");if(heading)heading.textContent="Single Customer · Multiple Services";
     const saveBtn=$("save-billing");if(saveBtn)saveBtn.textContent="Save one bill with all services";
     $("bill-received").value="0";$("bill-cash").value="0";$("bill-upi").value="0";
     $("bill-customer").value="";$("bill-phone").value="";
+    $("bill-mode").value="cash";
     billingRows=[];
-    const freshCount=Math.max(1,Math.min(100,Number($("bill-count").value)||1));
-    $("bill-count").value=freshCount;
-    await setBillingRows(freshCount);
-    updatePaymentFields();await loadRecentBills();await refreshWalletBalances();
+    $("bill-count").value="1";
+    await setBillingRows(1);
+    updatePaymentFields();updateBillingTotals();
+    showBillSavedAnimation(wasEditing?"Bill Updated Successfully!":"Bill Saved Successfully!");
+    await loadRecentBills();await refreshWalletBalances();
   }catch(e){msg.textContent=e.message||"Unable to save bills.";console.error(e);}
   finally{btn.disabled=false;}
 }
