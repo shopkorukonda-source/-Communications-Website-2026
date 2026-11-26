@@ -894,8 +894,12 @@ async function renderQuickBilling(){
   ["bill-received","bill-cash","bill-upi"].forEach(id=>$(id).addEventListener("input",updateBillingTotals));
   setBillingRows(1);await loadRecentBills();
 }
+function isManualJobApplicationWalletService(svc){
+  const code=String(svc?.code||"").toUpperCase(),name=String(svc?.name||"").toUpperCase();
+  return code.includes("JOB")||name.includes("JOB APPLICATION");
+}
 function automaticWalletDebits(row,svc){
-  if(svc?.code==="CREDIT_CARD_BANK")return [];
+  if(svc?.code==="CREDIT_CARD_BANK"||isManualJobApplicationWalletService(svc))return [];
   const rules=billingWalletRules[row.service_id]||[];
   if(!rules.length)return [];
   const amount=Number(row.base||0),processingCost=Number(row.cost||svc?.processing_cost_config?.fixed_amount||0);
@@ -921,6 +925,23 @@ function automaticWalletDebits(row,svc){
   if(autoIndexes.length)allocations[autoIndexes[autoIndexes.length-1]].amount=autoTarget;
   return allocations.filter(x=>Number(x.amount)>0);
 }
+function walletDebitsForRow(row,svc){
+  if(!isManualJobApplicationWalletService(svc))return automaticWalletDebits(row,svc);
+  if(!row.processing_wallet_id)return [];
+  return automaticWalletDebits({...row,processing_wallet_id:row.processing_wallet_id}, {...svc,code:"MANUAL_JOB_APP_WALLET"})
+    .filter(x=>x.wallet_id===row.processing_wallet_id);
+}
+function manualJobApplicationWalletHtml(row,svc,index){
+  if(!isManualJobApplicationWalletService(svc))return null;
+  const rules=billingWalletRules[row.service_id]||[];
+  const selected=String(row.processing_wallet_id||"");
+  const opts=rules.map(rule=>{
+    const w=walletOptions.find(x=>x.id===rule.wallet_id&&x.is_active);
+    return w?'<option value="'+w.id+'" '+(selected===w.id?"selected":"")+'>'+escapeHtml(w.name)+' · Balance '+money(w.current_balance)+'</option>':"";
+  }).join("");
+  const debit=walletDebitsForRow(row,svc).reduce((n,x)=>n+Number(x.amount||0),0);
+  return '<div class="wallet-map-box"><strong>Processing wallet (select manually)</strong><p>Select which assigned wallet should be debited for this Job Application.</p><label>Processing Wallet<select data-field="processing_wallet_id" data-i="'+index+'"><option value="">Select processing wallet</option>'+opts+'</select></label><small>Debit amount: '+money(debit)+'</small></div>';
+}
 async function setBillingRows(n){
   const {data:rules}=await supabase.from("service_wallet_rules").select("service_id,wallet_id,wallet_slot,debit_config").order("wallet_slot");
   billingWalletRules={};(rules||[]).forEach(x=>(billingWalletRules[x.service_id]??=[]).push(x));
@@ -930,8 +951,9 @@ async function setBillingRows(n){
   billingRows=Array.from({length:n},(_,i)=>billingRows[i]||({service_id:"",base:"",charge:"",cost:"",bank:"",quantity:1,unit_count:"",print_type:"single_side",sets:1,item_label:"",discount:0,wallet_debits:[],bill_count:1,bill_amounts:[""]}));
   $("billing-rows").innerHTML=billingRows.map((r,i)=>{
     const serviceOptions=services.filter(s=>s.is_active).map(s=>'<option value="'+s.id+'" '+(s.id===r.service_id?"selected":"")+'>'+escapeHtml(s.name)+'</option>').join("");
-    const svc=services.find(s=>s.id===r.service_id),special=isPaperPageService(svc),alloc=automaticWalletDebits(r,svc);
+    const svc=services.find(s=>s.id===r.service_id),special=isPaperPageService(svc),alloc=walletDebitsForRow(r,svc);
     const pages=Number(r.unit_count||0)*Math.max(1,Number(r.sets||1)),count=svc?.code==="PRINTOUT"&&r.print_type==="both_side"?Math.ceil(pages/2):pages,rate=paperPageRate(r,svc,count);
+    const manualWalletHtml=manualJobApplicationWalletHtml(r,svc,i);
     const walletOptionsHtml=(billingWalletRules[r.service_id]||[]).map(rule=>{
       const wallet=walletOptions.find(x=>x.id===rule.wallet_id),debit=alloc.find(x=>x.wallet_id===rule.wallet_id);
       return wallet?'<div class="wallet-choice"><span>'+escapeHtml(wallet.name)+' <small>Balance '+money(wallet.current_balance)+' · Auto debit '+money(debit?.amount||0)+'</small></span></div>':"";
@@ -947,7 +969,7 @@ async function setBillingRows(n){
       : isCreditCard
         ? '<label>Transfer amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0.01" step="0.01" value="'+escapeHtml(r.base||"")+'" placeholder="Enter amount"></label><label>Service charge (%)<input data-field="charge_percent" data-i="'+i+'" type="number" min="0.01" max="100" step="0.01" value="'+escapeHtml(r.charge_percent??svc.billing_config?.charge_percent??2)+'"></label><label>Service wallet<select data-field="credit_wallet_id" data-i="'+i+'"><option value="">Select wallet</option>'+ccWalletIds.map(id=>{const w=walletOptions.find(x=>x.id===id&&x.is_active);return w?'<option value="'+w.id+'" '+(r.credit_wallet_id===w.id?"selected":"")+'>'+escapeHtml(w.name)+' · '+money(w.current_balance)+'</option>':"";}).join("")+'</select></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label>'
         : '<label>Bill / Transfer Amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.base)+'"></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label><label>Service charge (₹)<input data-field="charge" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.charge||"")+'"></label><label class="bank-field">Bank (AEPS)<input data-field="bank" data-i="'+i+'" value="'+escapeHtml(r.bank)+'" placeholder="Bank name"></label><label>Manual processing cost (₹)<input data-field="cost" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.cost)+'"></label>';
-    return '<div class="billing-row" data-row="'+i+'"><div class="billing-row-head"><strong>Item '+(i+1)+'</strong><span class="billing-row-total" id="row-total-'+i+'">₹0.00</span></div><div class="billing-row-fields"><label>Service<div class="service-picker" data-service-picker="'+i+'"><input type="search" data-service-search="'+i+'" value="'+escapeHtml(svc?.name||"")+'" placeholder="Type one letter or service name…" autocomplete="off"><div class="service-picker-options hidden" id="service-picker-options-'+i+'"></div></div></label>'+serviceFields+'</div><div class="wallet-map-box"><strong>Processing wallet (automatic)</strong><p>Wallet and debit amount are taken from Admin service settings.</p><div class="wallet-choice-grid" id="wallet-auto-'+i+'">'+walletOptionsHtml+'</div></div><div class="billing-row-result" id="row-result-'+i+'">Service Charge: ₹0.00</div></div>';
+    return '<div class="billing-row" data-row="'+i+'"><div class="billing-row-head"><strong>Item '+(i+1)+'</strong><span class="billing-row-total" id="row-total-'+i+'">₹0.00</span></div><div class="billing-row-fields"><label>Service<div class="service-picker" data-service-picker="'+i+'"><input type="search" data-service-search="'+i+'" value="'+escapeHtml(svc?.name||"")+'" placeholder="Type one letter or service name…" autocomplete="off"><div class="service-picker-options hidden" id="service-picker-options-'+i+'"></div></div></label>'+serviceFields+'</div>'+(manualWalletHtml||('<div class="wallet-map-box"><strong>Processing wallet (automatic)</strong><p>Wallet and debit amount are taken from Admin service settings.</p><div class="wallet-choice-grid" id="wallet-auto-'+i+'">'+walletOptionsHtml+'</div></div>'))+'<div class="billing-row-result" id="row-result-'+i+'">Service Charge: ₹0.00</div></div>';
   }).join("");
   $("billing-rows").querySelectorAll("[data-field]").forEach(el=>{
     if(el.dataset.field==="bill_count")el.addEventListener("change",onBillingRowChange);
@@ -962,7 +984,7 @@ async function setBillingRows(n){
   $("billing-rows").onclick=e=>{
     const btn=e.target.closest("[data-service-option]");if(!btn)return;
     const idx=Number(btn.dataset.rowIndex),svc=services.find(s=>s.id===btn.dataset.serviceOption);if(!svc)return;
-    billingRows[idx].service_id=svc.id;billingRows[idx].base=svc.billing_config?.base_amount??"";billingRows[idx].charge=svc.billing_config?.customer_charge??"";billingRows[idx].cost=svc.processing_cost_config?.fixed_amount??"";billingRows[idx].charge_percent=svc.billing_config?.charge_percent??2;billingRows[idx].credit_wallet_id="";billingRows[idx].quantity=1;billingRows[idx].unit_count="";billingRows[idx].print_type="single_side";billingRows[idx].sets=1;billingRows[idx].item_label="";billingRows[idx].discount=0;billingRows[idx].wallet_debits=[];billingRows[idx].bill_count=1;billingRows[idx].bill_amounts=[""];
+    billingRows[idx].service_id=svc.id;billingRows[idx].base=svc.billing_config?.base_amount??"";billingRows[idx].charge=svc.billing_config?.customer_charge??"";billingRows[idx].cost=svc.processing_cost_config?.fixed_amount??"";billingRows[idx].charge_percent=svc.billing_config?.charge_percent??2;billingRows[idx].credit_wallet_id="";billingRows[idx].processing_wallet_id="";billingRows[idx].quantity=1;billingRows[idx].unit_count="";billingRows[idx].print_type="single_side";billingRows[idx].sets=1;billingRows[idx].item_label="";billingRows[idx].discount=0;billingRows[idx].wallet_debits=[];billingRows[idx].bill_count=1;billingRows[idx].bill_amounts=[""];
     setBillingRows(billingRows.length);
   };
   updateBillingTotals();
@@ -988,6 +1010,7 @@ function onBillingRowChange(e){
     billingRows[i].cost=svc?.processing_cost_config?.fixed_amount??"";
     billingRows[i].charge_percent=svc?.billing_config?.charge_percent??2;
     billingRows[i].credit_wallet_id="";
+    billingRows[i].processing_wallet_id="";
     billingRows[i].quantity=1;billingRows[i].unit_count="";billingRows[i].print_type="single_side";billingRows[i].sets=1;billingRows[i].item_label="";billingRows[i].discount=0;billingRows[i].wallet_debits=[];billingRows[i].bill_count=1;billingRows[i].bill_amounts=[""];
     setBillingRows(billingRows.length);return;
   }
@@ -998,7 +1021,7 @@ function onBillingWalletChange(){}
 function updateBillingTotals(){
   let base=0,charges=0,costs=0,total=0;
   billingRows.forEach((r,i)=>{
-    const svc=services.find(s=>s.id===r.service_id),isCurrentBills=svc?.code==="CURRENT_BILLS",special=isPaperPageService(svc),alloc=automaticWalletDebits(r,svc),t=$("row-total-"+i),res=$("row-result-"+i),walletBox=$("wallet-auto-"+i);
+    const svc=services.find(s=>s.id===r.service_id),isCurrentBills=svc?.code==="CURRENT_BILLS",special=isPaperPageService(svc),alloc=walletDebitsForRow(r,svc),t=$("row-total-"+i),res=$("row-result-"+i),walletBox=$("wallet-auto-"+i);
     const currentCalcs=isCurrentBills?(r.bill_amounts||[]).map(amount=>calculateBillingRow({...r,base:amount})):null;
     if(isCurrentBills)currentCalcs.forEach((x,j)=>{const charge=$("[data-current-charge='"+i+"-"+j+"']"),lineTotal=$("[data-current-total='"+i+"-"+j+"']");if(charge)charge.textContent=money(x.charge);if(lineTotal)lineTotal.textContent=money(x.total);});
     const calc=isCurrentBills?{charge:currentCalcs.reduce((a,x)=>a+x.charge,0),cost:currentCalcs.reduce((a,x)=>a+x.cost,0),profit:currentCalcs.reduce((a,x)=>a+x.profit,0),total:currentCalcs.reduce((a,x)=>a+x.total,0)}:calculateBillingRow(r);
@@ -1034,13 +1057,18 @@ async function saveQuickBilling(){
       if(!r.service_id&&!Number(r.base||0)&&!Number(r.unit_count||0))continue;
       if(!r.service_id||Number(r.base||0)<0)throw new Error("Every entered row needs a service and valid count or bill amount.");
       const svc=services.find(s=>s.id===r.service_id),special=isPaperPageService(svc);
-      const wallet_debits=automaticWalletDebits(r,svc);
+      const wallet_debits=walletDebitsForRow(r,svc);
+      if(isManualJobApplicationWalletService(svc)){
+        if(!(billingWalletRules[r.service_id]||[]).length)throw new Error("Admin must assign one or more allowed processing wallets in Admin Services for Job Application.");
+        if(!r.processing_wallet_id)throw new Error("Select the processing wallet for Job Application.");
+        if(!wallet_debits.length)throw new Error("Enter a valid processing cost and select its wallet for Job Application.");
+      }
       if(svc.code==="CURRENT_BILLS"&&Number(r.base)>=10&&!(billingWalletRules[r.service_id]||[]).length)throw new Error("Admin must assign a processing wallet to Current Bills.");
       if(svc.code==="CREDIT_CARD_BANK"){
         if(!(billingCreditWalletRules[r.service_id]||[]).includes(r.credit_wallet_id))throw new Error("Select a service wallet assigned by Admin for Credit Card service.");
         if(!(Number(r.base)>0)||!(Number(r.charge_percent)>0)||Number(r.charge_percent)>100)throw new Error("Enter a valid transfer amount and percentage (0.01–100).");
       }
-      if(svc.code!=="CREDIT_CARD_BANK"&&(billingWalletRules[r.service_id]||[]).length&&!wallet_debits.length)throw new Error("Set processing wallet debit amounts in Admin Services for "+svc.name);
+      if(svc.code!=="CREDIT_CARD_BANK"&&!isManualJobApplicationWalletService(svc)&&(billingWalletRules[r.service_id]||[]).length&&!wallet_debits.length)throw new Error("Set processing wallet debit amounts in Admin Services for "+svc.name);
       if(wallet_debits.some(x=>!Number.isFinite(Number(x.amount))||Number(x.amount)<=0))throw new Error("Invalid automatic wallet debit amount.");
       r.wallet_debits=wallet_debits;
       const calc=calculateBillingRow(r);
