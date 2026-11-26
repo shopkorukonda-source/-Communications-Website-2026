@@ -987,10 +987,11 @@ function updateBillingTotals(){
     if(res)res.textContent=isCurrentBills?"Bills: "+(r.bill_amounts||[]).filter(x=>Number(x)>0).length+" · Service charges: "+money(calc.charge)+" · Customer total: "+money(calc.total)+(currentProfile?.role==="admin"?" · Profit: "+money(calc.profit):""):currentProfile?.role==="admin"?"Gross: "+money(calc.gross??calc.charge)+" · Discount: "+money(calc.discount||0)+" · Processing Cost: "+money(calc.cost)+" · Profit: "+money(calc.profit)+" · Wallet debit: "+money(alloc.reduce((a,x)=>a+x.amount,0)):"Amount: "+money(calc.total)+(special?" · "+(svc.code==="PRINTOUT"?Number(r.unit_count||0)*Number(r.sets||1)+" pages · "+calc.count+" papers":calc.count+" papers"):"");
   });
   $("billing-totals").innerHTML='<div><small>Gross / base</small><strong>'+money(base+charges)+'</strong></div><div><small>Service charges</small><strong>'+money(charges)+'</strong></div><div><small>Customer total</small><strong>'+money(total)+'</strong></div>';
-  const received=Number($("bill-received").value||0);
+  const received=Number($("bill-received").value||0),selected=billingRows.map(r=>services.find(s=>s.id===r.service_id)).filter(Boolean),ccOnly=selected.length>0&&selected.length===billingRows.filter(r=>r.service_id).length&&selected.every(s=>s.code==="CREDIT_CARD_BANK");
   const balance=Math.max(0,total-received),change=Math.max(0,received-total),status=$("bill-change");
   status.classList.remove("payment-short","payment-exact","payment-change");
-  if(received<total){status.classList.add("payment-short");status.textContent="BALANCE TO COLLECT  ·  "+money(balance);}
+  if(ccOnly){status.classList.add("payment-exact");status.textContent="NO CASH / UPI COLLECTION · Transfer amount will be credited to selected wallet.";}
+  else if(received<total){status.classList.add("payment-short");status.textContent="BALANCE TO COLLECT  ·  "+money(balance);}
   else if(received===total){status.classList.add("payment-exact");status.textContent="PAYMENT SETTLED  ·  "+money(0);}
   else{status.classList.add("payment-change");status.textContent="RETURN TO CUSTOMER  ·  "+money(change);}
 }
@@ -1035,11 +1036,13 @@ async function saveQuickBilling(){
       customerTotal+=price*quantity;processingTotal+=calc.cost*quantity;profitTotal+=calc.profit*quantity;
     }
     if(!items.length)throw new Error("Enter at least one bill.");
-    const mode=$("bill-mode").value,received=Number($("bill-received").value||0);
-    const cash=mode==="upi"?0:mode==="cash"?received:Number($("bill-cash").value||0);
-    const upi=mode==="cash"?0:mode==="upi"?received:Number($("bill-upi").value||0);
-    if(received<customerTotal)throw new Error("Amount received must be equal to or greater than customer total.");
-    if(mode==="split"&&Math.abs(cash+upi-received)>0.009)throw new Error("Cash + UPI must equal amount received.");
+    const mode=$("bill-mode").value,ccOnly=items.length>0&&items.every(x=>services.find(s=>s.id===x.service_id)?.code==="CREDIT_CARD_BANK");
+    const received=ccOnly?0:Number($("bill-received").value||0);
+    const cash=ccOnly?0:mode==="upi"?0:mode==="cash"?received:Number($("bill-cash").value||0);
+    const upi=ccOnly?0:mode==="cash"?0:mode==="upi"?received:Number($("bill-upi").value||0);
+    if(items.some(x=>services.find(s=>s.id===x.service_id)?.code==="CREDIT_CARD_BANK")&&!ccOnly)throw new Error("Credit Card to Bank Transfer must be billed separately from other services.");
+    if(!ccOnly&&received<customerTotal)throw new Error("Amount received must be equal to or greater than customer total.");
+    if(!ccOnly&&mode==="split"&&Math.abs(cash+upi-received)>0.009)throw new Error("Cash + UPI must equal amount received.");
     let activeDrawerId=null;if(currentProfile?.role==="employee"&&currentEmployee){const activeSession=await supabase.from("drawer_sessions").select("drawer_id").eq("employee_id",currentEmployee.id).eq("status","open").order("opened_at",{ascending:false}).limit(1).maybeSingle();if(activeSession.error)throw activeSession.error;activeDrawerId=activeSession.data?.drawer_id||null;}
     const payload={drawer_id:activeDrawerId,customer_name:$("bill-customer").value.trim()||null,customer_phone:$("bill-phone").value.trim()||null,payment_mode:mode,customer_total:customerTotal,amount_received:received,cash_received:cash,upi_received:upi,items};
     const {data,error}=await supabase.rpc("create_bill",{payload});
