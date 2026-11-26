@@ -823,7 +823,7 @@ async function renderQuickBilling(){
 }
 function automaticWalletDebits(row,svc){
   if(svc?.code==="UPI_TO_CASH")return [];
-  if(svc?.code==="CURRENT_BILLS"){const rule=(billingWalletRules[row.service_id]||[]).find(x=>x.wallet_id===row.current_bills_wallet_id);if(!rule)return [];const amount=Number(row.base||0),processing=currentBillsProcessingCost(amount,svc,rule);return amount>0?[{wallet_id:rule.wallet_id,amount:amount+processing}]:[];}
+  if(svc?.code==="CURRENT_BILLS"){const rule=(billingWalletRules[row.service_id]||[]).find(x=>x.wallet_id===row.current_bills_wallet_id);if(!rule)return [];const amount=Number(row.base||row.bill_amounts?.find(v=>Number(v)>0)||0),processing=currentBillsProcessingCost(amount,svc,rule);return amount>0?[{wallet_id:rule.wallet_id,amount:amount+processing}]:[];}
   const rules=billingWalletRules[row.service_id]||[];
   if(!rules.length)return [];
   const amount=Number(row.base||0),processingCost=Number(row.cost||svc?.processing_cost_config?.fixed_amount||0);
