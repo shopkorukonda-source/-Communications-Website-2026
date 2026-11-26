@@ -850,12 +850,12 @@ async function setBillingRows(n){
   const {data:rules}=await supabase.from("service_wallet_rules").select("service_id,wallet_id,wallet_slot,debit_config").order("wallet_slot");
   billingWalletRules={};(rules||[]).forEach(x=>(billingWalletRules[x.service_id]??=[]).push(x));
   const {data:profitRules,error:profitRulesError}=await supabase.from("service_profit_wallet_rules").select("service_id,wallet_id").order("wallet_id");
-  if(profitRulesError)throw profitRulesError;
+  if(profitRulesError){console.warn("Optional service profit-wallet rules could not be loaded; continuing Quick Billing.",profitRulesError);}
   billingProfitWalletRules={};(profitRules||[]).forEach(x=>(billingProfitWalletRules[x.service_id]??=[]).push(x.wallet_id));
   billingRows=Array.from({length:n},(_,i)=>billingRows[i]||({service_id:"",base:"",charge:"",cost:"",bank:"",quantity:1,unit_count:"",sets:1,item_label:"",discount:0,wallet_debits:[],bill_count:1,bill_amounts:[""]}));
   $("billing-rows").innerHTML=billingRows.map((r,i)=>{
     const serviceOptions=services.filter(s=>s.is_active).map(s=>'<option value="'+s.id+'" '+(s.id===r.service_id?"selected":"")+'>'+escapeHtml(s.name)+'</option>').join("");
-    const svc=services.find(s=>s.id===r.service_id),special=isPaperPageService(svc),alloc=automaticWalletDebits(r,svc);
+    const svc=services.find(s=>s.id===r.service_id)||{},special=isPaperPageService(svc),alloc=automaticWalletDebits(r,svc);
     const count=Number(r.unit_count||0)*Math.max(1,Number(r.sets||1)),rate=paperPageRate(r,svc,count);
     const walletOptionsHtml=(billingWalletRules[r.service_id]||[]).map(rule=>{
       const wallet=walletOptions.find(x=>x.id===rule.wallet_id),debit=alloc.find(x=>x.wallet_id===rule.wallet_id);
