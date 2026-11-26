@@ -334,7 +334,7 @@ export async function renderOperations(view, ctx) {
       const d=$("op-set-date").value;
       const [tx,ex]=await Promise.all([
         supabase.from("billing_transactions").select("customer_total,processing_total,profit_total").eq("business_date",d),
-        supabase.from("expenses").select("amount").eq("expense_date",d)
+        supabase.from("expenses").select("amount").eq("business_date",d)
       ]);
       if(tx.error||ex.error){$("op-set-msg").textContent=(tx.error||ex.error).message;return;}
       const prior=await supabase.from("night_settlements").select("id").eq("settlement_date",d).maybeSingle();
