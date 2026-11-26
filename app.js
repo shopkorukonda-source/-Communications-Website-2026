@@ -520,6 +520,11 @@ async function saveService(event){
 }
 async function toggleService(id){
   const s=services.find(x=>x.id===id);if(!s)return;
+  if(!s.is_active){
+    if(s.billing_type==="slabs"&&!(s.billing_config?.slabs||[]).length){alert("Add customer charge slabs before activating this service.");return;}
+    if(s.processing_cost_type==="slabs"&&!(s.processing_cost_config?.slabs||[]).length){alert("Add processing cost slabs before activating this service.");return;}
+    if(s.profit_mode==="slabs"&&!(s.profit_config?.slabs||[]).length){alert("Add profit slabs before activating this service.");return;}
+  }
   const {error}=await supabase.from("services").update({is_active:!s.is_active,updated_at:new Date().toISOString()}).eq("id",id);
   if(error){alert(error.message);return;}
   await loadCatalog();await renderServiceManager();
