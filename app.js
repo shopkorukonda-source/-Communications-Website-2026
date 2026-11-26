@@ -1193,10 +1193,13 @@ async function saveQuickBilling(){
       const svc=services.find(s=>s.id===r.service_id),special=isPaperPageService(svc);
       const wallet_debits=walletDebitsForRow(r,svc);
       if(isManualProcessingWalletService(svc)){
-        if(!(billingWalletRules[r.service_id]||[]).length)throw new Error("Admin must assign one or more processing wallets in Admin Services for "+svc.name+".");
-        if(!r.processing_wallet_id)throw new Error("Select the transaction wallet for "+svc.name+".");
-        if(!(billingWalletRules[r.service_id]||[]).some(x=>x.wallet_id===r.processing_wallet_id))throw new Error("Selected wallet is not assigned to "+svc.name+".");
-        if(!wallet_debits.length)throw new Error("Selected wallet debit must be greater than zero. Check the processing cost and wallet debit rule for "+svc.name+".");
+        const zeroCostAeps=svc.code==="AEPS_WITHDRAWAL"&&serviceProcessingCost(Number(r.base||0),svc,r)===0;
+        if(!zeroCostAeps){
+          if(!(billingWalletRules[r.service_id]||[]).length)throw new Error("Admin must assign one or more processing wallets in Admin Services for "+svc.name+".");
+          if(!r.processing_wallet_id)throw new Error("Select the transaction wallet for "+svc.name+".");
+          if(!(billingWalletRules[r.service_id]||[]).some(x=>x.wallet_id===r.processing_wallet_id))throw new Error("Selected wallet is not assigned to "+svc.name+".");
+          if(!wallet_debits.length)throw new Error("Selected wallet debit must be greater than zero. Check the processing cost and wallet debit rule for "+svc.name+".");
+        }
       }
       if(svc.code==="CURRENT_BILLS"&&Number(r.base)>=10&&!(billingWalletRules[r.service_id]||[]).length)throw new Error("Admin must assign a processing wallet to Current Bills.");
       if(svc.code==="CREDIT_CARD_BANK"){
@@ -1322,9 +1325,10 @@ async function loadBillIntoQuickBilling(id){
     $("bill-customer").value=bill.customer_name||"";
     $("bill-phone").value=bill.customer_phone||"";
     $("bill-mode").value=bill.payment_mode||"cash";
-    $("bill-received").value=String(bill.amount_received||0);
-    $("bill-cash").value=String(bill.cash_received||0);
-    $("bill-upi").value=String(bill.upi_received||0);
+    const oldExtra=bill.cash_adjustment_type==="extra"?Number(bill.cash_adjustment_amount||0):0;
+    $("bill-received").value=String(Math.max(0,Number(bill.amount_received||0)-oldExtra));
+    $("bill-cash").value=String(Math.max(0,Number(bill.cash_received||0)-(bill.cash_adjustment_type==="extra"&&bill.cash_adjustment_mode==="cash"?oldExtra:0)));
+    $("bill-upi").value=String(Math.max(0,Number(bill.upi_received||0)-(bill.cash_adjustment_type==="extra"&&bill.cash_adjustment_mode==="upi"?oldExtra:0)));
     await setBillingRows(loadedRows.length);
     $("billing-message").textContent="Editing Bill #"+(bill.bill_number||"")+" · Change the details below and click Update Bill.";
     $("save-billing").textContent="Update Bill #"+(bill.bill_number||"");
