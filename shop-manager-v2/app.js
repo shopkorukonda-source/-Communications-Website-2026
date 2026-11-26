@@ -865,13 +865,16 @@ async function setBillingRows(n){
     const ccWalletIds=billingProfitWalletRules[r.service_id]||[];
     const isCurrentBills=svc?.code==="CURRENT_BILLS";
     const billAmounts=Array.isArray(r.bill_amounts)?r.bill_amounts:[];
+    const isCashTransfer=["CASH_TO_UPI","UPI_TO_CASH"].includes(svc?.code);
     const serviceFields=isCurrentBills
       ? '<label>Number of current bills<input data-field="bill_count" data-i="'+i+'" type="number" min="1" max="100" step="1" value="'+Math.max(1,Number(r.bill_count||billAmounts.length||1))+'"></label><div class="current-bills-grid-wrap"><table class="current-bills-grid"><thead><tr><th>#</th><th>Bill amount (₹)</th><th>Service charge (₹)</th><th>Customer total (₹)</th></tr></thead><tbody>'+Array.from({length:Math.max(1,Number(r.bill_count||billAmounts.length||1))},(_,j)=>{const amount=Number(billAmounts[j]||0),calc=calculateBillingRow({...r,base:amount});return '<tr><td>'+(j+1)+'</td><td><input data-field="bill_amount" data-i="'+i+'" data-j="'+j+'" type="number" min="0" step="0.01" value="'+(billAmounts[j]??"")+'" placeholder="Enter bill amount"></td><td><span data-current-charge="'+i+'-'+j+'">'+money(calc.charge)+'</span></td><td><strong data-current-total="'+i+'-'+j+'">'+money(calc.total)+'</strong></td></tr>';}).join("")+'</tbody></table></div>'
       : special
       ? '<label>Book / PDF name (optional)<input data-field="item_label" data-i="'+i+'" value="'+escapeHtml(r.item_label||"")+'" placeholder="Book 1 / PDF 1"></label><label>'+(svc.code==="PRINTOUT"?"PDF pages":"Xerox papers")+'<input data-field="unit_count" data-i="'+i+'" type="number" min="1" step="1" value="'+escapeHtml(r.unit_count||"")+'" placeholder="Enter count"></label><label>Number of sets<input data-field="sets" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.sets||1)+'"></label><label>Admin fixed rate (automatic)<input type="text" readonly value="'+money(rate)+' / '+(svc.code==="PRINTOUT"?"page":"paper")+'"></label><label>Discount (₹)<input data-field="discount" data-i="'+i+'" type="number" min="0" step="0.01" value="'+Number(r.discount||0)+'" placeholder="Optional"></label>'
       : isCreditCard
         ? '<label>Transfer amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0.01" step="0.01" value="'+escapeHtml(r.base||"")+'" placeholder="Enter amount"></label><label>Service charge (%)<input data-field="charge_percent" data-i="'+i+'" type="number" min="0.01" max="100" step="0.01" value="'+escapeHtml(r.charge_percent??svc.billing_config?.charge_percent??2)+'"></label><label>Profit wallet<select data-field="profit_wallet_id" data-i="'+i+'"><option value="">Select wallet</option>'+ccWalletIds.map(id=>{const w=walletOptions.find(x=>x.id===id&&x.is_active);return w?'<option value="'+w.id+'" '+(r.profit_wallet_id===w.id?"selected":"")+'>'+escapeHtml(w.name)+' · '+money(w.current_balance)+'</option>':"";}).join("")+'</select></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label>'
-        : '<label>Bill / Transfer Amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.base)+'"></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label><label>Service charge (₹)<input data-field="charge" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.charge||"")+'"></label><label class="bank-field">Bank (AEPS)<input data-field="bank" data-i="'+i+'" value="'+escapeHtml(r.bank)+'" placeholder="Bank name"></label><label>Manual processing cost (₹)<input data-field="cost" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.cost)+'"></label>';
+        : isCashTransfer
+          ? '<label>Amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.base)+'" placeholder="Enter transfer amount"></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label><label>Adjustment Type<select data-field="adjustment_type" data-i="'+i+'"><option value="">No adjustment</option><option value="deduct" '+(r.adjustment_type==="deduct"?"selected":"")+'>Amount Deduct</option><option value="extra" '+(r.adjustment_type==="extra"?"selected":"")+'>Amount Extra</option></select></label><label>Adjustment Amount (₹)<input data-field="adjustment_amount" data-i="'+i+'" type="number" min="0" step="0.01" value="'+Number(r.adjustment_amount||0)+'" placeholder="0.00"></label>'+(r.adjustment_type==="extra"?(svc.code==="UPI_TO_CASH"?'<small>Extra amount will be collected in Cash.</small>':'<label>Extra Payment Mode<select data-field="adjustment_mode" data-i="'+i+'"><option value="cash" '+((r.adjustment_mode||"cash")==="cash"?"selected":"")+'>Cash</option><option value="upi" '+(r.adjustment_mode==="upi"?"selected":"")+'>UPI</option></select></label>'):"")
+          : '<label>Bill / Transfer Amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.base)+'"></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label><label>Service charge (₹)<input data-field="charge" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.charge||"")+'"></label><label class="bank-field">Bank (AEPS)<input data-field="bank" data-i="'+i+'" value="'+escapeHtml(r.bank)+'" placeholder="Bank name"></label><label>Manual processing cost (₹)<input data-field="cost" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.cost)+'"></label>';
     return '<div class="billing-row" data-row="'+i+'"><div class="billing-row-head"><strong>Item '+(i+1)+'</strong><span class="billing-row-total" id="row-total-'+i+'">₹0.00</span></div><div class="billing-row-fields"><label>Service<div class="service-picker" data-service-picker="'+i+'"><input type="search" data-service-search="'+i+'" value="'+escapeHtml(svc?.name||"")+'" placeholder="Type one letter or service name…" autocomplete="off"><div class="service-picker-options hidden" id="service-picker-options-'+i+'"></div></div></label>'+serviceFields+'</div><div class="wallet-map-box"><strong>Processing wallet (automatic)</strong><p>Wallet and debit amount are taken from Admin service settings.</p><div class="wallet-choice-grid" id="wallet-auto-'+i+'">'+walletOptionsHtml+'</div></div><div class="billing-row-result" id="row-result-'+i+'">Service Charge: ₹0.00</div></div>';
   }).join("");
   $("billing-rows").querySelectorAll("[data-field]").forEach(el=>{
@@ -906,6 +909,10 @@ function onBillingRowChange(e){
     setBillingRows(billingRows.length);return;
   }
   billingRows[i][field]=e.target.value;
+  if(field==="adjustment_type"){
+    if(e.target.value==="extra"&&!billingRows[i].adjustment_mode)billingRows[i].adjustment_mode="cash";
+    setBillingRows(billingRows.length);return;
+  }
   if(field==="service_id"){
     const svc=services.find(s=>s.id===e.target.value);
     billingRows[i].base=svc?.billing_config?.base_amount??"";
@@ -913,7 +920,7 @@ function onBillingRowChange(e){
     billingRows[i].cost=svc?.processing_cost_config?.fixed_amount??"";
     billingRows[i].charge_percent=svc?.billing_config?.charge_percent??2;
     billingRows[i].profit_wallet_id="";
-    billingRows[i].quantity=1;billingRows[i].unit_count="";billingRows[i].sets=1;billingRows[i].item_label="";billingRows[i].discount=0;billingRows[i].wallet_debits=[];billingRows[i].bill_count=1;billingRows[i].bill_amounts=[""];
+    billingRows[i].quantity=1;billingRows[i].unit_count="";billingRows[i].sets=1;billingRows[i].item_label="";billingRows[i].discount=0;billingRows[i].wallet_debits=[];billingRows[i].bill_count=1;billingRows[i].bill_amounts=[""];billingRows[i].adjustment_type="";billingRows[i].adjustment_amount=0;billingRows[i].adjustment_mode="cash";
     setBillingRows(billingRows.length);return;
   }
   updateBillingTotals();
@@ -927,8 +934,9 @@ function updateBillingTotals(){
     const currentCalcs=isCurrentBills?(r.bill_amounts||[]).map(amount=>calculateBillingRow({...r,base:amount})):null;
     if(isCurrentBills)currentCalcs.forEach((x,j)=>{const charge=$("[data-current-charge='"+i+"-"+j+"']"),lineTotal=$("[data-current-total='"+i+"-"+j+"']");if(charge)charge.textContent=money(x.charge);if(lineTotal)lineTotal.textContent=money(x.total);});
     const calc=isCurrentBills?{charge:currentCalcs.reduce((a,x)=>a+x.charge,0),cost:currentCalcs.reduce((a,x)=>a+x.cost,0),profit:currentCalcs.reduce((a,x)=>a+x.profit,0),total:currentCalcs.reduce((a,x)=>a+x.total,0)}:calculateBillingRow(r);
-    base+=isCurrentBills?(r.bill_amounts||[]).reduce((a,x)=>a+Number(x||0),0):Number(r.base||0);charges+=calc.charge;costs+=calc.cost;total+=calc.total;
-    if(t)t.textContent=""+money(calc.total);
+    const adjustmentExtra=isCashTransfer&&r.adjustment_type==="extra"?Math.max(0,Number(r.adjustment_amount||0)):0;
+    base+=isCurrentBills?(r.bill_amounts||[]).reduce((a,x)=>a+Number(x||0),0):Number(r.base||0);charges+=calc.charge;costs+=calc.cost;total+=calc.total+adjustmentExtra;
+    if(t)t.textContent=""+money(calc.total+adjustmentExtra);
     if(walletBox)walletBox.innerHTML=(billingWalletRules[r.service_id]||[]).map(rule=>{const wallet=walletOptions.find(x=>x.id===rule.wallet_id),debit=alloc.find(x=>x.wallet_id===rule.wallet_id);return wallet?'<div class="wallet-choice"><span>'+escapeHtml(wallet.name)+' <small>Balance '+money(wallet.current_balance)+' · Auto debit '+money(debit?.amount||0)+'</small></span></div>':"";}).join("")||"<small>No processing wallet configured for this service.</small>";
     if(res)res.textContent=isCurrentBills?"Bills: "+(r.bill_amounts||[]).filter(x=>Number(x)>0).length+" · Service charges: "+money(calc.charge)+" · Customer total: "+money(calc.total)+(currentProfile?.role==="admin"?" · Profit: "+money(calc.profit):""):currentProfile?.role==="admin"?"Gross: "+money(calc.gross??calc.charge)+" · Discount: "+money(calc.discount||0)+" · Processing Cost: "+money(calc.cost)+" · Profit: "+money(calc.profit)+" · Wallet debit: "+money(alloc.reduce((a,x)=>a+x.amount,0)):"Amount: "+money(calc.total)+(special?" · "+calc.count+" "+(svc.code==="PRINTOUT"?"pages":"papers"):"");
   });
@@ -982,15 +990,22 @@ async function saveQuickBilling(){
       customerTotal+=price*quantity;processingTotal+=calc.cost*quantity;profitTotal+=calc.profit*quantity;
     }
     if(!items.length)throw new Error("Enter at least one bill.");
-    const mode=$("bill-mode").value,received=Number($("bill-received").value||0);
-    const cash=mode==="upi"?0:mode==="cash"?received:Number($("bill-cash").value||0);
-    const upi=mode==="cash"?0:mode==="upi"?received:Number($("bill-upi").value||0);
-    if(received<customerTotal)throw new Error("Amount received must be equal to or greater than customer total.");
-    if(mode==="split"&&Math.abs(cash+upi-received)>0.009)throw new Error("Cash + UPI must equal amount received.");
+    const adjustmentRows=expandedBillingRows.filter(r=>["UPI_TO_CASH","CASH_TO_UPI"].includes(services.find(s=>s.id===r.service_id)?.code));
+    if(adjustmentRows.length>1)throw new Error("Please bill one Cash to UPI / UPI to Cash service row at a time when using an adjustment.");
+    const adjustmentRow=adjustmentRows[0]||null,adjustmentServiceCode=services.find(s=>s.id===adjustmentRow?.service_id)?.code||null,adjustmentType=adjustmentRow?.adjustment_type||null,adjustmentAmount=Math.max(0,Number(adjustmentRow?.adjustment_amount||0)),adjustmentMode=adjustmentRow?.adjustment_mode||null;
+    if(adjustmentAmount>0&&!adjustmentType)throw new Error("Select Amount Deduct or Amount Extra.");
+    if(adjustmentType==="extra"&&adjustmentAmount>0&&adjustmentServiceCode==="CASH_TO_UPI"&&!["cash","upi"].includes(adjustmentMode))throw new Error("Select Cash or UPI for Amount Extra.");
+    const mode=$("bill-mode").value,enteredReceived=Number($("bill-received").value||0);
+    let cash=mode==="upi"?0:mode==="cash"?enteredReceived:Number($("bill-cash").value||0),upi=mode==="cash"?0:mode==="upi"?enteredReceived:Number($("bill-upi").value||0),finalMode=mode,received=mode==="split"?cash+upi:enteredReceived;
+    if(adjustmentType==="extra"&&adjustmentAmount>0){if(adjustmentServiceCode==="UPI_TO_CASH"||adjustmentMode==="cash")cash+=adjustmentAmount;else upi+=adjustmentAmount;received+=adjustmentAmount;if(cash>0&&upi>0)finalMode="split";else finalMode=cash>0?"cash":"upi";}
+    const customerTotalWithAdjustment=customerTotal+(adjustmentType==="extra"?adjustmentAmount:0);
+    if(received<customerTotalWithAdjustment)throw new Error("Amount received must be equal to or greater than customer total including extra amount.");
+    if(finalMode==="split"&&Math.abs(cash+upi-received)>0.009)throw new Error("Cash + UPI must equal amount received.");
     let activeDrawerId=null;if(currentProfile?.role==="employee"&&currentEmployee){const activeSession=await supabase.from("drawer_sessions").select("drawer_id").eq("employee_id",currentEmployee.id).eq("status","open").order("opened_at",{ascending:false}).limit(1).maybeSingle();if(activeSession.error)throw activeSession.error;activeDrawerId=activeSession.data?.drawer_id||null;}
-    const payload={drawer_id:activeDrawerId,customer_name:$("bill-customer").value.trim()||null,customer_phone:$("bill-phone").value.trim()||null,payment_mode:mode,customer_total:customerTotal,amount_received:received,cash_received:cash,upi_received:upi,items};
+    const payload={drawer_id:activeDrawerId,customer_name:$("bill-customer").value.trim()||null,customer_phone:$("bill-phone").value.trim()||null,payment_mode:finalMode,customer_total:customerTotalWithAdjustment,amount_received:received,cash_received:cash,upi_received:upi,items};
     const {data,error}=editingBillId?await supabase.rpc("update_bill_with_approval",{p_transaction_id:editingBillId,p_payload:{...payload,notes:null},p_edit_request_id:null}):await supabase.rpc("create_bill",{payload});
     if(error)throw error;
+    if(adjustmentRows.length){const adjustmentResult=await supabase.rpc("set_aeps_cash_adjustment",{p_transaction_id:data||editingBillId,p_adjustment_type:adjustmentType,p_amount:adjustmentAmount,p_mode:adjustmentMode});if(adjustmentResult.error)throw adjustmentResult.error;}
     msg.textContent=(editingBillId?"Bill updated successfully.":"Bills saved successfully.")+" Transaction ID: "+(data||editingBillId);editingBillId=null;$("save-billing").textContent="Save one bill with all services";
     $("bill-received").value="0";$("bill-cash").value="0";$("bill-upi").value="0";
     $("bill-customer").value="";$("bill-phone").value="";
