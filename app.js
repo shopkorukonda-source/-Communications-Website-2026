@@ -458,7 +458,11 @@ async function saveService(event){
     costConfig={...(existing?.processing_cost_config||{}),fixed_amount:toAmount("svc-cost-amount"),percentage:toAmount("svc-cost-percentage")};
     profitConfig={...(existing?.profit_config||{}),fixed_amount:toAmount("svc-profit-amount"),percentage:toAmount("svc-profit-percentage")};
   }catch(e){msg.textContent=e.message;return;}
-  const payload={category_id:$("svc-category").value,name:$("svc-name").value.trim(),code:$("svc-code").value.trim()||null,description:$("svc-description").value.trim()||null,billing_type:$("svc-billing").value,processing_cost_type:$("svc-cost").value,profit_mode:$("svc-profit").value,billing_config:billingConfig,processing_cost_config:costConfig,profit_config:profitConfig,is_active:$("svc-active").checked,updated_at:new Date().toISOString()};
+  const billingType=$("svc-billing").value,costType=$("svc-cost").value,profitMode=$("svc-profit").value;
+  if(billingType==="slabs"&&!Array.isArray(billingConfig.slabs))billingConfig.slabs=[{min:0,max:999999999,customer_charge:billingConfig.customer_charge}];
+  if(costType==="slabs"&&!Array.isArray(costConfig.slabs))costConfig.slabs=[{min:0,max:999999999,cost:costConfig.fixed_amount}];
+  if(profitMode==="slabs"&&!Array.isArray(profitConfig.slabs))profitConfig.slabs=[{min:0,max:999999999,profit:profitConfig.fixed_amount}];
+  const payload={category_id:$("svc-category").value,name:$("svc-name").value.trim(),code:$("svc-code").value.trim()||null,description:$("svc-description").value.trim()||null,billing_type:billingType,processing_cost_type:costType,profit_mode:profitMode,billing_config:billingConfig,processing_cost_config:costConfig,profit_config:profitConfig,is_active:$("svc-active").checked,updated_at:new Date().toISOString()};
   if(!payload.name){msg.textContent="Service name is required.";return;}
   btn.disabled=true;btn.textContent="Saving…";
   try{
