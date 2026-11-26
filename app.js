@@ -15,6 +15,9 @@ let currentProfile = null;
 let currentEmployee = null;
 let walletOptions = [];
 let editingServiceId = null;
+let walletRefreshChannel = null;
+let walletRefreshTimer = null;
+let walletRefreshInFlight = false;
 
 function setMessage(message, isError = true) {
   $("login-message").textContent = message;
@@ -68,6 +71,7 @@ async function showApp(user) {
     document.querySelector(".stat-card:nth-child(2) small").textContent = "Shop Cash wallet balance";
   }
   await loadCatalog();
+  startWalletAutoRefresh();
   if (profile.role === "employee") { await loadEmployeeAnnouncements(); await loadEmployeeTaskReminders(); }
 }
 
@@ -125,6 +129,43 @@ function renderEmployeeWallets(){
  const cashTotal=activeWallets.filter(w=>w.wallet_type==="cash").reduce((sum,w)=>sum+Number(w.current_balance||0),0);
  if(!walletOptions.length){host.innerHTML='<div class="announcement-heading"><div><div class="eyebrow">'+heading+'</div><h3>'+(isAdmin?"No active wallets created":"No wallets assigned")+'</h3></div></div>';return;}
  host.innerHTML='<div class="announcement-heading"><div><div class="eyebrow">'+heading+'</div><h3>'+title+'</h3></div></div>'+(isAdmin?'<div class="admin-module-stats"><div><small>Total balance · All wallets including cash</small><strong>'+money(walletTotal)+'</strong></div><div><small>Cash balance</small><strong>'+money(cashTotal)+'</strong></div><div><small>Non-cash wallets</small><strong>'+money(walletTotal-cashTotal)+'</strong></div></div>':'')+'<div class="employee-wallet-grid">'+activeWallets.map(w=>'<article class="employee-wallet-card"><div><strong>'+escapeHtml(w.name)+'</strong><small>'+escapeHtml(w.provider||w.wallet_type||"Wallet")+'</small></div><b>'+money(w.current_balance)+'</b></article>').join("")+'</div>';
+}
+async function refreshWalletBalances(){
+  if(walletRefreshInFlight || !currentProfile)return;
+  walletRefreshInFlight=true;
+  try{
+    let ids=null;
+    if(currentProfile.role!=="admin" && currentEmployee?.id){
+      const [{data:assigned,error:assignedError},{data:rules,error:rulesError}]=await Promise.all([
+        supabase.from("employee_wallet_access").select("wallet_id").eq("employee_id",currentEmployee.id).eq("is_active",true),
+        supabase.from("service_credit_wallet_rules").select("wallet_id")
+      ]);
+      if(assignedError)throw assignedError;if(rulesError)throw rulesError;
+      ids=[...new Set([...(assigned||[]).map(x=>x.wallet_id),...(rules||[]).map(x=>x.wallet_id)])];
+    }
+    let query=supabase.from("wallets").select("id,name,wallet_type,provider,current_balance,is_active,low_balance_threshold,low_balance_alert_enabled").order("name");
+    if(currentProfile.role!=="admin")query=ids?.length?query.in("id",ids):query.eq("id","00000000-0000-0000-0000-000000000000");
+    const {data,error}=await query;if(error)throw error;
+    walletOptions=data||[];renderEmployeeWallets();renderWalletAlerts();await loadOverviewStats();
+    if($("other-view")?.querySelector("#wallet-rows")){
+      renderWalletRows();
+      const updateOptions=id=>{const el=$(id);if(!el)return;const selected=el.value;el.innerHTML=walletOptions.filter(w=>w.is_active).map(w=>'<option value="'+w.id+'">'+escapeHtml(w.name)+' · '+money(w.current_balance)+'</option>').join("");if(walletOptions.some(w=>w.id===selected&&w.is_active))el.value=selected;};
+      updateOptions("load-wallet");updateOptions("withdraw-wallet");
+      const from=$("transfer-from")?.value,to=$("transfer-to")?.value;fillTransferWallets();if(from)$("transfer-from").value=from;if(to)$("transfer-to").value=to;
+    }
+    document.querySelectorAll("[data-wallet-balance]").forEach(el=>{const wallet=walletOptions.find(w=>w.id===el.dataset.walletBalance);if(wallet)el.textContent=money(wallet.current_balance);});
+  }catch(error){console.warn("Wallet balance refresh failed:",error);}
+  finally{walletRefreshInFlight=false;}
+}
+function startWalletAutoRefresh(){
+  if(walletRefreshChannel){supabase.removeChannel(walletRefreshChannel);walletRefreshChannel=null;}
+  if(walletRefreshTimer)clearInterval(walletRefreshTimer);
+  walletRefreshChannel=supabase.channel("slv-wallet-balances-live").on("postgres_changes",{event:"*",schema:"public",table:"wallets"},()=>refreshWalletBalances()).subscribe();
+  walletRefreshTimer=setInterval(()=>refreshWalletBalances(),10000);
+}
+function stopWalletAutoRefresh(){
+  if(walletRefreshChannel){supabase.removeChannel(walletRefreshChannel);walletRefreshChannel=null;}
+  if(walletRefreshTimer){clearInterval(walletRefreshTimer);walletRefreshTimer=null;}
 }
 function renderWalletAlerts(){
  const host=$("wallet-alerts");if(!host)return;
@@ -295,7 +336,7 @@ supabase.auth.onAuthStateChange((event,session)=>{
   }
 });
 
-$("signout-btn").addEventListener("click",async()=>{await supabase.auth.signOut();showLogin();});
+$("signout-btn").addEventListener("click",async()=>{stopWalletAutoRefresh();await supabase.auth.signOut();showLogin();});
 $("service-search").addEventListener("input",renderServices);
 document.querySelectorAll(".nav-item").forEach(btn=>btn.addEventListener("click",async()=>{
   if(currentProfile?.role!=="admin" && (btn.classList.contains("admin-only") || btn.dataset.view==="services")) return;
@@ -343,7 +384,7 @@ document.querySelectorAll(".nav-item").forEach(btn=>btn.addEventListener("click"
   } else if(view==="employees") {
     await renderEmployeeManager();
   } else if(["drawers","attendance","leave","payroll","incentives","ucl","walletaccess","tasks","inventory","expenses","settlement"].includes(view)) {
-    await renderOperations(view,{supabase,host:$("other-view"),profile:currentProfile,$});
+    await renderOperations(view,{supabase,host:$("other-view"),profile:currentProfile,$,refreshWalletBalances});
   } else {
     $("other-view").innerHTML='<div class="empty-panel"><div class="empty-icon">✦</div><h2 id="other-title"></h2><p>This module will be enabled after its complete workflow and safety checks are ready.</p></div>';
     $("other-title").textContent=btn.textContent.trim();
@@ -543,7 +584,7 @@ async function renderWalletManager(){
   const serviceWallets=walletOptions.filter(w=>creditWalletIds.includes(w.id));
   host.innerHTML=`
     <div class="admin-module-head"><div><div class="eyebrow">ADMINISTRATION</div><h2>Wallet Management</h2><p>Manage service wallets, add or withdraw amounts, transfer balances and configure low-balance alerts.</p></div></div>
-    <div class="admin-editor"><h3>Assigned service wallets</h3><p class="muted">These wallets are assigned in Admin Service settings to receive customer credit-card transfer principal. Service charges are tracked separately as profit.</p><div class="employee-wallet-grid">${serviceWallets.length?serviceWallets.map(w=>`<article class="employee-wallet-card"><div><strong>${escapeHtml(w.name)}</strong><small>${escapeHtml(w.provider||w.wallet_type||"Wallet")} · Service wallet</small></div><b>${money(w.current_balance)}</b></article>`).join(""):'<div class="empty-state">No service wallets assigned yet. Open Services Management and assign wallets under Credit Card to Bank Transfer.</div>'}</div></div>
+    <div class="admin-editor"><h3>Assigned service wallets</h3><p class="muted">These wallets are assigned in Admin Service settings to receive customer credit-card transfer principal. Service charges are tracked separately as profit.</p><div class="employee-wallet-grid">${serviceWallets.length?serviceWallets.map(w=>`<article class="employee-wallet-card"><div><strong>${escapeHtml(w.name)}</strong><small>${escapeHtml(w.provider||w.wallet_type||"Wallet")} · Service wallet</small></div><b data-wallet-balance="${w.id}">${money(w.current_balance)}</b></article>`).join(""):'<div class="empty-state">No service wallets assigned yet. Open Services Management and assign wallets under Credit Card to Bank Transfer.</div>'}</div></div>
     <div class="admin-editor"><h3>Create wallet</h3><form id="wallet-form" class="service-form">
       <div class="admin-form-grid"><label>Wallet name<input id="wallet-name" required maxlength="100" placeholder="e.g. IDFC Bank"></label><label>Wallet type<select id="wallet-type"><option value="bank">Bank</option><option value="upi">UPI</option><option value="provider">Provider</option><option value="cash">Cash</option><option value="other">Other</option></select></label><label>Provider / account label<input id="wallet-provider" maxlength="100" placeholder="Optional"></label></div>
       <small class="muted">New wallets always start with ₹0 opening balance.</small><div id="wallet-message" class="message"></div><button class="primary-btn admin-add-btn" type="submit" id="wallet-save">Create wallet</button>
@@ -576,7 +617,7 @@ function renderWalletRows(){
   const q=$("wallet-search")?.value.trim().toLowerCase()||"";
   const rows=walletOptions.filter(w=>w.name.toLowerCase().includes(q)||(w.provider||"").toLowerCase().includes(q));
   $("wallet-rows").innerHTML=rows.length?rows.map(w=>`
-    <div class="admin-service-row ${w.low_balance_alert_enabled!==false&&Number(w.current_balance||0)<=Number(w.low_balance_threshold||0)?"wallet-low-balance":""}"><div class="admin-service-main"><strong>${escapeHtml(w.name)}</strong><small>${escapeHtml(w.provider||w.wallet_type)} · ${escapeHtml(w.wallet_type)}</small><label>Low balance alert at ₹<input type="number" min="0" step=".01" value="${Number(w.low_balance_threshold||0)}" data-wallet-threshold="${w.id}" style="width:110px"></label><label><input type="checkbox" data-wallet-alert="${w.id}" ${w.low_balance_alert_enabled!==false?"checked":""}> Alert enabled</label><button class="secondary-btn" data-wallet-threshold-save="${w.id}">Save alert</button></div><div class="admin-service-meta"><strong>${money(w.current_balance)}</strong><span class="status-pill ${w.is_active?"is-active":"is-inactive"}">${w.is_active?"Active":"Inactive"}</span></div><div class="admin-service-actions"><button data-wallet-toggle="${w.id}">${w.is_active?"Deactivate":"Activate"}</button></div></div>`).join(""):'<div class="empty-state">No wallets created yet.</div>';
+    <div class="admin-service-row ${w.low_balance_alert_enabled!==false&&Number(w.current_balance||0)<=Number(w.low_balance_threshold||0)?"wallet-low-balance":""}"><div class="admin-service-main"><strong>${escapeHtml(w.name)}</strong><small>${escapeHtml(w.provider||w.wallet_type)} · ${escapeHtml(w.wallet_type)}</small><label>Low balance alert at ₹<input type="number" min="0" step=".01" value="${Number(w.low_balance_threshold||0)}" data-wallet-threshold="${w.id}" style="width:110px"></label><label><input type="checkbox" data-wallet-alert="${w.id}" ${w.low_balance_alert_enabled!==false?"checked":""}> Alert enabled</label><button class="secondary-btn" data-wallet-threshold-save="${w.id}">Save alert</button></div><div class="admin-service-meta"><strong data-wallet-balance="${w.id}">${money(w.current_balance)}</strong><span class="status-pill ${w.is_active?"is-active":"is-inactive"}">${w.is_active?"Active":"Inactive"}</span></div><div class="admin-service-actions"><button data-wallet-toggle="${w.id}">${w.is_active?"Deactivate":"Activate"}</button></div></div>`).join(""):'<div class="empty-state">No wallets created yet.</div>';
   document.querySelectorAll("[data-wallet-toggle]").forEach(b=>b.addEventListener("click",()=>toggleWallet(b.dataset.walletToggle)));
   document.querySelectorAll("[data-wallet-threshold-save]").forEach(b=>b.addEventListener("click",async()=>{
     const id=b.dataset.walletThresholdSave,threshold=Number(document.querySelector('[data-wallet-threshold="'+id+'"]').value),enabled=document.querySelector('[data-wallet-alert="'+id+'"]').checked;
@@ -1122,7 +1163,7 @@ async function saveQuickBilling(){
     const freshCount=Math.max(1,Math.min(100,Number($("bill-count").value)||1));
     $("bill-count").value=freshCount;
     await setBillingRows(freshCount);
-    updatePaymentFields();await loadRecentBills();
+    updatePaymentFields();await loadRecentBills();await refreshWalletBalances();
   }catch(e){msg.textContent=e.message||"Unable to save bills.";console.error(e);}
   finally{btn.disabled=false;}
 }
