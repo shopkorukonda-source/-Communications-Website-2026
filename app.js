@@ -1042,7 +1042,7 @@ async function setBillingRows(n){
   billingRows=Array.from({length:n},(_,i)=>billingRows[i]||({service_id:"",base:"",charge:"",cost:"",bank:"",quantity:1,unit_count:"",print_type:"single_side",sets:1,item_label:"",discount:0,wallet_debits:[],bill_count:1,bill_amounts:[""]}));
   $("billing-rows").innerHTML=billingRows.map((r,i)=>{
     const serviceOptions=services.filter(s=>s.is_active).map(s=>'<option value="'+s.id+'" '+(s.id===r.service_id?"selected":"")+'>'+escapeHtml(s.name)+'</option>').join("");
-    const svc=services.find(s=>s.id===r.service_id),special=isPaperPageService(svc),alloc=walletDebitsForRow(r,svc);
+    const svc=services.find(s=>s.id===r.service_id)||{},special=isPaperPageService(svc),alloc=walletDebitsForRow(r,svc);
     const pages=Number(r.unit_count||0)*Math.max(1,Number(r.sets||1)),count=svc?.code==="PRINTOUT"&&r.print_type==="both_side"?Math.ceil(pages/2):pages,rate=paperPageRate(r,svc,count);
     const manualWalletHtml=manualProcessingWalletHtml(r,svc,i);
     const walletOptionsHtml=(billingWalletRules[r.service_id]||[]).map(rule=>{
