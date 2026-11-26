@@ -1031,7 +1031,7 @@ function manualProcessingWalletHtml(row,svc,index){
   }).join("");
   const debitTotal=debits.reduce((n,x)=>n+Number(x.amount||0),0),aepsCredit=svc.code==="AEPS_WITHDRAWAL"?Number(row.base||0):0;
   const control=multi?'<p>Admin-selected wallets are automatically debited using each wallet rule.</p><div class="wallet-choice-grid">'+(opts||"<small>No processing wallets assigned. Configure them in Admin Services.</small>")+'</div>':'<label>Processing wallet <select data-field="processing_wallet_id" data-i="'+index+'"><option value="">Select one wallet</option>'+opts+'</select></label>';
-  return '<div class="wallet-map-box"><strong>Transaction wallet'+(multi?"s":"")+'</strong>'+control+(svc.code==="AEPS_WITHDRAWAL"?'<small>Selected wallet credit: '+money(aepsCredit)+'</small>':'<small>Total wallet debit: <span id="manual-wallet-debit-'+index+'">'+money(debitTotal)+'</span></small>')+'</div>';
+  return '<div class="wallet-map-box"><strong>Transaction wallet'+(multi?"s":"")+'</strong>'+control+(svc.code==="AEPS_WITHDRAWAL"?'<small>Selected wallet credit: <span id="manual-wallet-credit-'+index+'">'+money(aepsCredit)+'</span></small>':'<small>Total wallet debit: <span id="manual-wallet-debit-'+index+'">'+money(debitTotal)+'</span></small>')+'</div>';
 }
 async function setBillingRows(n){
   const {data:rules}=await supabase.from("service_wallet_rules").select("service_id,wallet_id,wallet_slot,debit_config").order("wallet_slot");
@@ -1136,7 +1136,7 @@ function updateBillingTotals(){
     base+=isCurrentBills?(r.bill_amounts||[]).reduce((a,x)=>a+Number(x||0),0):Number(r.base||0);charges+=calc.charge;costs+=calc.cost;total+=calc.total+aepsExtra;
     if(t)t.textContent=""+money(calc.total+aepsExtra);
     if(walletBox)walletBox.innerHTML=(billingWalletRules[r.service_id]||[]).map(rule=>{const wallet=walletOptions.find(x=>x.id===rule.wallet_id),debit=alloc.find(x=>x.wallet_id===rule.wallet_id);return wallet?'<div class="wallet-choice"><span>'+escapeHtml(wallet.name)+' <small>Balance '+money(wallet.current_balance)+' · Auto debit '+money(debit?.amount||0)+'</small></span></div>':"";}).join("")||"<small>No processing wallet configured for this service.</small>";
-    const manualDebit=$("manual-wallet-debit-"+i);if(manualDebit)manualDebit.textContent=money(alloc.reduce((a,x)=>a+Number(x.amount||0),0));
+    const manualDebit=$("manual-wallet-debit-"+i);if(manualDebit)manualDebit.textContent=money(alloc.reduce((a,x)=>a+Number(x.amount||0),0));const manualCredit=$("manual-wallet-credit-"+i);if(manualCredit)manualCredit.textContent=money(svc?.code==="AEPS_WITHDRAWAL"?Number(r.base||0):0);
     if(res)res.textContent=isCurrentBills?"Bills: "+(r.bill_amounts||[]).filter(x=>Number(x)>0).length+" · Service charges: "+money(calc.charge)+" · Customer total: "+money(calc.total)+(currentProfile?.role==="admin"?" · Profit: "+money(calc.profit):""):currentProfile?.role==="admin"?"Gross: "+money(calc.gross??calc.charge)+" · Discount: "+money(calc.discount||0)+" · Processing Cost: "+money(calc.cost)+" · Profit: "+money(calc.profit)+" · Wallet debit: "+money(alloc.reduce((a,x)=>a+x.amount,0)):"Amount: "+money(calc.total)+(special?" · "+(svc.code==="PRINTOUT"?Number(r.unit_count||0)*Number(r.sets||1)+" pages · "+calc.count+" papers":calc.count+" papers"):"");
   });
   $("billing-totals").innerHTML='<div><small>Gross / base</small><strong>'+money(base+charges)+'</strong></div><div><small>Service charges</small><strong>'+money(charges)+'</strong></div><div><small>Customer total</small><strong>'+money(total)+'</strong></div>';
