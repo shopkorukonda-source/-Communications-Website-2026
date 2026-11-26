@@ -419,11 +419,11 @@ async function openServiceEditor(id=null){
   const s=id?services.find(x=>x.id===id):null;
   let selectedWalletRules=[],selectedCreditWallets=[];
   if(s){
-    const [{data},{data:profitWallets}]=await Promise.all([
+    const [{data},{data:creditWallets}]=await Promise.all([
       supabase.from("service_wallet_rules").select("wallet_id,debit_config").eq("service_id",id).order("wallet_slot"),
       supabase.from("service_credit_wallet_rules").select("wallet_id").eq("service_id",id)
     ]);
-    selectedWalletRules=data||[];selectedCreditWallets=(profitWallets||[]).map(x=>x.wallet_id);
+    selectedWalletRules=data||[];selectedCreditWallets=(creditWallets||[]).map(x=>x.wallet_id);
   }
   const editor=$("service-editor");
   editor.classList.remove("hidden");
@@ -506,10 +506,10 @@ async function saveService(event){
     const chosen=[...document.querySelectorAll("[data-admin-wallet-check]:checked")].map((el,i)=>{const mode=document.querySelector('[data-admin-wallet-mode="'+el.value+'"]')?.value||"processing_cost",value=Number(document.querySelector('[data-admin-wallet-value="'+el.value+'"]')?.value||0),debit_config={mode};if(mode==="fixed_amount")debit_config.fixed_amount=value;if(mode==="percentage")debit_config.percentage=value;return {service_id:saved.id,wallet_id:el.value,wallet_slot:i+1,debit_order:i+1,debit_config,is_required:true};});
     if(chosen.some(x=>(x.debit_config.mode==="fixed_amount"||x.debit_config.mode==="percentage")&&(!(Number(x.debit_config.fixed_amount??x.debit_config.percentage)>0))))throw new Error("Enter a positive value for every fixed or percentage wallet rule.");
     if(payload.code==="CREDIT_CARD_BANK"&&!document.querySelectorAll("[data-credit-wallet-check]:checked").length)throw new Error("Assign at least one Credit Card service wallet.");
-    const profitWalletIds=[...document.querySelectorAll("[data-credit-wallet-check]:checked")].map(el=>el.value);
+    const creditWalletIds=[...document.querySelectorAll("[data-credit-wallet-check]:checked")].map(el=>el.value);
     const {error:profitDelError}=await supabase.from("service_credit_wallet_rules").delete().eq("service_id",saved.id);
     if(profitDelError)throw profitDelError;
-    if(profitWalletIds.length){const {error:profitRuleError}=await supabase.from("service_credit_wallet_rules").insert(profitWalletIds.map(wallet_id=>({service_id:saved.id,wallet_id})));if(profitRuleError)throw profitRuleError;}
+    if(creditWalletIds.length){const {error:creditRuleError}=await supabase.from("service_credit_wallet_rules").insert(creditWalletIds.map(wallet_id=>({service_id:saved.id,wallet_id})));if(creditRuleError)throw creditRuleError;}
     const {error:delError}=await supabase.from("service_wallet_rules").delete().eq("service_id",saved.id);
     if(delError)throw delError;
     if(chosen.length){const {error:ruleError}=await supabase.from("service_wallet_rules").insert(chosen);if(ruleError)throw ruleError;}
