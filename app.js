@@ -1092,6 +1092,10 @@ function onBillingRowChange(e){
     setBillingRows(billingRows.length);return;
   }
   billingRows[i][field]=e.target.value;
+  if(field==="adjustment_type"){
+    if(e.target.value==="extra"&&!billingRows[i].adjustment_mode)billingRows[i].adjustment_mode="cash";
+    setBillingRows(billingRows.length);return;
+  }
   if(field==="service_id"){
     const svc=services.find(s=>s.id===e.target.value);
     billingRows[i].base=svc?.billing_config?.base_amount??"";
@@ -1100,7 +1104,7 @@ function onBillingRowChange(e){
     billingRows[i].charge_percent=svc?.billing_config?.charge_percent??2;
     billingRows[i].credit_wallet_id="";
     billingRows[i].processing_wallet_id="";
-    billingRows[i].quantity=1;billingRows[i].unit_count="";billingRows[i].print_type="single_side";billingRows[i].sets=1;billingRows[i].item_label="";billingRows[i].discount=0;billingRows[i].wallet_debits=[];billingRows[i].bill_count=1;billingRows[i].bill_amounts=[""];
+    billingRows[i].quantity=1;billingRows[i].unit_count="";billingRows[i].print_type="single_side";billingRows[i].sets=1;billingRows[i].item_label="";billingRows[i].discount=0;billingRows[i].wallet_debits=[];billingRows[i].bill_count=1;billingRows[i].bill_amounts=[""];billingRows[i].adjustment_type="";billingRows[i].adjustment_amount=0;billingRows[i].adjustment_mode="cash";
     setBillingRows(billingRows.length);return;
   }
   updateBillingTotals();
@@ -1115,8 +1119,9 @@ function updateBillingTotals(){
     if(isCurrentBills)currentCalcs.forEach((x,j)=>{const charge=$("[data-current-charge='"+i+"-"+j+"']"),lineTotal=$("[data-current-total='"+i+"-"+j+"']");if(charge)charge.textContent=money(x.charge);if(lineTotal)lineTotal.textContent=money(x.total);});
     const calc=isCurrentBills?{charge:currentCalcs.reduce((a,x)=>a+x.charge,0),cost:currentCalcs.reduce((a,x)=>a+x.cost,0),profit:currentCalcs.reduce((a,x)=>a+x.profit,0),total:currentCalcs.reduce((a,x)=>a+x.total,0)}:calculateBillingRow(r);
     const slabCharge=$("slab-charge-"+i),slabCost=$("slab-cost-"+i);if(slabCharge)slabCharge.value=money(calc.charge);if(slabCost)slabCost.value=money(calc.cost);
-    base+=isCurrentBills?(r.bill_amounts||[]).reduce((a,x)=>a+Number(x||0),0):Number(r.base||0);charges+=calc.charge;costs+=calc.cost;total+=calc.total;
-    if(t)t.textContent=""+money(calc.total);
+    const aepsExtra=svc?.code==="AEPS_WITHDRAWAL"&&r.adjustment_type==="extra"?Math.max(0,Number(r.adjustment_amount||0)):0;
+    base+=isCurrentBills?(r.bill_amounts||[]).reduce((a,x)=>a+Number(x||0),0):Number(r.base||0);charges+=calc.charge;costs+=calc.cost;total+=calc.total+aepsExtra;
+    if(t)t.textContent=""+money(calc.total+aepsExtra);
     if(walletBox)walletBox.innerHTML=(billingWalletRules[r.service_id]||[]).map(rule=>{const wallet=walletOptions.find(x=>x.id===rule.wallet_id),debit=alloc.find(x=>x.wallet_id===rule.wallet_id);return wallet?'<div class="wallet-choice"><span>'+escapeHtml(wallet.name)+' <small>Balance '+money(wallet.current_balance)+' · Auto debit '+money(debit?.amount||0)+'</small></span></div>':"";}).join("")||"<small>No processing wallet configured for this service.</small>";
     const manualDebit=$("manual-wallet-debit-"+i);if(manualDebit)manualDebit.textContent=money(alloc.reduce((a,x)=>a+Number(x.amount||0),0));
     if(res)res.textContent=isCurrentBills?"Bills: "+(r.bill_amounts||[]).filter(x=>Number(x)>0).length+" · Service charges: "+money(calc.charge)+" · Customer total: "+money(calc.total)+(currentProfile?.role==="admin"?" · Profit: "+money(calc.profit):""):currentProfile?.role==="admin"?"Gross: "+money(calc.gross??calc.charge)+" · Discount: "+money(calc.discount||0)+" · Processing Cost: "+money(calc.cost)+" · Profit: "+money(calc.profit)+" · Wallet debit: "+money(alloc.reduce((a,x)=>a+x.amount,0)):"Amount: "+money(calc.total)+(special?" · "+(svc.code==="PRINTOUT"?Number(r.unit_count||0)*Number(r.sets||1)+" pages · "+calc.count+" papers":calc.count+" papers"):"");
