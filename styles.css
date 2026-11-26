@@ -619,3 +619,14 @@ button:not(.nav-item):focus-visible,input:focus-visible,select:focus-visible,tex
  .sidebar{background:#fff;border-bottom:1px solid #dce9e1;box-shadow:0 3px 12px rgba(16,80,55,.05)}
  .login-card{padding:26px 21px}
 }
+
+
+/* Service slab editor */
+.service-slab-editor{display:grid;gap:14px;margin:16px 0;padding:16px;border:1px solid #d8dfeb;border-radius:14px;background:#f8fbff}
+.service-slab-group{display:grid;gap:10px}
+.service-slab-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.service-slab-head strong{font-size:14px;color:#18243a}
+.service-slab-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;align-items:end;gap:10px;padding:10px;background:#fff;border:1px solid #e1e7f0;border-radius:10px}
+.service-slab-row label{display:grid;gap:5px;font-size:12px;color:#526078}
+.service-slab-row input{width:100%;min-width:0}
+@media(max-width:700px){.service-slab-row{grid-template-columns:repeat(2,minmax(0,1fr))}.service-slab-row button{justify-self:start}}
