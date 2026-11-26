@@ -679,7 +679,7 @@ async function loadReportsData(){
  const failure=tx.error||ex.error||targets.error||serviceProfit.error;if(failure){$("report-rows").innerHTML='<div class="empty-state">Unable to load financial report: '+escapeHtml(failure.message)+'</div>';return}
  const bills=tx.data||[],expenses=ex.data||[],targetRows=targets.data||[];
  const serviceProfitRows=(serviceProfit.data||[]).map(x=>({name:x.service_name,code:x.service_code||"",bill_count:Number(x.bill_count||0),quantity:Number(x.quantity_total||0),profit:Number(x.profit_total||0)}));
- const sum=(arr,k)=>arr.reduce((n,x)=>n+Number(x[k]||0),0),income=sum(bills,"profit_total"),expenseTotal=sum(expenses,"amount"),collection=bills.reduce((n,x)=>n+Number(x.cash_received||0)+Number(x.upi_received||0),0),processing=sum(bills,"processing_total"),targetRow=targetRows.find(x=>x.period_type===financeDbPeriod[period]),baseTarget=Number(targetRow?.target_amount||0),expenseBudget=Number(targetRow?.expense_target_amount||0);
+ const sum=(arr,k)=>arr.reduce((n,x)=>n+Number(x[k]||0),0),income=serviceProfitRows.reduce((n,x)=>n+Number(x.profit||0),0),expenseTotal=sum(expenses,"amount"),collection=bills.reduce((n,x)=>n+Number(x.cash_received||0)+Number(x.upi_received||0),0),processing=sum(bills,"processing_total"),targetRow=targetRows.find(x=>x.period_type===financeDbPeriod[period]),baseTarget=Number(targetRow?.target_amount||0),expenseBudget=Number(targetRow?.expense_target_amount||0);
  let carryForward=0;
  if(period==="day"&&baseTarget>0&&targetRow?.daily_target_start_date){
   const carryStart=new Date(targetRow.daily_target_start_date+"T00:00:00");
