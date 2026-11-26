@@ -457,6 +457,15 @@ function wireServiceSlabEditor(editor){
 async function openServiceEditor(id=null){
   editingServiceId=id;
   const s=id?services.find(x=>x.id===id):null;
+  // Admin service setup must always offer every active shop wallet, including
+  // wallets not yet assigned to any service.
+  const {data:activeServiceWallets,error:activeServiceWalletsError}=await supabase
+    .from("wallets")
+    .select("id,name,wallet_type,provider,current_balance,is_active,low_balance_threshold,low_balance_alert_enabled")
+    .eq("is_active",true)
+    .order("name");
+  if(activeServiceWalletsError)throw activeServiceWalletsError;
+  walletOptions=activeServiceWallets||[];
   let selectedWalletRules=[],selectedCreditWallets=[];
   if(s){
     const [{data},{data:creditWallets}]=await Promise.all([
