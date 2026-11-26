@@ -318,10 +318,61 @@ export async function renderOperations(view, ctx) {
 
   if(view==="settlement"){
     if(!admin){host.innerHTML=head("Night Settlement","Admin access required.");return;}
-    const rows=await supabase.from("night_settlements").select("id,settlement_date,gross_income,processing_cost,net_profit,profit_transfer_amount,profit_transfer_approved").order("settlement_date",{ascending:false}).limit(60);
-    host.innerHTML=head("Night Settlement","After calculating profit, Admin can move it to a separate Cash or Bank wallet. Transfers are balance movements, never new income.")+'<div class="admin-editor"><h3>Calculate daily settlement</h3><form id="op-settlement" class="service-form"><div class="admin-form-grid"><label>Date<input id="op-set-date" type="date" required value="'+new Date().toISOString().slice(0,10)+'"></label><label>Notes<input id="op-set-notes"></label></div><div id="op-set-msg" class="message"></div><button class="primary-btn">Calculate and save</button></form></div><div class="admin-table-wrap"><h3>Settlement history</h3>'+(rows.data||[]).map(x=>'<div class="admin-service-row"><div class="admin-service-main"><strong>'+x.settlement_date+'</strong><small>Collection '+money(x.gross_income)+' · Cost '+money(x.processing_cost)+'</small></div><div class="admin-service-meta"><strong>Profit '+money(x.net_profit)+'</strong><span>'+(x.profit_transfer_approved?"Transferred "+money(x.profit_transfer_amount):"No transfer")+'</span></div>'+(x.profit_transfer_approved?"":'<div class="admin-service-actions"><button data-op-profit="'+x.id+'" data-profit="'+x.net_profit+'">Profit transfer</button></div>')+'</div>').join("")||'<div class="empty-state">No settlements yet.</div>'+'</div><div id="op-profit-editor"></div>';
-    $("op-settlement").addEventListener("submit",async e=>{e.preventDefault();const d=$("op-set-date").value,start=new Date(d+"T00:00:00"),end=new Date(d+"T23:59:59.999");const [tx,ex]=await Promise.all([supabase.from("billing_transactions").select("customer_total,processing_total,profit_total").gte("created_at",start.toISOString()).lte("created_at",end.toISOString()),supabase.from("expenses").select("amount").eq("expense_date",d)]);if(tx.error||ex.error){$("op-set-msg").textContent=(tx.error||ex.error).message;return;}const prior=await supabase.from("night_settlements").select("id").eq("settlement_date",d).maybeSingle();if(prior.data){$("op-set-msg").textContent="Settlement already exists for this date.";return;}const sum=k=>(tx.data||[]).reduce((a,x)=>a+Number(x[k]||0),0),expenseTotal=(ex.data||[]).reduce((a,x)=>a+Number(x.amount||0),0);const r=await supabase.from("night_settlements").insert({settlement_date:d,gross_income:sum("customer_total"),processing_cost:sum("processing_total")+expenseTotal,net_profit:sum("profit_total")-expenseTotal,profit_transfer_amount:0,profit_transfer_approved:false,notes:$("op-set-notes").value||null});$("op-set-msg").textContent=r.error?r.error.message:"Settlement saved. Profit transfer is excluded from new income.";if(!r.error)await renderOperations(view,ctx);});
-    host.querySelectorAll("[data-op-profit]").forEach(b=>b.addEventListener("click",async()=>{const w=await supabase.from("wallets").select("id,name,current_balance").eq("is_active",true);const ed=$("op-profit-editor");ed.innerHTML='<div class="admin-editor"><h3>Move daily profit to a separate wallet</h3><p>Choose a source wallet and a destination such as Shop Cash or a bank wallet. This is a balance transfer, not new income.</p><div class="admin-form-grid"><label>From<select id="op-profit-from">'+(w.data||[]).map(x=>'<option value="'+x.id+'">'+esc(x.name)+' · '+money(x.current_balance)+'</option>').join("")+'</select></label><label>Deposit profit into (Cash / Bank)<select id="op-profit-to">'+(w.data||[]).map(x=>'<option value="'+x.id+'">'+esc(x.name)+'</option>').join("")+'</select></label><label>Amount (max '+money(b.dataset.profit)+')<input id="op-profit-amount" type="number" min=".01" max="'+Number(b.dataset.profit)+'" step=".01"></label></div><div id="op-profit-msg" class="message"></div><button class="primary-btn" id="op-profit-confirm">Approve transfer</button></div>';$("op-profit-confirm").addEventListener("click",async()=>{const r=await supabase.rpc("approve_night_profit_transfer",{p_settlement_id:b.dataset.opProfit,p_from_wallet:$("op-profit-from").value,p_to_wallet:$("op-profit-to").value,p_amount:Number($("op-profit-amount").value)});$("op-profit-msg").textContent=r.error?r.error.message:"Transfer approved.";if(!r.error)await renderOperations(view,ctx);});}));
+    const [rows,walletRows]=await Promise.all([
+      supabase.from("night_settlements").select("id,settlement_date,gross_income,processing_cost,net_profit,profit_transfer_amount,profit_transfer_approved,created_at,wallet_reconciliation,actual_cash,balances_applied_at").order("created_at",{ascending:false}).limit(60),
+      supabase.from("wallets").select("id,name,wallet_type,current_balance").eq("is_active",true).order("name")
+    ]);
+    if(rows.error||walletRows.error){host.innerHTML=head("Night Settlement","Unable to load settlement data.")+'<p>'+esc((rows.error||walletRows.error).message)+'</p>';return;}
+    const wallets=walletRows.data||[];
+    const nonCashWallets=wallets.filter(w=>w.wallet_type!=="cash");
+    const cashWallets=wallets.filter(w=>w.wallet_type==="cash");
+    host.innerHTML=head("Night Settlement","After settlement, all later transactions are carried into the next business day. Opening balance reconciliation preserves those later movements.")+
+      '<div class="admin-editor"><h3>Calculate daily settlement</h3><form id="op-settlement" class="service-form"><div class="admin-form-grid"><label>Date<input id="op-set-date" type="date" required value="'+new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Kolkata"})+'"></label><label>Notes<input id="op-set-notes"></label></div><div id="op-set-msg" class="message"></div><button class="primary-btn">Calculate and save</button></form></div>'+
+      '<div class="admin-table-wrap"><h3>Settlement history</h3>'+(rows.data||[]).map(x=>'<div class="admin-service-row"><div class="admin-service-main"><strong>'+x.settlement_date+'</strong><small>Collection '+money(x.gross_income)+' · Cost '+money(x.processing_cost)+' · '+new Date(x.created_at).toLocaleString("en-IN")+'</small><small>'+(x.balances_applied_at?"Opening balances updated: "+new Date(x.balances_applied_at).toLocaleString("en-IN"):"Opening balances not updated")+'</small></div><div class="admin-service-meta"><strong>Profit '+money(x.net_profit)+'</strong><span>'+(x.profit_transfer_approved?"Transferred "+money(x.profit_transfer_amount):"No transfer")+'</span></div><div class="admin-service-actions">'+(x.balances_applied_at?"":'<button data-op-openbal="'+x.id+'">Update Opening Balances</button>')+(x.profit_transfer_approved?"":'<button data-op-profit="'+x.id+'" data-profit="'+x.net_profit+'">Profit transfer</button>')+'</div></div>').join("")||'<div class="empty-state">No settlements yet.</div>'+'</div><div id="op-profit-editor"></div><div id="op-opening-editor"></div>';
+    $("op-settlement").addEventListener("submit",async e=>{
+      e.preventDefault();
+      const d=$("op-set-date").value;
+      const [tx,ex]=await Promise.all([
+        supabase.from("billing_transactions").select("customer_total,processing_total,profit_total").eq("business_date",d),
+        supabase.from("expenses").select("amount").eq("expense_date",d)
+      ]);
+      if(tx.error||ex.error){$("op-set-msg").textContent=(tx.error||ex.error).message;return;}
+      const prior=await supabase.from("night_settlements").select("id").eq("settlement_date",d).maybeSingle();
+      if(prior.error){$("op-set-msg").textContent=prior.error.message;return;}
+      if(prior.data){$("op-set-msg").textContent="Settlement already exists for this date.";return;}
+      const sum=k=>(tx.data||[]).reduce((a,x)=>a+Number(x[k]||0),0);
+      const expenseTotal=(ex.data||[]).reduce((a,x)=>a+Number(x.amount||0),0);
+      const r=await supabase.from("night_settlements").insert({settlement_date:d,gross_income:sum("customer_total"),processing_cost:sum("processing_total")+expenseTotal,net_profit:sum("profit_total")-expenseTotal,profit_transfer_amount:0,profit_transfer_approved:false,notes:$("op-set-notes").value||null});
+      $("op-set-msg").textContent=r.error?r.error.message:"Settlement saved. Transactions after this settlement will be assigned to the next business day.";
+      if(!r.error)await renderOperations(view,ctx);
+    });
+    host.querySelectorAll("[data-op-openbal]").forEach(b=>b.addEventListener("click",()=>{
+      const settlement=(rows.data||[]).find(x=>x.id===b.dataset.opOpenbal);
+      const priorMap=new Map((settlement?.wallet_reconciliation||[]).map(x=>[x.wallet_id,x.actual_balance]));
+      const ed=$("op-opening-editor");
+      ed.innerHTML='<div class="admin-editor"><h3>Opening balance update · '+esc(settlement.settlement_date)+'</h3><p>Enter the actual balances counted at the settlement cutoff. Transactions made after that cutoff will be added automatically, so they are not lost.</p><div class="admin-form-grid">'+nonCashWallets.map(w=>'<label>'+esc(w.name)+' actual balance (₹)<input type="number" min="0" step=".01" required data-open-wallet="'+w.id+'" value="'+(priorMap.has(w.id)?Number(priorMap.get(w.id)):"")+'" placeholder="Enter counted balance"></label>').join("")+(cashWallets.length===1?'<label>Physical cash counted (₹)<input id="op-open-cash" type="number" min="0" step=".01" required value="'+(settlement.actual_cash!=null?Number(settlement.actual_cash):"")+'" placeholder="Enter cash count"></label>':'<p>Exactly one active Cash wallet is required.</p>')+'</div><div id="op-openbal-msg" class="message"></div><button class="primary-btn" id="op-openbal-save">Save & Update Opening Balances</button></div>';
+      $("op-openbal-save").addEventListener("click",async()=>{
+        const msg=$("op-openbal-msg"),btn=$("op-openbal-save");
+        const inputs=[...ed.querySelectorAll("[data-open-wallet]")];
+        if(cashWallets.length!==1){msg.textContent="Exactly one active Cash wallet is required.";return;}
+        if(inputs.some(i=>i.value===""||!Number.isFinite(Number(i.value))||Number(i.value)<0)||$("op-open-cash").value===""||!Number.isFinite(Number($("op-open-cash").value))||Number($("op-open-cash").value)<0){msg.textContent="Enter valid actual balances for every wallet and physical cash.";return;}
+        const reconciliation=inputs.map(i=>({wallet_id:i.dataset.openWallet,actual_balance:Number(i.value)}));
+        btn.disabled=true;msg.textContent="Saving reconciliation…";
+        try{
+          const saved=await supabase.from("night_settlements").update({wallet_reconciliation:reconciliation,actual_cash:Number($("op-open-cash").value)}).eq("id",settlement.id);
+          if(saved.error)throw saved.error;
+          const applied=await supabase.rpc("apply_night_settlement_balances",{p_settlement_id:settlement.id});
+          if(applied.error)throw applied.error;
+          msg.textContent="Opening balances updated. All post-settlement cash and wallet transactions have been carried forward.";
+          await renderOperations(view,ctx);
+        }catch(error){msg.textContent=error.message||"Unable to update opening balances.";btn.disabled=false;}
+      });
+    }));
+    host.querySelectorAll("[data-op-profit]").forEach(b=>b.addEventListener("click",async()=>{
+      const w=await supabase.from("wallets").select("id,name,current_balance").eq("is_active",true);
+      const ed=$("op-profit-editor");
+      ed.innerHTML='<div class="admin-editor"><h3>Move daily profit to a separate wallet</h3><p>Choose a source wallet and a destination such as Shop Cash or a bank wallet. This is a balance transfer, not new income.</p><div class="admin-form-grid"><label>From<select id="op-profit-from">'+(w.data||[]).map(x=>'<option value="'+x.id+'">'+esc(x.name)+' · '+money(x.current_balance)+'</option>').join("")+'</select></label><label>Deposit profit into (Cash / Bank)<select id="op-profit-to">'+(w.data||[]).map(x=>'<option value="'+x.id+'">'+esc(x.name)+'</option>').join("")+'</select></label><label>Amount (max '+money(b.dataset.profit)+')<input id="op-profit-amount" type="number" min=".01" max="'+Number(b.dataset.profit)+'" step=".01"></label></div><div id="op-profit-msg" class="message"></div><button class="primary-btn" id="op-profit-confirm">Approve transfer</button></div>';
+      $("op-profit-confirm").addEventListener("click",async()=>{const r=await supabase.rpc("approve_night_profit_transfer",{p_settlement_id:b.dataset.opProfit,p_from_wallet:$("op-profit-from").value,p_to_wallet:$("op-profit-to").value,p_amount:Number($("op-profit-amount").value)});$("op-profit-msg").textContent=r.error?r.error.message:"Transfer approved.";if(!r.error)await renderOperations(view,ctx);});
+    }));
     return;
-  }
-}
+  }}
