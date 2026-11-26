@@ -898,8 +898,8 @@ function isManualJobApplicationWalletService(svc){
   const code=String(svc?.code||"").toUpperCase(),name=String(svc?.name||"").toUpperCase();
   return code.includes("JOB")||name.includes("JOB APPLICATION");
 }
-function automaticWalletDebits(row,svc){
-  if(svc?.code==="CREDIT_CARD_BANK"||isManualJobApplicationWalletService(svc))return [];
+function automaticWalletDebits(row,svc,allowJobApplication=false){
+  if(svc?.code==="CREDIT_CARD_BANK"||(isManualJobApplicationWalletService(svc)&&!allowJobApplication))return [];
   const rules=billingWalletRules[row.service_id]||[];
   if(!rules.length)return [];
   const amount=Number(row.base||0),processingCost=Number(row.cost||svc?.processing_cost_config?.fixed_amount||0);
@@ -928,8 +928,7 @@ function automaticWalletDebits(row,svc){
 function walletDebitsForRow(row,svc){
   if(!isManualJobApplicationWalletService(svc))return automaticWalletDebits(row,svc);
   if(!row.processing_wallet_id)return [];
-  return automaticWalletDebits({...row,processing_wallet_id:row.processing_wallet_id}, {...svc,code:"MANUAL_JOB_APP_WALLET"})
-    .filter(x=>x.wallet_id===row.processing_wallet_id);
+  return automaticWalletDebits(row,svc,true).filter(x=>x.wallet_id===row.processing_wallet_id);
 }
 function manualJobApplicationWalletHtml(row,svc,index){
   if(!isManualJobApplicationWalletService(svc))return null;
@@ -940,7 +939,7 @@ function manualJobApplicationWalletHtml(row,svc,index){
     return w?'<option value="'+w.id+'" '+(selected===w.id?"selected":"")+'>'+escapeHtml(w.name)+' · Balance '+money(w.current_balance)+'</option>':"";
   }).join("");
   const debit=walletDebitsForRow(row,svc).reduce((n,x)=>n+Number(x.amount||0),0);
-  return '<div class="wallet-map-box"><strong>Processing wallet (select manually)</strong><p>Select which assigned wallet should be debited for this Job Application.</p><label>Processing Wallet<select data-field="processing_wallet_id" data-i="'+index+'"><option value="">Select processing wallet</option>'+opts+'</select></label><small>Debit amount: '+money(debit)+'</small></div>';
+  return '<div class="wallet-map-box"><strong>Processing wallet (select manually)</strong><p>Select which assigned wallet should be debited for this Job Application.</p><label>Processing Wallet<select data-field="processing_wallet_id" data-i="'+index+'"><option value="">Select processing wallet</option>'+opts+'</select></label><small>Debit amount: <span id="manual-wallet-debit-'+index+'">'+money(debit)+'</span></small></div>';
 }
 async function setBillingRows(n){
   const {data:rules}=await supabase.from("service_wallet_rules").select("service_id,wallet_id,wallet_slot,debit_config").order("wallet_slot");
@@ -1028,6 +1027,7 @@ function updateBillingTotals(){
     base+=isCurrentBills?(r.bill_amounts||[]).reduce((a,x)=>a+Number(x||0),0):Number(r.base||0);charges+=calc.charge;costs+=calc.cost;total+=calc.total;
     if(t)t.textContent=""+money(calc.total);
     if(walletBox)walletBox.innerHTML=(billingWalletRules[r.service_id]||[]).map(rule=>{const wallet=walletOptions.find(x=>x.id===rule.wallet_id),debit=alloc.find(x=>x.wallet_id===rule.wallet_id);return wallet?'<div class="wallet-choice"><span>'+escapeHtml(wallet.name)+' <small>Balance '+money(wallet.current_balance)+' · Auto debit '+money(debit?.amount||0)+'</small></span></div>':"";}).join("")||"<small>No processing wallet configured for this service.</small>";
+    const manualDebit=$("manual-wallet-debit-"+i);if(manualDebit)manualDebit.textContent=money(alloc.reduce((a,x)=>a+Number(x.amount||0),0));
     if(res)res.textContent=isCurrentBills?"Bills: "+(r.bill_amounts||[]).filter(x=>Number(x)>0).length+" · Service charges: "+money(calc.charge)+" · Customer total: "+money(calc.total)+(currentProfile?.role==="admin"?" · Profit: "+money(calc.profit):""):currentProfile?.role==="admin"?"Gross: "+money(calc.gross??calc.charge)+" · Discount: "+money(calc.discount||0)+" · Processing Cost: "+money(calc.cost)+" · Profit: "+money(calc.profit)+" · Wallet debit: "+money(alloc.reduce((a,x)=>a+x.amount,0)):"Amount: "+money(calc.total)+(special?" · "+(svc.code==="PRINTOUT"?Number(r.unit_count||0)*Number(r.sets||1)+" pages · "+calc.count+" papers":calc.count+" papers"):"");
   });
   $("billing-totals").innerHTML='<div><small>Gross / base</small><strong>'+money(base+charges)+'</strong></div><div><small>Service charges</small><strong>'+money(charges)+'</strong></div><div><small>Customer total</small><strong>'+money(total)+'</strong></div>';
