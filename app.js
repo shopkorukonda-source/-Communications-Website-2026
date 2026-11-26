@@ -94,7 +94,7 @@ async function loadCatalog() {
     }else if(currentEmployee?.id){
       const [{data: assigned, error: assignedError},{data: profitRules,error:profitRulesError}]=await Promise.all([
         supabase.from("employee_wallet_access").select("wallet_id").eq("employee_id",currentEmployee.id).eq("is_active",true),
-        supabase.from("service_profit_wallet_rules").select("wallet_id")
+        supabase.from("service_credit_wallet_rules").select("wallet_id")
       ]);
       if(assignedError)console.warn("Assigned wallet list unavailable",assignedError);
       if(profitRulesError)console.warn("Service profit wallet list unavailable",profitRulesError);
@@ -417,13 +417,13 @@ function wireServiceSlabEditor(editor){
 async function openServiceEditor(id=null){
   editingServiceId=id;
   const s=id?services.find(x=>x.id===id):null;
-  let selectedWalletRules=[],selectedProfitWallets=[];
+  let selectedWalletRules=[],selectedCreditWallets=[];
   if(s){
     const [{data},{data:profitWallets}]=await Promise.all([
       supabase.from("service_wallet_rules").select("wallet_id,debit_config").eq("service_id",id).order("wallet_slot"),
-      supabase.from("service_profit_wallet_rules").select("wallet_id").eq("service_id",id)
+      supabase.from("service_credit_wallet_rules").select("wallet_id").eq("service_id",id)
     ]);
-    selectedWalletRules=data||[];selectedProfitWallets=(profitWallets||[]).map(x=>x.wallet_id);
+    selectedWalletRules=data||[];selectedCreditWallets=(profitWallets||[]).map(x=>x.wallet_id);
   }
   const editor=$("service-editor");
   editor.classList.remove("hidden");
@@ -454,7 +454,7 @@ async function openServiceEditor(id=null){
         ${serviceSlabRows("cost",s?.processing_cost_config?.slabs,"cost")}
         ${serviceSlabRows("profit",s?.profit_config?.slabs,"profit")}
       </div>
-      <div class="wallet-map-box" id="credit-profit-wallet-box" style="display:${s?.code==="CREDIT_CARD_BANK"?"block":"none"}"><strong>Credit Card profit wallets</strong><p>Service-charge profit will be credited here. The transfer principal goes to the customer bank account and never enters shop wallets.</p><div class="wallet-choice-grid">${walletOptions.map(w=>`<label class="wallet-choice"><input type="checkbox" data-profit-wallet-check value="${w.id}" ${selectedProfitWallets.includes(w.id)?"checked":""} ${w.is_active?"":"disabled"}><span>${escapeHtml(w.name)} <small>${escapeHtml(w.provider||w.wallet_type)}</small></span></label>`).join("")||'<small>No wallets created yet. Add wallets from Wallets section.</small>'}</div></div>
+      <div class="wallet-map-box" id="credit-service-wallet-box" style="display:${s?.code==="CREDIT_CARD_BANK"?"block":"none"}"><strong>Credit Card service wallets</strong><p>Customer credit-card transfer principal is credited to one of these service wallets. The service charge is recorded separately as shop profit.</p><div class="wallet-choice-grid">${walletOptions.map(w=>`<label class="wallet-choice"><input type="checkbox" data-credit-wallet-check value="${w.id}" ${selectedCreditWallets.includes(w.id)?"checked":""} ${w.is_active?"":"disabled"}><span>${escapeHtml(w.name)} <small>${escapeHtml(w.provider||w.wallet_type)}</small></span></label>`).join("")||'<small>No wallets created yet. Add wallets from Wallets section.</small>'}</div></div>
       <div class="wallet-map-box"><strong>Processing wallets</strong><p>Admin selects the wallet and debit formula for each service.</p><div class="wallet-choice-grid">${walletOptions.map(w=>{const rule=selectedWalletRules.find(x=>x.wallet_id===w.id),cfg=rule?.debit_config||{},mode=cfg.mode||(cfg.fixed_amount!=null?"fixed_amount":"processing_cost"),value=mode==="percentage"?(cfg.percentage??""):(cfg.fixed_amount??"");return `<label class="wallet-choice"><input type="checkbox" data-admin-wallet-check value="${w.id}" ${rule?"checked":""} ${w.is_active?"":"disabled"}><span>${escapeHtml(w.name)} <small>${escapeHtml(w.provider||w.wallet_type)}</small><select data-admin-wallet-mode="${w.id}" ${rule?"":"disabled"}><option value="processing_cost" ${mode==="processing_cost"?"selected":""}>Processing cost</option><option value="base_amount" ${mode==="base_amount"?"selected":""}>Bill amount</option><option value="base_plus_processing_cost" ${mode==="base_plus_processing_cost"?"selected":""}>Bill + processing cost</option><option value="fixed_amount" ${mode==="fixed_amount"?"selected":""}>Fixed amount</option><option value="percentage" ${mode==="percentage"?"selected":""}>Percentage of bill</option></select><input type="number" min="0" step="0.01" data-admin-wallet-value="${w.id}" value="${value}" placeholder="Value for fixed / percentage" ${rule&&["fixed_amount","percentage"].includes(mode)?"":"disabled"}></span></label>`;}).join("")||'<small>No wallets created yet. Add wallets from Wallets section.</small>'}</div></div>
       <label class="inline-check"><input id="svc-active" type="checkbox" ${s?.is_active===false?"":"checked"}> Service active</label>
       <div id="service-form-message" class="message"></div>
@@ -463,7 +463,7 @@ async function openServiceEditor(id=null){
   $("svc-billing").value=s?.billing_type||"fixed";
   $("svc-cost").value=s?.processing_cost_type||"fixed";
   $("svc-profit").value=s?.profit_mode||"manual";
-  const syncCreditProfitWalletBox=()=>{const box=$("credit-profit-wallet-box");if(box)box.style.display=$("svc-code").value.trim().toUpperCase()==="CREDIT_CARD_BANK"?"block":"none";};
+  const syncCreditProfitWalletBox=()=>{const box=$("credit-service-wallet-box");if(box)box.style.display=$("svc-code").value.trim().toUpperCase()==="CREDIT_CARD_BANK"?"block":"none";};
   $("svc-code").addEventListener("input",syncCreditProfitWalletBox);syncCreditProfitWalletBox();
   wireServiceSlabEditor(editor);
   const syncWalletRule=(walletId,checked)=>{const mode=editor.querySelector('[data-admin-wallet-mode="'+walletId+'"]'),value=editor.querySelector('[data-admin-wallet-value="'+walletId+'"]');if(mode)mode.disabled=!checked;if(value)value.disabled=!checked||!["fixed_amount","percentage"].includes(mode?.value);};
@@ -505,11 +505,11 @@ async function saveService(event){
     else{const {data,error}=await supabase.from("services").insert(payload).select("id").single();if(error)throw error;saved=data;}
     const chosen=[...document.querySelectorAll("[data-admin-wallet-check]:checked")].map((el,i)=>{const mode=document.querySelector('[data-admin-wallet-mode="'+el.value+'"]')?.value||"processing_cost",value=Number(document.querySelector('[data-admin-wallet-value="'+el.value+'"]')?.value||0),debit_config={mode};if(mode==="fixed_amount")debit_config.fixed_amount=value;if(mode==="percentage")debit_config.percentage=value;return {service_id:saved.id,wallet_id:el.value,wallet_slot:i+1,debit_order:i+1,debit_config,is_required:true};});
     if(chosen.some(x=>(x.debit_config.mode==="fixed_amount"||x.debit_config.mode==="percentage")&&(!(Number(x.debit_config.fixed_amount??x.debit_config.percentage)>0))))throw new Error("Enter a positive value for every fixed or percentage wallet rule.");
-    if(payload.code==="CREDIT_CARD_BANK"&&!document.querySelectorAll("[data-profit-wallet-check]:checked").length)throw new Error("Assign at least one Credit Card profit wallet.");
-    const profitWalletIds=[...document.querySelectorAll("[data-profit-wallet-check]:checked")].map(el=>el.value);
-    const {error:profitDelError}=await supabase.from("service_profit_wallet_rules").delete().eq("service_id",saved.id);
+    if(payload.code==="CREDIT_CARD_BANK"&&!document.querySelectorAll("[data-credit-wallet-check]:checked").length)throw new Error("Assign at least one Credit Card service wallet.");
+    const profitWalletIds=[...document.querySelectorAll("[data-credit-wallet-check]:checked")].map(el=>el.value);
+    const {error:profitDelError}=await supabase.from("service_credit_wallet_rules").delete().eq("service_id",saved.id);
     if(profitDelError)throw profitDelError;
-    if(profitWalletIds.length){const {error:profitRuleError}=await supabase.from("service_profit_wallet_rules").insert(profitWalletIds.map(wallet_id=>({service_id:saved.id,wallet_id})));if(profitRuleError)throw profitRuleError;}
+    if(profitWalletIds.length){const {error:profitRuleError}=await supabase.from("service_credit_wallet_rules").insert(profitWalletIds.map(wallet_id=>({service_id:saved.id,wallet_id})));if(profitRuleError)throw profitRuleError;}
     const {error:delError}=await supabase.from("service_wallet_rules").delete().eq("service_id",saved.id);
     if(delError)throw delError;
     if(chosen.length){const {error:ruleError}=await supabase.from("service_wallet_rules").insert(chosen);if(ruleError)throw ruleError;}
@@ -538,12 +538,12 @@ async function renderWalletManager(){
   const {data:transferHistory,error:transferHistoryError}=await supabase.from("wallet_ledger")
     .select("id,wallet_id,transfer_group_id,amount,direction,description,created_at,entry_type")
     .order("created_at",{ascending:false}).limit(50);
-  const {data:profitRules,error:profitRulesError}=await supabase.from("service_profit_wallet_rules").select("wallet_id");
+  const {data:profitRules,error:profitRulesError}=await supabase.from("service_credit_wallet_rules").select("wallet_id");
   const profitWalletIds=[...new Set((profitRules||[]).map(r=>r.wallet_id))];
   const profitWallets=walletOptions.filter(w=>profitWalletIds.includes(w.id));
   host.innerHTML=`
-    <div class="admin-module-head"><div><div class="eyebrow">ADMINISTRATION</div><h2>Wallet Management</h2><p>View profit wallets, add or withdraw amounts, transfer balances and configure low-balance alerts.</p></div></div>
-    <div class="admin-editor"><h3>Profit wallets</h3><p class="muted">These wallets are selected in Admin Service settings to receive service-charge profits. Credit Card to Bank Transfer credits only its service charge here.</p><div class="employee-wallet-grid">${profitWallets.length?profitWallets.map(w=>`<article class="employee-wallet-card"><div><strong>${escapeHtml(w.name)}</strong><small>${escapeHtml(w.provider||w.wallet_type||"Wallet")} · Profit wallet</small></div><b>${money(w.current_balance)}</b></article>`).join(""):'<div class="empty-state">No profit wallets assigned yet. Open Services Management and assign wallets under the relevant service.</div>'}</div></div>
+    <div class="admin-module-head"><div><div class="eyebrow">ADMINISTRATION</div><h2>Wallet Management</h2><p>Manage service wallets, add or withdraw amounts, transfer balances and configure low-balance alerts.</p></div></div>
+    <div class="admin-editor"><h3>Assigned service wallets</h3><p class="muted">These wallets are assigned in Admin Service settings to receive customer credit-card transfer principal. Service charges are tracked separately as profit.</p><div class="employee-wallet-grid">${profitWallets.length?profitWallets.map(w=>`<article class="employee-wallet-card"><div><strong>${escapeHtml(w.name)}</strong><small>${escapeHtml(w.provider||w.wallet_type||"Wallet")} · Profit wallet</small></div><b>${money(w.current_balance)}</b></article>`).join(""):'<div class="empty-state">No profit wallets assigned yet. Open Services Management and assign wallets under the relevant service.</div>'}</div></div>
     <div class="admin-editor"><h3>Create wallet</h3><form id="wallet-form" class="service-form">
       <div class="admin-form-grid"><label>Wallet name<input id="wallet-name" required maxlength="100" placeholder="e.g. IDFC Bank"></label><label>Wallet type<select id="wallet-type"><option value="bank">Bank</option><option value="upi">UPI</option><option value="provider">Provider</option><option value="cash">Cash</option><option value="other">Other</option></select></label><label>Provider / account label<input id="wallet-provider" maxlength="100" placeholder="Optional"></label></div>
       <small class="muted">New wallets always start with ₹0 opening balance.</small><div id="wallet-message" class="message"></div><button class="primary-btn admin-add-btn" type="submit" id="wallet-save">Create wallet</button>
@@ -646,6 +646,7 @@ async function renderReports(){
   <article class="finance-kpi"><small>Net profit after expenses</small><strong id="finance-net">₹0.00</strong><span>Earned income − operating expenses</span></article>
  </div>
  <div class="finance-secondary-stats"><div><small>Customer collections (not income)</small><strong id="finance-collections">₹0.00</strong></div><div><small>Processing costs already deducted in earned income</small><strong id="finance-processing">₹0.00</strong></div></div>
+ <div class="admin-table-wrap"><h3>Service-wise profit</h3><p class="muted">Automatically updated from each completed bill. Wallet top-ups and customer collections are not counted as profit.</p><div id="finance-service-profit-rows"></div></div>
  <div class="admin-editor finance-target-editor"><h3>Set income targets</h3><p>Set a recurring target for each period. Actual income is compared with the selected period's target.</p><form id="finance-target-form" class="finance-target-form"><label>Target period<select id="finance-target-period"><option value="day">Daily</option><option value="week">Weekly</option><option value="fortnight">Fortnightly</option><option value="month">Monthly</option><option value="year">Yearly</option></select></label><label>Income target (₹)<input id="finance-target-input" type="number" min="0" step=".01" required></label><label>Expense budget (₹)<input id="finance-expense-target-input" type="number" min="0" step=".01" required value="0"></label><button class="primary-btn" type="submit">Save target</button></form><div id="finance-target-message" class="message"></div><div class="finance-target-chips" id="finance-target-chips"></div></div>
  <div class="finance-lower-grid"><div class="admin-table-wrap"><h3>Expense category breakdown</h3><div id="finance-category-rows"></div></div><div class="admin-table-wrap"><h3>Recent expenses</h3><div id="finance-expense-rows"></div></div></div>
  <div class="admin-table-wrap"><h3>Recent bills</h3><div id="report-rows"></div></div><div class="admin-table-wrap"><h3>Permanent monthly income & expense history</h3><p class="muted">Monthly totals remain available even after old bill and expense details are cleaned up.</p><div id="monthly-financial-archive"></div></div>`;
@@ -668,13 +669,23 @@ async function loadMonthlyFinancialArchive(){
 }
 async function loadReportsData(){
  const period=$("report-period")?.value||"day",{start,end}=financeRange(period),startIso=start.toISOString(),endIso=end.toISOString(),startDate=financeYmd(start),endDate=financeYmd(new Date(end.getTime()-86400000));
- const [tx,ex,targets]=await Promise.all([
+ const [tx,ex,targets,serviceItems]=await Promise.all([
   supabase.from("billing_transactions").select("id,bill_number,customer_name,customer_total,amount_received,cash_received,upi_received,processing_total,profit_total,payment_mode,created_at").gte("created_at",startIso).lt("created_at",endIso).order("created_at",{ascending:false}).limit(1000),
   supabase.from("expenses").select("id,expense_date,category,description,amount,payment_mode").gte("expense_date",startDate).lte("expense_date",endDate).order("expense_date",{ascending:false}).limit(1000),
-  supabase.from("income_targets").select("period_type,target_amount,expense_target_amount,daily_target_start_date")
+  supabase.from("income_targets").select("period_type,target_amount,expense_target_amount,daily_target_start_date"),
+  supabase.from("billing_items").select("transaction_id,service_id,quantity,profit_amount,services(name,code),billing_transactions!inner(created_at,status)").gte("billing_transactions.created_at",startIso).lt("billing_transactions.created_at",endIso).eq("billing_transactions.status","completed").limit(5000)
  ]);
- const failure=tx.error||ex.error||targets.error;if(failure){$("report-rows").innerHTML='<div class="empty-state">Unable to load financial report: '+escapeHtml(failure.message)+'</div>';return}
- const bills=tx.data||[],expenses=ex.data||[],targetRows=targets.data||[];
+ const failure=tx.error||ex.error||targets.error||serviceItems.error;if(failure){$("report-rows").innerHTML='<div class="empty-state">Unable to load financial report: '+escapeHtml(failure.message)+'</div>';return}
+ const bills=tx.data||[],expenses=ex.data||[],targetRows=targets.data||[],serviceItemRows=serviceItems.data||[];
+ const serviceProfitMap=new Map();
+ serviceItemRows.forEach(item=>{
+  const service=Array.isArray(item.services)?item.services[0]:item.services;
+  const key=item.service_id;
+  if(!serviceProfitMap.has(key))serviceProfitMap.set(key,{name:service?.name||"Unknown service",code:service?.code||"",profit:0,quantity:0,bills:new Set()});
+  const row=serviceProfitMap.get(key);row.profit+=Number(item.profit_amount||0)*Number(item.quantity||1);row.quantity+=Number(item.quantity||1);row.bills.add(item.transaction_id);
+ });
+ const serviceProfitRows=[...serviceProfitMap.values()].sort((a,b)=>b.profit-a.profit);
+ $("finance-service-profit-rows").innerHTML=serviceProfitRows.length?serviceProfitRows.map(x=>'<div class="admin-service-row"><div class="admin-service-main"><strong>'+escapeHtml(x.name)+'</strong><small>'+escapeHtml(x.code||"Service")+' · '+x.bills.size+' bills · Qty '+x.quantity+'</small></div><div class="admin-service-meta"><strong>'+money(x.profit)+'</strong><span>Profit</span></div></div>').join(""):'<div class="empty-state">No service profit recorded in this period yet.</div>';
  const sum=(arr,k)=>arr.reduce((n,x)=>n+Number(x[k]||0),0),income=sum(bills,"profit_total"),expenseTotal=sum(expenses,"amount"),collection=bills.reduce((n,x)=>n+Number(x.cash_received||0)+Number(x.upi_received||0),0),processing=sum(bills,"processing_total"),targetRow=targetRows.find(x=>x.period_type===financeDbPeriod[period]),baseTarget=Number(targetRow?.target_amount||0),expenseBudget=Number(targetRow?.expense_target_amount||0);
  let carryForward=0;
  if(period==="day"&&baseTarget>0&&targetRow?.daily_target_start_date){
@@ -793,7 +804,7 @@ async function createEmployee(e){
 
 let billingRows = [];
 let billingWalletRules = {};
-let billingProfitWalletRules = {};
+let billingCreditWalletRules = {};
 function money(n){return "₹"+Number(n||0).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2});}
 function serviceByCode(code){return services.find(s=>s.code===code);}
 function isPaperPageService(svc){return !!svc&&(svc.code==="PRINTOUT"||svc.code?.startsWith("XEROX_"));}
@@ -920,9 +931,9 @@ function automaticWalletDebits(row,svc){
 async function setBillingRows(n){
   const {data:rules}=await supabase.from("service_wallet_rules").select("service_id,wallet_id,wallet_slot,debit_config").order("wallet_slot");
   billingWalletRules={};(rules||[]).forEach(x=>(billingWalletRules[x.service_id]??=[]).push(x));
-  const {data:profitRules,error:profitRulesError}=await supabase.from("service_profit_wallet_rules").select("service_id,wallet_id").order("wallet_id");
+  const {data:profitRules,error:profitRulesError}=await supabase.from("service_credit_wallet_rules").select("service_id,wallet_id").order("wallet_id");
   if(profitRulesError)throw profitRulesError;
-  billingProfitWalletRules={};(profitRules||[]).forEach(x=>(billingProfitWalletRules[x.service_id]??=[]).push(x.wallet_id));
+  billingCreditWalletRules={};(profitRules||[]).forEach(x=>(billingCreditWalletRules[x.service_id]??=[]).push(x.wallet_id));
   billingRows=Array.from({length:n},(_,i)=>billingRows[i]||({service_id:"",base:"",charge:"",cost:"",bank:"",quantity:1,unit_count:"",print_type:"single_side",sets:1,item_label:"",discount:0,wallet_debits:[],bill_count:1,bill_amounts:[""]}));
   $("billing-rows").innerHTML=billingRows.map((r,i)=>{
     const serviceOptions=services.filter(s=>s.is_active).map(s=>'<option value="'+s.id+'" '+(s.id===r.service_id?"selected":"")+'>'+escapeHtml(s.name)+'</option>').join("");
@@ -933,7 +944,7 @@ async function setBillingRows(n){
       return wallet?'<div class="wallet-choice"><span>'+escapeHtml(wallet.name)+' <small>Balance '+money(wallet.current_balance)+' · Auto debit '+money(debit?.amount||0)+'</small></span></div>':"";
     }).join("")||"<small>No processing wallet configured for this service.</small>";
     const isCreditCard=svc?.code==="CREDIT_CARD_BANK";
-    const ccWalletIds=billingProfitWalletRules[r.service_id]||[];
+    const ccWalletIds=billingCreditWalletRules[r.service_id]||[];
     const isCurrentBills=svc?.code==="CURRENT_BILLS";
     const billAmounts=Array.isArray(r.bill_amounts)?r.bill_amounts:[];
     const serviceFields=isCurrentBills
@@ -941,7 +952,7 @@ async function setBillingRows(n){
       : special
       ? '<label>Book / PDF name (optional)<input data-field="item_label" data-i="'+i+'" value="'+escapeHtml(r.item_label||"")+'" placeholder="Book 1 / PDF 1"></label>'+(svc.code==="PRINTOUT"?'<label>Print type<select data-field="print_type" data-i="'+i+'"><option value="single_side" '+((r.print_type||"single_side")==="single_side"?"selected":"")+'>Single Side</option><option value="both_side" '+(r.print_type==="both_side"?"selected":"")+'>Both Side</option></select></label>':'')+'<label>'+(svc.code==="PRINTOUT"?"PDF pages":"Xerox papers")+'<input data-field="unit_count" data-i="'+i+'" type="number" min="1" step="1" value="'+escapeHtml(r.unit_count||"")+'" placeholder="Enter count"></label><label>Number of sets<input data-field="sets" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.sets||1)+'"></label><label>Admin fixed rate (automatic)<input type="text" readonly value="'+money(rate)+' / '+(svc.code==="PRINTOUT"?"page":"paper")+'"></label><label>Discount (₹)<input data-field="discount" data-i="'+i+'" type="number" min="0" step="0.01" value="'+Number(r.discount||0)+'" placeholder="Optional"></label>'
       : isCreditCard
-        ? '<label>Transfer amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0.01" step="0.01" value="'+escapeHtml(r.base||"")+'" placeholder="Enter amount"></label><label>Service charge (%)<input data-field="charge_percent" data-i="'+i+'" type="number" min="0.01" max="100" step="0.01" value="'+escapeHtml(r.charge_percent??svc.billing_config?.charge_percent??2)+'"></label><label>Profit wallet<select data-field="profit_wallet_id" data-i="'+i+'"><option value="">Select wallet</option>'+ccWalletIds.map(id=>{const w=walletOptions.find(x=>x.id===id&&x.is_active);return w?'<option value="'+w.id+'" '+(r.profit_wallet_id===w.id?"selected":"")+'>'+escapeHtml(w.name)+' · '+money(w.current_balance)+'</option>':"";}).join("")+'</select></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label>'
+        ? '<label>Transfer amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0.01" step="0.01" value="'+escapeHtml(r.base||"")+'" placeholder="Enter amount"></label><label>Service charge (%)<input data-field="charge_percent" data-i="'+i+'" type="number" min="0.01" max="100" step="0.01" value="'+escapeHtml(r.charge_percent??svc.billing_config?.charge_percent??2)+'"></label><label>Profit wallet<select data-field="credit_wallet_id" data-i="'+i+'"><option value="">Select wallet</option>'+ccWalletIds.map(id=>{const w=walletOptions.find(x=>x.id===id&&x.is_active);return w?'<option value="'+w.id+'" '+(r.credit_wallet_id===w.id?"selected":"")+'>'+escapeHtml(w.name)+' · '+money(w.current_balance)+'</option>':"";}).join("")+'</select></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label>'
         : '<label>Bill / Transfer Amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.base)+'"></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label><label>Service charge (₹)<input data-field="charge" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.charge||"")+'"></label><label class="bank-field">Bank (AEPS)<input data-field="bank" data-i="'+i+'" value="'+escapeHtml(r.bank)+'" placeholder="Bank name"></label><label>Manual processing cost (₹)<input data-field="cost" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.cost)+'"></label>';
     return '<div class="billing-row" data-row="'+i+'"><div class="billing-row-head"><strong>Item '+(i+1)+'</strong><span class="billing-row-total" id="row-total-'+i+'">₹0.00</span></div><div class="billing-row-fields"><label>Service<div class="service-picker" data-service-picker="'+i+'"><input type="search" data-service-search="'+i+'" value="'+escapeHtml(svc?.name||"")+'" placeholder="Type one letter or service name…" autocomplete="off"><div class="service-picker-options hidden" id="service-picker-options-'+i+'"></div></div></label>'+serviceFields+'</div><div class="wallet-map-box"><strong>Processing wallet (automatic)</strong><p>Wallet and debit amount are taken from Admin service settings.</p><div class="wallet-choice-grid" id="wallet-auto-'+i+'">'+walletOptionsHtml+'</div></div><div class="billing-row-result" id="row-result-'+i+'">Service Charge: ₹0.00</div></div>';
   }).join("");
@@ -958,7 +969,7 @@ async function setBillingRows(n){
   $("billing-rows").onclick=e=>{
     const btn=e.target.closest("[data-service-option]");if(!btn)return;
     const idx=Number(btn.dataset.rowIndex),svc=services.find(s=>s.id===btn.dataset.serviceOption);if(!svc)return;
-    billingRows[idx].service_id=svc.id;billingRows[idx].base=svc.billing_config?.base_amount??"";billingRows[idx].charge=svc.billing_config?.customer_charge??"";billingRows[idx].cost=svc.processing_cost_config?.fixed_amount??"";billingRows[idx].charge_percent=svc.billing_config?.charge_percent??2;billingRows[idx].profit_wallet_id="";billingRows[idx].quantity=1;billingRows[idx].unit_count="";billingRows[idx].print_type="single_side";billingRows[idx].sets=1;billingRows[idx].item_label="";billingRows[idx].discount=0;billingRows[idx].wallet_debits=[];billingRows[idx].bill_count=1;billingRows[idx].bill_amounts=[""];
+    billingRows[idx].service_id=svc.id;billingRows[idx].base=svc.billing_config?.base_amount??"";billingRows[idx].charge=svc.billing_config?.customer_charge??"";billingRows[idx].cost=svc.processing_cost_config?.fixed_amount??"";billingRows[idx].charge_percent=svc.billing_config?.charge_percent??2;billingRows[idx].credit_wallet_id="";billingRows[idx].quantity=1;billingRows[idx].unit_count="";billingRows[idx].print_type="single_side";billingRows[idx].sets=1;billingRows[idx].item_label="";billingRows[idx].discount=0;billingRows[idx].wallet_debits=[];billingRows[idx].bill_count=1;billingRows[idx].bill_amounts=[""];
     setBillingRows(billingRows.length);
   };
   updateBillingTotals();
@@ -983,7 +994,7 @@ function onBillingRowChange(e){
     billingRows[i].charge=svc?.billing_config?.customer_charge??"";
     billingRows[i].cost=svc?.processing_cost_config?.fixed_amount??"";
     billingRows[i].charge_percent=svc?.billing_config?.charge_percent??2;
-    billingRows[i].profit_wallet_id="";
+    billingRows[i].credit_wallet_id="";
     billingRows[i].quantity=1;billingRows[i].unit_count="";billingRows[i].print_type="single_side";billingRows[i].sets=1;billingRows[i].item_label="";billingRows[i].discount=0;billingRows[i].wallet_debits=[];billingRows[i].bill_count=1;billingRows[i].bill_amounts=[""];
     setBillingRows(billingRows.length);return;
   }
@@ -1007,7 +1018,7 @@ function updateBillingTotals(){
   const received=Number($("bill-received").value||0),selected=billingRows.map(r=>services.find(s=>s.id===r.service_id)).filter(Boolean),ccOnly=selected.length>0&&selected.length===billingRows.filter(r=>r.service_id).length&&selected.every(s=>s.code==="CREDIT_CARD_BANK");
   const balance=Math.max(0,total-received),change=Math.max(0,received-total),status=$("bill-change");
   status.classList.remove("payment-short","payment-exact","payment-change");
-  if(ccOnly){status.classList.add("payment-exact");status.textContent="NO CASH / UPI COLLECTION · Transfer amount goes to customer bank account; service-charge profit goes to selected shop profit wallet.";}
+  if(ccOnly){status.classList.add("payment-exact");status.textContent="NO CASH / UPI COLLECTION · Transfer principal is credited to selected service wallet; service charge is recorded as profit.";}
   else if(received<total){status.classList.add("payment-short");status.textContent="BALANCE TO COLLECT  ·  "+money(balance);}
   else if(received===total){status.classList.add("payment-exact");status.textContent="PAYMENT SETTLED  ·  "+money(0);}
   else{status.classList.add("payment-change");status.textContent="RETURN TO CUSTOMER  ·  "+money(change);}
@@ -1033,7 +1044,7 @@ async function saveQuickBilling(){
       const wallet_debits=automaticWalletDebits(r,svc);
       if(svc.code==="CURRENT_BILLS"&&Number(r.base)>=10&&!(billingWalletRules[r.service_id]||[]).length)throw new Error("Admin must assign a processing wallet to Current Bills.");
       if(svc.code==="CREDIT_CARD_BANK"){
-        if(!(billingProfitWalletRules[r.service_id]||[]).includes(r.profit_wallet_id))throw new Error("Select a profit wallet assigned by Admin for Credit Card service.");
+        if(!(billingCreditWalletRules[r.service_id]||[]).includes(r.credit_wallet_id))throw new Error("Select a service wallet assigned by Admin for Credit Card service.");
         if(!(Number(r.base)>0)||!(Number(r.charge_percent)>0)||Number(r.charge_percent)>100)throw new Error("Enter a valid transfer amount and percentage (0.01–100).");
       }
       if(svc.code!=="CREDIT_CARD_BANK"&&(billingWalletRules[r.service_id]||[]).length&&!wallet_debits.length)throw new Error("Set processing wallet debit amounts in Admin Services for "+svc.name);
@@ -1045,7 +1056,7 @@ async function saveQuickBilling(){
       const quantity=special?1:Math.max(1,Number(r.quantity||1)),price=calc.unitTotal;
       const snapshot=special
         ? {base_amount:0,service_charge:calc.gross,count_unit:"papers",print_type:svc.code==="PRINTOUT"?(r.print_type||"single_side"):"single_side",page_count:Number(r.unit_count),unit_count:Number(r.unit_count),sets:Number(r.sets),total_count:calc.count,item_label:r.item_label||null,unit_rate:calc.rate,discount_amount:calc.discount,wallet_debits}
-        : svc.code==="CREDIT_CARD_BANK" ? {base_amount:Number(r.base),service_charge:calc.charge,charge_percent:Number(r.charge_percent),profit_wallet_id:r.profit_wallet_id,wallet_debits}
+        : svc.code==="CREDIT_CARD_BANK" ? {base_amount:Number(r.base),service_charge:calc.charge,charge_percent:Number(r.charge_percent),credit_wallet_id:r.credit_wallet_id,wallet_debits}
         : {base_amount:Number(r.base),service_charge:calc.charge,bank:r.bank||null,wallet_debits};
       const itemPayload={service_id:r.service_id,quantity,customer_unit_price:price,processing_unit_cost:calc.cost,pricing_snapshot:snapshot,wallet_debits};
       if(currentProfile?.role==="admin")itemPayload.profit_amount=calc.profit;
