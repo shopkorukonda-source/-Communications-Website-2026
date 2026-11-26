@@ -858,10 +858,10 @@ async function setBillingRows(n){
     const serviceOptions=services.filter(s=>s.is_active).map(s=>'<option value="'+s.id+'" '+(s.id===r.service_id?"selected":"")+'>'+escapeHtml(s.name)+'</option>').join("");
     const svc=services.find(s=>s.id===r.service_id)||{},special=isPaperPageService(svc),alloc=automaticWalletDebits(r,svc);
     const count=Number(r.unit_count||0)*Math.max(1,Number(r.sets||1)),rate=paperPageRate(r,svc,count);
-    const walletOptionsHtml=(billingWalletRules[r.service_id]||[]).map(rule=>{
+    const walletOptionsHtml=svc?.code==="UPI_TO_CASH"?"<small>Customer UPI credits the selected destination. Cash payout debits Shop Cash.</small>":(billingWalletRules[r.service_id]||[]).map(rule=>{
       const wallet=walletOptions.find(x=>x.id===rule.wallet_id),debit=alloc.find(x=>x.wallet_id===rule.wallet_id);
       return wallet?'<div class="wallet-choice"><span>'+escapeHtml(wallet.name)+' <small>Balance '+money(wallet.current_balance)+' · Auto debit '+money(debit?.amount||0)+'</small></span></div>':"";
-    }).join("")||"<small>No processing wallet configured for this service.</small>";
+    }).join("")||"<small>No processing wallet configured for this service.</small>");
     const isCreditCard=svc?.code==="CREDIT_CARD_BANK";
     const ccWalletIds=billingProfitWalletRules[r.service_id]||[];
     const isCurrentBills=svc?.code==="CURRENT_BILLS";
@@ -891,7 +891,7 @@ async function setBillingRows(n){
   $("billing-rows").onclick=e=>{
     const btn=e.target.closest("[data-service-option]");if(!btn)return;
     const idx=Number(btn.dataset.rowIndex),svc=services.find(s=>s.id===btn.dataset.serviceOption);if(!svc)return;
-    billingRows[idx].service_id=svc.id;billingRows[idx].base=svc.billing_config?.base_amount??"";billingRows[idx].charge=svc.billing_config?.customer_charge??"";billingRows[idx].cost=svc.processing_cost_config?.fixed_amount??"";billingRows[idx].charge_percent=svc.billing_config?.charge_percent??2;billingRows[idx].profit_wallet_id="";billingRows[idx].quantity=1;billingRows[idx].unit_count="";billingRows[idx].sets=1;billingRows[idx].item_label="";billingRows[idx].discount=0;billingRows[idx].wallet_debits=[];billingRows[idx].bill_count=1;billingRows[idx].bill_amounts=[""];
+    billingRows[idx].service_id=svc.id;if(svc.code==="UPI_TO_CASH"){$("bill-mode").value="upi";updatePaymentFields();}billingRows[idx].base=svc.billing_config?.base_amount??"";billingRows[idx].charge=svc.billing_config?.customer_charge??"";billingRows[idx].cost=svc.processing_cost_config?.fixed_amount??"";billingRows[idx].charge_percent=svc.billing_config?.charge_percent??2;billingRows[idx].profit_wallet_id="";billingRows[idx].quantity=1;billingRows[idx].unit_count="";billingRows[idx].sets=1;billingRows[idx].item_label="";billingRows[idx].discount=0;billingRows[idx].wallet_debits=[];billingRows[idx].bill_count=1;billingRows[idx].bill_amounts=[""];
     setBillingRows(billingRows.length);
   };
   updateBillingTotals();
