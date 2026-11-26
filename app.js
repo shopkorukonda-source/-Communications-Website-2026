@@ -1037,7 +1037,7 @@ async function setBillingRows(n){
   const {data:rules}=await supabase.from("service_wallet_rules").select("service_id,wallet_id,wallet_slot,debit_config").order("wallet_slot");
   billingWalletRules={};(rules||[]).forEach(x=>(billingWalletRules[x.service_id]??=[]).push(x));
   const {data:profitRules,error:profitRulesError}=await supabase.from("service_credit_wallet_rules").select("service_id,wallet_id").order("wallet_id");
-  if(profitRulesError)throw profitRulesError;
+  if(profitRulesError){console.warn("Credit wallet rules could not be loaded; continuing Quick Billing without optional profit-wallet mappings.",profitRulesError);}
   billingCreditWalletRules={};(profitRules||[]).forEach(x=>(billingCreditWalletRules[x.service_id]??=[]).push(x.wallet_id));
   billingRows=Array.from({length:n},(_,i)=>billingRows[i]||({service_id:"",base:"",charge:"",cost:"",bank:"",quantity:1,unit_count:"",print_type:"single_side",sets:1,item_label:"",discount:0,wallet_debits:[],bill_count:1,bill_amounts:[""]}));
   $("billing-rows").innerHTML=billingRows.map((r,i)=>{
