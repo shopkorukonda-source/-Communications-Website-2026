@@ -78,7 +78,7 @@ async function showApp(user) {
 async function loadCatalog() {
   const grid = $("category-grid");
   grid.innerHTML = '<div class="loading-card">Loading categories…</div>';
-  const serviceFields=currentProfile?.role==="admin"?"id,category_id,name,code,description,billing_type,processing_cost_type,profit_mode,billing_config,processing_cost_config,profit_config,sort_order,is_active":"id,category_id,name,code,description,billing_type,processing_cost_type,profit_mode,billing_config,processing_cost_config,sort_order,is_active";
+  const serviceFields=currentProfile?.role==="admin"?"id,category_id,name,code,description,billing_type,processing_cost_type,profit_mode,billing_config,processing_cost_config,profit_config,multi_wallet_debit,sort_order,is_active":"id,category_id,name,code,description,billing_type,processing_cost_type,profit_mode,billing_config,processing_cost_config,sort_order,is_active,multi_wallet_debit";
   const [{data: cats, error: catError},{data: rows,error: serviceError}] = await Promise.all([
     supabase.from("service_categories").select("id,name,slug,sort_order,is_active").order("sort_order"),
     supabase.from("services").select(serviceFields).order("sort_order")
@@ -1009,7 +1009,7 @@ function walletDebitsForRow(row,svc){
   const rules=billingWalletRules[row.service_id]||[];
   const selectedIds=svc?.multi_wallet_debit?rules.map(x=>String(x.wallet_id)):(row.processing_wallet_id?[String(row.processing_wallet_id)]:(Array.isArray(row.processing_wallet_ids)?row.processing_wallet_ids.map(String):[]));
   if(!selectedIds.length)return [];
-  const rules=billingWalletRules[row.service_id]||[],base=Number(row.base||0),processingCost=serviceProcessingCost(base,svc,row);
+  const base=Number(row.base||0),processingCost=serviceProcessingCost(base,svc,row);
   return selectedIds.map(walletId=>{
     const rule=rules.find(x=>x.wallet_id===walletId);
     if(!rule)return null;
