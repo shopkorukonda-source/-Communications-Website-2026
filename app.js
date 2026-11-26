@@ -1179,16 +1179,17 @@ async function saveQuickBilling(){
       const svc=services.find(s=>s.id===r.service_id),special=isPaperPageService(svc);
       const wallet_debits=walletDebitsForRow(r,svc);
       if(isManualProcessingWalletService(svc)){
-        if(!(billingWalletRules[r.service_id]||[]).length)throw new Error("Admin must assign one or more allowed processing wallets in Admin Services for Job Application.");
-        if(!r.processing_wallet_id)throw new Error("Select the processing wallet for Job Application.");
-        if(!wallet_debits.length)throw new Error("Enter a valid processing cost and select its wallet for Job Application.");
+        if(!(billingWalletRules[r.service_id]||[]).length)throw new Error("Admin must assign one or more processing wallets in Admin Services for "+svc.name+".");
+        if(!r.processing_wallet_id)throw new Error("Select the transaction wallet for "+svc.name+".");
+        if(!(billingWalletRules[r.service_id]||[]).some(x=>x.wallet_id===r.processing_wallet_id))throw new Error("Selected wallet is not assigned to "+svc.name+".");
+        if(!wallet_debits.length)throw new Error("Selected wallet debit must be greater than zero. Check the processing cost and wallet debit rule for "+svc.name+".");
       }
       if(svc.code==="CURRENT_BILLS"&&Number(r.base)>=10&&!(billingWalletRules[r.service_id]||[]).length)throw new Error("Admin must assign a processing wallet to Current Bills.");
       if(svc.code==="CREDIT_CARD_BANK"){
         if(!(billingCreditWalletRules[r.service_id]||[]).includes(r.credit_wallet_id))throw new Error("Select a profit wallet assigned by Admin for Credit Card service.");
         if(!(Number(r.base)>0)||!(Number(r.charge_percent)>0)||Number(r.charge_percent)>100)throw new Error("Enter a valid transfer amount and percentage (0.01–100).");
       }
-      if(svc.code!=="CREDIT_CARD_BANK"&&!isManualJobApplicationWalletService(svc)&&(billingWalletRules[r.service_id]||[]).length&&!wallet_debits.length)throw new Error("Set processing wallet debit amounts in Admin Services for "+svc.name);
+      if(svc.code!=="CREDIT_CARD_BANK"&&!isManualProcessingWalletService(svc)&&(billingWalletRules[r.service_id]||[]).length&&!wallet_debits.length)throw new Error("Set processing wallet debit amounts in Admin Services for "+svc.name);
       if(wallet_debits.some(x=>!Number.isFinite(Number(x.amount))||Number(x.amount)<=0))throw new Error("Invalid automatic wallet debit amount.");
       r.wallet_debits=wallet_debits;
       const calc=calculateBillingRow(r);
