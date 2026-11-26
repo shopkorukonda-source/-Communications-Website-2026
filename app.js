@@ -1030,7 +1030,7 @@ function manualProcessingWalletHtml(row,svc,index){
     return multi?'<div class="wallet-choice"><span>'+escapeHtml(w.name)+' · Debit '+money(debit?.amount||0)+'</span></div>':'<option value="'+w.id+'" '+(selectedId===String(w.id)?"selected":"")+'>'+escapeHtml(w.name)+' · Balance '+money(w.current_balance)+'</option>';
   }).join("");
   const debitTotal=debits.reduce((n,x)=>n+Number(x.amount||0),0),aepsCredit=svc.code==="AEPS_WITHDRAWAL"?Number(row.base||0):0;
-  const control=multi?'<p>Admin-selected wallets are automatically debited using each wallet rule.</p><div class="wallet-choice-grid">'+(opts||"<small>No processing wallets assigned. Configure them in Admin Services.</small>")+'</div>':'<label>Processing wallet <select data-field="processing_wallet_id" data-i="'+index+'"><option value="">Select one wallet</option>'+opts+'</select></label>';
+  const control=multi?'<p>Admin-selected wallets are automatically debited using each wallet rule.</p><div class="wallet-choice-grid">'+(opts||"<small>No processing wallets assigned. Configure them in Admin Services.</small>")+'</div>':'<label>'+(svc.code==="AEPS_WITHDRAWAL"?"AEPS credit wallet":"Processing wallet")+' <select data-field="processing_wallet_id" data-i="'+index+'"><option value="">Select one wallet</option>'+opts+'</select></label>';
   return '<div class="wallet-map-box"><strong>Transaction wallet'+(multi?"s":"")+'</strong>'+control+(svc.code==="AEPS_WITHDRAWAL"?'<small>Selected wallet credit: <span id="manual-wallet-credit-'+index+'">'+money(aepsCredit)+'</span></small>':'<small>Total wallet debit: <span id="manual-wallet-debit-'+index+'">'+money(debitTotal)+'</span></small>')+'</div>';
 }
 async function setBillingRows(n){
