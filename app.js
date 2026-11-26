@@ -391,6 +391,29 @@ function renderAdminServiceRows(){
   document.querySelectorAll("[data-edit-service]").forEach(b=>b.addEventListener("click",()=>openServiceEditor(b.dataset.editService)));
   document.querySelectorAll("[data-toggle-service]").forEach(b=>b.addEventListener("click",()=>toggleService(b.dataset.toggleService)));
 }
+function serviceSlabRows(kind, rows, valueKey) {
+  const data=Array.isArray(rows)?rows:[];
+  return '<div class="service-slab-group" data-slab-group="'+kind+'"><div class="service-slab-head"><strong>'+({billing:"Customer charge slabs",cost:"Processing cost slabs",profit:"Profit slabs"}[kind])+'</strong><button type="button" class="secondary-btn" data-add-slab="'+kind+'">+ Add slab</button></div><div class="service-slab-rows">'+data.map((x,i)=>'<div class="service-slab-row" data-slab-row><label>Amount from ₹<input type="number" min="0" step="0.01" data-slab-min value="'+Number(x.min??0)+'"></label><label>Amount to ₹<input type="number" min="0" step="0.01" data-slab-max value="'+(x.max==null?'':Number(x.max))+'" placeholder="No limit"></label><label>'+({billing:"Customer charge ₹",cost:"Processing cost ₹",profit:"Profit ₹"}[kind])+'<input type="number" min="0" step="0.01" data-slab-value value="'+Number(x[valueKey]??0)+'"></label><button type="button" class="text-btn" data-remove-slab>Remove</button></div>').join('')+'</div></div>';
+}
+function readServiceSlabs(kind,valueKey){
+  return [...document.querySelectorAll('[data-slab-group="'+kind+'"] [data-slab-row]')].map(row=>({
+    min:Number(row.querySelector('[data-slab-min]').value||0),
+    max:row.querySelector('[data-slab-max]').value===''?null:Number(row.querySelector('[data-slab-max]').value),
+    [valueKey]:Number(row.querySelector('[data-slab-value]').value||0)
+  }));
+}
+function wireServiceSlabEditor(editor){
+  editor.querySelectorAll('[data-add-slab]').forEach(btn=>btn.addEventListener('click',()=>{
+    const kind=btn.dataset.addSlab,host=editor.querySelector('[data-slab-group="'+kind+'"] .service-slab-rows');
+    const rows=[...host.querySelectorAll('[data-slab-row]')],last=rows.at(-1);
+    const min=last?Number(last.querySelector('[data-slab-max]').value||last.querySelector('[data-slab-min]').value)+1:0;
+    const title=kind==='billing'?'Customer charge':kind==='cost'?'Processing cost':'Profit';
+    const row=document.createElement('div');row.className='service-slab-row';row.dataset.slabRow='';
+    row.innerHTML='<label>Amount from ₹<input type="number" min="0" step="0.01" data-slab-min value="'+min+'"></label><label>Amount to ₹<input type="number" min="0" step="0.01" data-slab-max placeholder="No limit"></label><label>'+title+' ₹<input type="number" min="0" step="0.01" data-slab-value value="0"></label><button type="button" class="text-btn" data-remove-slab>Remove</button>';
+    host.appendChild(row);row.querySelector('[data-remove-slab]').onclick=()=>row.remove();
+  }));
+  editor.querySelectorAll('[data-remove-slab]').forEach(btn=>btn.addEventListener('click',()=>btn.closest('[data-slab-row]').remove()));
+}
 async function openServiceEditor(id=null){
   editingServiceId=id;
   const s=id?services.find(x=>x.id===id):null;
@@ -425,6 +448,12 @@ async function openServiceEditor(id=null){
         <label>Profit percentage (%)<input id="svc-profit-percentage" type="number" min="0" step="0.01" value="${Number(s?.profit_config?.percentage||0)}" placeholder="Enter percentage"></label>
       </div>
       <small class="muted">Enter normal amounts directly. Only the selected Billing type, Processing cost type and Profit mode are used. Existing slab settings are preserved when editing a service.</small>
+      <div class="service-slab-editor">
+        <p class="muted">Slab rates are matched against the transaction amount. Add non-overlapping ranges for each selected Slabs mode.</p>
+        ${serviceSlabRows("billing",s?.billing_config?.slabs,"customer_charge")}
+        ${serviceSlabRows("cost",s?.processing_cost_config?.slabs,"cost")}
+        ${serviceSlabRows("profit",s?.profit_config?.slabs,"profit")}
+      </div>
       <div class="wallet-map-box" id="credit-profit-wallet-box" style="display:${s?.code==="CREDIT_CARD_BANK"?"block":"none"}"><strong>Credit Card profit wallets</strong><p>Select all wallets employees may choose. Each bill's calculated profit is credited to the selected wallet.</p><div class="wallet-choice-grid">${walletOptions.map(w=>`<label class="wallet-choice"><input type="checkbox" data-profit-wallet-check value="${w.id}" ${selectedProfitWallets.includes(w.id)?"checked":""} ${w.is_active?"":"disabled"}><span>${escapeHtml(w.name)} <small>${escapeHtml(w.provider||w.wallet_type)}</small></span></label>`).join("")||'<small>No wallets created yet. Add wallets from Wallets section.</small>'}</div></div>
       <div class="wallet-map-box"><strong>Processing wallets</strong><p>Admin selects the wallet and debit formula for each service.</p><div class="wallet-choice-grid">${walletOptions.map(w=>{const rule=selectedWalletRules.find(x=>x.wallet_id===w.id),cfg=rule?.debit_config||{},mode=cfg.mode||(cfg.fixed_amount!=null?"fixed_amount":"processing_cost"),value=mode==="percentage"?(cfg.percentage??""):(cfg.fixed_amount??"");return `<label class="wallet-choice"><input type="checkbox" data-admin-wallet-check value="${w.id}" ${rule?"checked":""} ${w.is_active?"":"disabled"}><span>${escapeHtml(w.name)} <small>${escapeHtml(w.provider||w.wallet_type)}</small><select data-admin-wallet-mode="${w.id}" ${rule?"":"disabled"}><option value="processing_cost" ${mode==="processing_cost"?"selected":""}>Processing cost</option><option value="base_amount" ${mode==="base_amount"?"selected":""}>Bill amount</option><option value="base_plus_processing_cost" ${mode==="base_plus_processing_cost"?"selected":""}>Bill + processing cost</option><option value="fixed_amount" ${mode==="fixed_amount"?"selected":""}>Fixed amount</option><option value="percentage" ${mode==="percentage"?"selected":""}>Percentage of bill</option></select><input type="number" min="0" step="0.01" data-admin-wallet-value="${w.id}" value="${value}" placeholder="Value for fixed / percentage" ${rule&&["fixed_amount","percentage"].includes(mode)?"":"disabled"}></span></label>`;}).join("")||'<small>No wallets created yet. Add wallets from Wallets section.</small>'}</div></div>
       <label class="inline-check"><input id="svc-active" type="checkbox" ${s?.is_active===false?"":"checked"}> Service active</label>
@@ -436,6 +465,7 @@ async function openServiceEditor(id=null){
   $("svc-profit").value=s?.profit_mode||"manual";
   const syncCreditProfitWalletBox=()=>{const box=$("credit-profit-wallet-box");if(box)box.style.display=$("svc-code").value.trim().toUpperCase()==="CREDIT_CARD_BANK"?"block":"none";};
   $("svc-code").addEventListener("input",syncCreditProfitWalletBox);syncCreditProfitWalletBox();
+  wireServiceSlabEditor(editor);
   const syncWalletRule=(walletId,checked)=>{const mode=editor.querySelector('[data-admin-wallet-mode="'+walletId+'"]'),value=editor.querySelector('[data-admin-wallet-value="'+walletId+'"]');if(mode)mode.disabled=!checked;if(value)value.disabled=!checked||!["fixed_amount","percentage"].includes(mode?.value);};
   editor.querySelectorAll("[data-admin-wallet-check]").forEach(ch=>ch.addEventListener("change",()=>syncWalletRule(ch.value,ch.checked)));
   editor.querySelectorAll("[data-admin-wallet-mode]").forEach(sel=>sel.addEventListener("change",()=>syncWalletRule(sel.dataset.adminWalletMode,editor.querySelector('[data-admin-wallet-check][value="'+sel.dataset.adminWalletMode+'"]')?.checked)));
@@ -456,9 +486,13 @@ async function saveService(event){
     profitConfig={...(existing?.profit_config||{}),fixed_amount:toAmount("svc-profit-amount"),percentage:toAmount("svc-profit-percentage")};
   }catch(e){msg.textContent=e.message;return;}
   const billingType=$("svc-billing").value,costType=$("svc-cost").value,profitMode=$("svc-profit").value;
-  if(billingType==="slabs"&&!Array.isArray(billingConfig.slabs))billingConfig.slabs=[{min:0,max:999999999,customer_charge:billingConfig.customer_charge}];
-  if(costType==="slabs"&&!Array.isArray(costConfig.slabs))costConfig.slabs=[{min:0,max:999999999,cost:costConfig.fixed_amount}];
-  if(profitMode==="slabs"&&!Array.isArray(profitConfig.slabs))profitConfig.slabs=[{min:0,max:999999999,profit:profitConfig.fixed_amount}];
+  const billingSlabs=readServiceSlabs("billing","customer_charge"),costSlabs=readServiceSlabs("cost","cost"),profitSlabs=readServiceSlabs("profit","profit");
+  const validateSlabs=(rows,label)=>{rows.sort((a,b)=>a.min-b.min);for(let i=0;i<rows.length;i++){const x=rows[i],p=rows[i-1];if(!Number.isFinite(x.min)||x.min<0||(x.max!==null&&(!Number.isFinite(x.max)||x.max<x.min))||!Number.isFinite(x[Object.keys(x).find(k=>!["min","max"].includes(k))])||x[Object.keys(x).find(k=>!["min","max"].includes(k))]<0||(p&&(p.max===null||x.min<=p.max)))throw new Error(label+" slab ranges must be valid and non-overlapping.");}};
+  try{
+    if(billingType==="slabs"){validateSlabs(billingSlabs,"Customer charge");billingConfig.slabs=billingSlabs;}
+    if(costType==="slabs"){validateSlabs(costSlabs,"Processing cost");costConfig.slabs=costSlabs;}
+    if(profitMode==="slabs"){validateSlabs(profitSlabs,"Profit");profitConfig.slabs=profitSlabs;}
+  }catch(e){msg.textContent=e.message;return;}
   const payload={category_id:$("svc-category").value,name:$("svc-name").value.trim(),code:$("svc-code").value.trim()||null,description:$("svc-description").value.trim()||null,billing_type:billingType,processing_cost_type:costType,profit_mode:profitMode,billing_config:billingConfig,processing_cost_config:costConfig,profit_config:profitConfig,is_active:$("svc-active").checked,updated_at:new Date().toISOString()};
   if(!payload.name){msg.textContent="Service name is required.";return;}
   btn.disabled=true;btn.textContent="Saving…";
