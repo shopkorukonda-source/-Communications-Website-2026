@@ -1331,7 +1331,7 @@ async function loadBillIntoQuickBilling(id){
         bill_amounts:isCurrent?[String(snap.base_amount??"")]:[""],
         credit_wallet_id:snap.credit_wallet_id||"",
         charge_percent:snap.charge_percent??svc?.billing_config?.charge_percent??2,
-        processing_wallet_id:walletDebits[0]?.wallet_id||"",
+        processing_wallet_id:snap.aeps_wallet_id||walletDebits[0]?.wallet_id||"",
         processing_wallet_ids:walletDebits.map(x=>String(x.wallet_id)),
         adjustment_type:["AEPS_WITHDRAWAL","UPI_TO_CASH","CASH_TO_UPI"].includes(svc?.code)?(["AEPS_WITHDRAWAL","UPI_TO_CASH","CASH_TO_UPI"].includes(svc?.code)&&bill.cash_adjustment_type==="extra"?"":(bill.cash_adjustment_type||"")):"",
         adjustment_amount:["AEPS_WITHDRAWAL","UPI_TO_CASH","CASH_TO_UPI"].includes(svc?.code)?(bill.cash_adjustment_type==="extra"?0:Number(bill.cash_adjustment_amount||0)):0,
