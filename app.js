@@ -1005,28 +1005,32 @@ function isManualProcessingWalletService(svc){
 }
 function walletDebitsForRow(row,svc){
   if(!isManualProcessingWalletService(svc))return automaticWalletDebits(row,svc);
-  if(!row.processing_wallet_id)return [];
-  const rule=(billingWalletRules[row.service_id]||[]).find(x=>x.wallet_id===row.processing_wallet_id);
-  if(!rule)return [];
-  const cfg=rule.debit_config||{},mode=cfg.mode||(cfg.fixed_amount!=null?"fixed_amount":"processing_cost");
-  const base=Number(row.base||0),processingCost=serviceProcessingCost(base,svc,row);
-  let amount=processingCost;
-  if(mode==="base_amount")amount=base;
-  else if(mode==="base_plus_processing_cost")amount=base+processingCost;
-  else if(mode==="fixed_amount")amount=Number(cfg.fixed_amount||0);
-  else if(mode==="percentage")amount=Math.round(base*Number(cfg.percentage||0))/100;
-  return Number.isFinite(amount)&&amount>0?[{wallet_id:rule.wallet_id,amount}]:[];
+  const selectedIds=Array.isArray(row.processing_wallet_ids)?row.processing_wallet_ids.map(String):(row.processing_wallet_id?[String(row.processing_wallet_id)]:[]);
+  if(!selectedIds.length)return [];
+  const rules=billingWalletRules[row.service_id]||[],base=Number(row.base||0),processingCost=serviceProcessingCost(base,svc,row);
+  return selectedIds.map(walletId=>{
+    const rule=rules.find(x=>x.wallet_id===walletId);
+    if(!rule)return null;
+    const cfg=rule.debit_config||{},mode=cfg.mode||(cfg.fixed_amount!=null?"fixed_amount":"processing_cost");
+    let amount=processingCost;
+    if(mode==="base_amount")amount=base;
+    else if(mode==="base_plus_processing_cost")amount=base+processingCost;
+    else if(mode==="fixed_amount")amount=Number(cfg.fixed_amount||0);
+    else if(mode==="percentage")amount=Math.round(base*Number(cfg.percentage||0))/100;
+    return Number.isFinite(amount)&&amount>0?{wallet_id:rule.wallet_id,amount}:null;
+  }).filter(Boolean);
 }
 function manualProcessingWalletHtml(row,svc,index){
   if(!isManualProcessingWalletService(svc))return null;
   const rules=billingWalletRules[row.service_id]||[];
-  const selected=String(row.processing_wallet_id||"");
+  const selectedIds=Array.isArray(row.processing_wallet_ids)?row.processing_wallet_ids.map(String):(row.processing_wallet_id?[String(row.processing_wallet_id)]:[]);
+  const debits=walletDebitsForRow(row,svc);
   const opts=rules.map(rule=>{
-    const w=walletOptions.find(x=>x.id===rule.wallet_id&&x.is_active);
-    return w?'<option value="'+w.id+'" '+(selected===w.id?"selected":"")+'>'+escapeHtml(w.name)+' · Balance '+money(w.current_balance)+'</option>':"";
+    const w=walletOptions.find(x=>x.id===rule.wallet_id&&x.is_active),debit=debits.find(x=>x.wallet_id===rule.wallet_id);
+    return w?'<label class="wallet-choice"><input type="checkbox" data-field="processing_wallet_ids" data-i="'+index+'" value="'+w.id+'" '+(selectedIds.includes(w.id)?"checked":"")+'><span>'+escapeHtml(w.name)+' · Balance '+money(w.current_balance)+' · Debit '+money(debit?.amount||0)+'</span></label>':"";
   }).join("");
-  const debit=walletDebitsForRow(row,svc).reduce((n,x)=>n+Number(x.amount||0),0);
-  return '<div class="wallet-map-box"><strong>Transaction wallet (select manually)</strong><p>Select the wallet used for this '+escapeHtml(svc.name)+'. Only the selected wallet will be debited.</p><label>Wallet<select data-field="processing_wallet_id" data-i="'+index+'"><option value="">Select transaction wallet</option>'+opts+'</select></label><small>Wallet debit: <span id="manual-wallet-debit-'+index+'">'+money(debit)+'</span></small></div>';
+  const debitTotal=debits.reduce((n,x)=>n+Number(x.amount||0),0);
+  return '<div class="wallet-map-box"><strong>Transaction wallets (select one or more)</strong><p>Select all wallets to debit for this '+escapeHtml(svc.name)+'. Each selected wallet uses its own Admin Services debit rule.</p><div class="wallet-multi-select">'+(opts||"<small>No processing wallets assigned. Configure them in Admin Services.</small>")+'</div><small>Total wallet debit: <span id="manual-wallet-debit-'+index+'">'+money(debitTotal)+'</span></small></div>';
 }
 async function setBillingRows(n){
   const {data:rules}=await supabase.from("service_wallet_rules").select("service_id,wallet_id,wallet_slot,debit_config").order("wallet_slot");
@@ -1091,6 +1095,13 @@ function onBillingRowChange(e){
     billingRows[i].bill_amounts=Array.from({length:n},(_,j)=>billingRows[i].bill_amounts?.[j]??"");
     setBillingRows(billingRows.length);return;
   }
+  if(field==="processing_wallet_ids"){
+    const ids=Array.isArray(billingRows[i].processing_wallet_ids)?billingRows[i].processing_wallet_ids.map(String):(billingRows[i].processing_wallet_id?[String(billingRows[i].processing_wallet_id)]:[]);
+    const walletId=String(e.target.value);
+    billingRows[i].processing_wallet_ids=e.target.checked?[...new Set([...ids,walletId])]:ids.filter(x=>x!==walletId);
+    billingRows[i].processing_wallet_id=billingRows[i].processing_wallet_ids[0]||"";
+    setBillingRows(billingRows.length);return;
+  }
   billingRows[i][field]=e.target.value;
   if(field==="adjustment_type"){
     if(e.target.value==="extra"&&!billingRows[i].adjustment_mode)billingRows[i].adjustment_mode="cash";
@@ -1103,7 +1114,7 @@ function onBillingRowChange(e){
     billingRows[i].cost=svc?.processing_cost_config?.fixed_amount??"";
     billingRows[i].charge_percent=svc?.billing_config?.charge_percent??2;
     billingRows[i].credit_wallet_id="";
-    billingRows[i].processing_wallet_id="";
+    billingRows[i].processing_wallet_id="";billingRows[i].processing_wallet_ids=[];
     billingRows[i].quantity=1;billingRows[i].unit_count="";billingRows[i].print_type="single_side";billingRows[i].sets=1;billingRows[i].item_label="";billingRows[i].discount=0;billingRows[i].wallet_debits=[];billingRows[i].bill_count=1;billingRows[i].bill_amounts=[""];billingRows[i].adjustment_type="";billingRows[i].adjustment_amount=0;billingRows[i].adjustment_mode="cash";
     setBillingRows(billingRows.length);return;
   }
@@ -1196,9 +1207,10 @@ async function saveQuickBilling(){
         const zeroCostAeps=svc.code==="AEPS_WITHDRAWAL"&&serviceProcessingCost(Number(r.base||0),svc,r)===0;
         if(!zeroCostAeps){
           if(!(billingWalletRules[r.service_id]||[]).length)throw new Error("Admin must assign one or more processing wallets in Admin Services for "+svc.name+".");
-          if(!r.processing_wallet_id)throw new Error("Select the transaction wallet for "+svc.name+".");
-          if(!(billingWalletRules[r.service_id]||[]).some(x=>x.wallet_id===r.processing_wallet_id))throw new Error("Selected wallet is not assigned to "+svc.name+".");
-          if(!wallet_debits.length)throw new Error("Selected wallet debit must be greater than zero. Check the processing cost and wallet debit rule for "+svc.name+".");
+          const selectedWalletIds=Array.isArray(r.processing_wallet_ids)?r.processing_wallet_ids.map(String):(r.processing_wallet_id?[String(r.processing_wallet_id)]:[]);
+          if(!selectedWalletIds.length)throw new Error("Select at least one transaction wallet for "+svc.name+".");
+          if(selectedWalletIds.some(id=>!(billingWalletRules[r.service_id]||[]).some(x=>x.wallet_id===id)))throw new Error("One or more selected wallets are not assigned to "+svc.name+".");
+          if(!wallet_debits.length||wallet_debits.length!==selectedWalletIds.length)throw new Error("Check the debit amount configured for every selected wallet in Admin Services.");
         }
       }
       if(svc.code==="CURRENT_BILLS"&&Number(r.base)>=10&&!(billingWalletRules[r.service_id]||[]).length)throw new Error("Admin must assign a processing wallet to Current Bills.");
@@ -1315,6 +1327,7 @@ async function loadBillIntoQuickBilling(id){
         credit_wallet_id:snap.credit_wallet_id||"",
         charge_percent:snap.charge_percent??svc?.billing_config?.charge_percent??2,
         processing_wallet_id:walletDebits[0]?.wallet_id||"",
+        processing_wallet_ids:walletDebits.map(x=>String(x.wallet_id)),
         adjustment_type:["AEPS_WITHDRAWAL","UPI_TO_CASH","CASH_TO_UPI"].includes(svc?.code)?(["AEPS_WITHDRAWAL","UPI_TO_CASH","CASH_TO_UPI"].includes(svc?.code)&&bill.cash_adjustment_type==="extra"?"":(bill.cash_adjustment_type||"")):"",
         adjustment_amount:["AEPS_WITHDRAWAL","UPI_TO_CASH","CASH_TO_UPI"].includes(svc?.code)?(bill.cash_adjustment_type==="extra"?0:Number(bill.cash_adjustment_amount||0)):0,
         adjustment_mode:["AEPS_WITHDRAWAL","UPI_TO_CASH","CASH_TO_UPI"].includes(svc?.code)?(bill.cash_adjustment_mode||"cash"):"cash"
