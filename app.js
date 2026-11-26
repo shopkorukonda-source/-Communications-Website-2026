@@ -928,7 +928,16 @@ function automaticWalletDebits(row,svc,allowJobApplication=false){
 function walletDebitsForRow(row,svc){
   if(!isManualJobApplicationWalletService(svc))return automaticWalletDebits(row,svc);
   if(!row.processing_wallet_id)return [];
-  return automaticWalletDebits(row,svc,true).filter(x=>x.wallet_id===row.processing_wallet_id);
+  const rule=(billingWalletRules[row.service_id]||[]).find(x=>x.wallet_id===row.processing_wallet_id);
+  if(!rule)return [];
+  const cfg=rule.debit_config||{},mode=cfg.mode||(cfg.fixed_amount!=null?"fixed_amount":"processing_cost");
+  const base=Number(row.base||0),processingCost=Number(row.cost||svc?.processing_cost_config?.fixed_amount||0);
+  let amount=processingCost;
+  if(mode==="base_amount")amount=base;
+  else if(mode==="base_plus_processing_cost")amount=base+processingCost;
+  else if(mode==="fixed_amount")amount=Number(cfg.fixed_amount||0);
+  else if(mode==="percentage")amount=Math.round(base*Number(cfg.percentage||0))/100;
+  return Number.isFinite(amount)&&amount>0?[{wallet_id:rule.wallet_id,amount}]:[];
 }
 function manualJobApplicationWalletHtml(row,svc,index){
   if(!isManualJobApplicationWalletService(svc))return null;
