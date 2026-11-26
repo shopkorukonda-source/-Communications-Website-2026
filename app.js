@@ -1119,7 +1119,7 @@ function updateBillingTotals(){
     if(isCurrentBills)currentCalcs.forEach((x,j)=>{const charge=$("[data-current-charge='"+i+"-"+j+"']"),lineTotal=$("[data-current-total='"+i+"-"+j+"']");if(charge)charge.textContent=money(x.charge);if(lineTotal)lineTotal.textContent=money(x.total);});
     const calc=isCurrentBills?{charge:currentCalcs.reduce((a,x)=>a+x.charge,0),cost:currentCalcs.reduce((a,x)=>a+x.cost,0),profit:currentCalcs.reduce((a,x)=>a+x.profit,0),total:currentCalcs.reduce((a,x)=>a+x.total,0)}:calculateBillingRow(r);
     const slabCharge=$("slab-charge-"+i),slabCost=$("slab-cost-"+i);if(slabCharge)slabCharge.value=money(calc.charge);if(slabCost)slabCost.value=money(calc.cost);
-    const aepsExtra=svc?.code==="AEPS_WITHDRAWAL"&&r.adjustment_type==="extra"?Math.max(0,Number(r.adjustment_amount||0)):0;
+    const aepsExtra=["AEPS_WITHDRAWAL","UPI_TO_CASH","CASH_TO_UPI"].includes(svc?.code)&&r.adjustment_type==="extra"?Math.max(0,Number(r.adjustment_amount||0)):0;
     base+=isCurrentBills?(r.bill_amounts||[]).reduce((a,x)=>a+Number(x||0),0):Number(r.base||0);charges+=calc.charge;costs+=calc.cost;total+=calc.total+aepsExtra;
     if(t)t.textContent=""+money(calc.total+aepsExtra);
     if(walletBox)walletBox.innerHTML=(billingWalletRules[r.service_id]||[]).map(rule=>{const wallet=walletOptions.find(x=>x.id===rule.wallet_id),debit=alloc.find(x=>x.wallet_id===rule.wallet_id);return wallet?'<div class="wallet-choice"><span>'+escapeHtml(wallet.name)+' <small>Balance '+money(wallet.current_balance)+' · Auto debit '+money(debit?.amount||0)+'</small></span></div>':"";}).join("")||"<small>No processing wallet configured for this service.</small>";
@@ -1312,9 +1312,9 @@ async function loadBillIntoQuickBilling(id){
         credit_wallet_id:snap.credit_wallet_id||"",
         charge_percent:snap.charge_percent??svc?.billing_config?.charge_percent??2,
         processing_wallet_id:walletDebits[0]?.wallet_id||"",
-        adjustment_type:svc?.code==="AEPS_WITHDRAWAL"?(bill.cash_adjustment_type||""):"",
-        adjustment_amount:svc?.code==="AEPS_WITHDRAWAL"?Number(bill.cash_adjustment_amount||0):0,
-        adjustment_mode:svc?.code==="AEPS_WITHDRAWAL"?(bill.cash_adjustment_mode||"cash"):"cash"
+        adjustment_type:["AEPS_WITHDRAWAL","UPI_TO_CASH","CASH_TO_UPI"].includes(svc?.code)?(bill.cash_adjustment_type||""):"",
+        adjustment_amount:["AEPS_WITHDRAWAL","UPI_TO_CASH","CASH_TO_UPI"].includes(svc?.code)?Number(bill.cash_adjustment_amount||0):0,
+        adjustment_mode:["AEPS_WITHDRAWAL","UPI_TO_CASH","CASH_TO_UPI"].includes(svc?.code)?(bill.cash_adjustment_mode||"cash"):"cash"
       };
     });
     const host=$("other-view");
