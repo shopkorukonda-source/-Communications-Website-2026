@@ -536,16 +536,19 @@ async function renderWalletManager(){
   await loadCatalog();
   const host=$("other-view");
   const {data:transferHistory,error:transferHistoryError}=await supabase.from("wallet_ledger")
-    .select("id,wallet_id,transfer_group_id,amount,direction,description,created_at")
-    
-    .order("created_at",{ascending:false}).limit(30);
+    .select("id,wallet_id,transfer_group_id,amount,direction,description,created_at,entry_type")
+    .order("created_at",{ascending:false}).limit(50);
+  const {data:profitRules,error:profitRulesError}=await supabase.from("service_profit_wallet_rules").select("wallet_id");
+  const profitWalletIds=[...new Set((profitRules||[]).map(r=>r.wallet_id))];
+  const profitWallets=walletOptions.filter(w=>profitWalletIds.includes(w.id));
   host.innerHTML=`
     <div class="admin-module-head"><div><div class="eyebrow">ADMINISTRATION</div><h2>Wallet Management</h2><p>Create wallets, load balances, recharge between wallets and configure low-balance alerts.</p></div></div>
+    <div class="admin-editor"><h3>Profit wallets</h3><p class="muted">These wallets are selected in Admin Service settings to receive service-charge profits. Credit Card to Bank Transfer credits only its service charge here.</p><div class="employee-wallet-grid">${profitWallets.length?profitWallets.map(w=>`<article class="employee-wallet-card"><div><strong>${escapeHtml(w.name)}</strong><small>${escapeHtml(w.provider||w.wallet_type||"Wallet")} · Profit wallet</small></div><b>${money(w.current_balance)}</b></article>`).join(""):'<div class="empty-state">No profit wallets assigned yet. Open Services Management and assign wallets under the relevant service.</div>'}</div></div>
     <div class="admin-editor"><h3>Create wallet</h3><form id="wallet-form" class="service-form">
       <div class="admin-form-grid"><label>Wallet name<input id="wallet-name" required maxlength="100" placeholder="e.g. IDFC Bank"></label><label>Wallet type<select id="wallet-type"><option value="bank">Bank</option><option value="upi">UPI</option><option value="provider">Provider</option><option value="cash">Cash</option><option value="other">Other</option></select></label><label>Provider / account label<input id="wallet-provider" maxlength="100" placeholder="Optional"></label></div>
       <small class="muted">New wallets always start with ₹0 opening balance.</small><div id="wallet-message" class="message"></div><button class="primary-btn admin-add-btn" type="submit" id="wallet-save">Create wallet</button>
     </form></div>
-    <div class="admin-editor"><h3>Load wallet balance</h3><form id="load-form" class="service-form"><div class="admin-form-grid"><label>Wallet<select id="load-wallet" required></select></label><label>Load amount (₹)<input id="load-amount" type="number" min="0.01" step="0.01" required></label><label>Source / bank account<input id="load-source" placeholder="e.g. SBI / IDFC / cash" maxlength="100"></label></div><div id="load-message" class="message"></div><button class="primary-btn" type="submit">Record wallet load</button></form></div>
+    <div class="admin-editor"><h3>Add amount to wallet</h3><form id="load-form" class="service-form"><div class="admin-form-grid"><label>Wallet<select id="load-wallet" required></select></label><label>Add amount (₹)<input id="load-amount" type="number" min="0.01" step="0.01" required></label><label>Source / bank account<input id="load-source" placeholder="e.g. SBI / IDFC / cash" maxlength="100"></label></div><div id="load-message" class="message"></div><button class="primary-btn" type="submit">Add amount</button></form></div>
     <div class="admin-editor"><h3>Withdraw from wallet</h3><form id="withdraw-form" class="service-form"><div class="admin-form-grid"><label>Wallet<select id="withdraw-wallet" required></select></label><label>Withdraw amount (₹)<input id="withdraw-amount" type="number" min="0.01" step="0.01" required></label><label>Reason / destination<input id="withdraw-note" maxlength="160" placeholder="e.g. Cash withdrawal / bank transfer"></label></div><div id="withdraw-message" class="message"></div><button class="primary-btn" type="submit" id="withdraw-save">Withdraw amount</button></form></div>
     <div class="admin-editor"><h3>Wallet-to-Wallet Recharge / Transfer</h3><form id="transfer-form" class="service-form">
       <div class="admin-form-grid"><label>From wallet<select id="transfer-from" required></select></label><label>To wallet<select id="transfer-to" required></select></label><label>Amount (₹)<input id="transfer-amount" type="number" min="0.01" step="0.01" required></label></div>
