@@ -493,6 +493,9 @@ async function saveService(event){
     if(costType==="slabs"){validateSlabs(costSlabs,"Processing cost");costConfig.slabs=costSlabs;}
     if(profitMode==="slabs"){validateSlabs(profitSlabs,"Profit");profitConfig.slabs=profitSlabs;}
   }catch(e){msg.textContent=e.message;return;}
+  if($("svc-active").checked&&billingType==="slabs"&&!billingSlabs.length){msg.textContent="Add at least one customer charge slab before activating this service.";return;}
+  if($("svc-active").checked&&costType==="slabs"&&!costSlabs.length){msg.textContent="Add at least one processing cost slab before activating this service.";return;}
+  if($("svc-active").checked&&profitMode==="slabs"&&!profitSlabs.length){msg.textContent="Add at least one profit slab before activating this service.";return;}
   const payload={category_id:$("svc-category").value,name:$("svc-name").value.trim(),code:$("svc-code").value.trim()||null,description:$("svc-description").value.trim()||null,billing_type:billingType,processing_cost_type:costType,profit_mode:profitMode,billing_config:billingConfig,processing_cost_config:costConfig,profit_config:profitConfig,is_active:$("svc-active").checked,updated_at:new Date().toISOString()};
   if(!payload.name){msg.textContent="Service name is required.";return;}
   btn.disabled=true;btn.textContent="Saving…";
