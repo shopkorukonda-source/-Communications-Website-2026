@@ -679,6 +679,7 @@ async function loadReportsData(){
  const failure=tx.error||ex.error||targets.error||serviceItems.error;if(failure){$("report-rows").innerHTML='<div class="empty-state">Unable to load financial report: '+escapeHtml(failure.message)+'</div>';return}
  const bills=tx.data||[],expenses=ex.data||[],targetRows=targets.data||[],serviceItemRows=serviceItems.data||[];
  const serviceProfitMap=new Map();
+ services.filter(service=>service.is_active).forEach(service=>serviceProfitMap.set(service.id,{name:service.name,code:service.code||"",profit:0,quantity:0,bills:new Set()}));
  serviceItemRows.forEach(item=>{
   const service=Array.isArray(item.services)?item.services[0]:item.services;
   const key=item.service_id;
