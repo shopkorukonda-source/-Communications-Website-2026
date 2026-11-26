@@ -913,6 +913,7 @@ function calculateBillingRow(row){
 async function renderQuickBilling(){
   const host=$("other-view");
   editingBillingTransactionId=null;editingBillingBillNumber=null;
+  billingRows=[];
   host.innerHTML=`
   <div class="admin-module-head"><div><div class="eyebrow">QUICK BILLING</div><h2>Single Customer · Multiple Services</h2><p>Add any number of services under one customer. Enter customer details and collect payment only once for the complete bill.</p></div></div>
   <div class="admin-editor billing-editor">
