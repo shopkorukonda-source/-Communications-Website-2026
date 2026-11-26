@@ -880,7 +880,18 @@ function calculateBillingRow(row){
     const pct=Number(row.charge_percent??svc.billing_config?.charge_percent??2);
     charge=Math.round((amount*pct/100)*100)/100;cost=0;profit=charge;
   } else if(svc.code==="AEPS_WITHDRAWAL"){
-    const bank=(row.bank||"").toLowerCase();charge=bank.includes("union")?0:Math.ceil(amount/1000)*Number(svc.billing_config?.charge_per_1000||10);cost=Number(row.cost||0);
+    const bank=(row.bank||"").toLowerCase(),bc=svc.billing_config||{};
+    if(bank.includes("union"))charge=0;
+    else if(svc.billing_type==="slabs"){
+      const slab=(bc.slabs||[]).find(x=>amount>=Number(x.min||0)&&(x.max==null||amount<=Number(x.max)));
+      charge=slab?(slab.percentage!=null?Math.round(amount*Number(slab.percentage))/100:Number(slab.customer_charge??slab.charge??0)):0;
+    }else charge=Math.ceil(amount/1000)*Number(bc.charge_per_1000||10);
+    cost=serviceProcessingCost(amount,svc,row);
+    profit=charge-cost;
+    if(svc.profit_mode==="slabs"){
+      const slab=(svc.profit_config?.slabs||[]).find(x=>amount>=Number(x.min||0)&&(x.max==null||amount<=Number(x.max)));
+      profit=Number(slab?.profit??slab?.amount??0);
+    }
   } else {
     const bc=svc.billing_config||{},cc=svc.processing_cost_config||{},pc=svc.profit_config||{};
     if(svc.billing_type==="fixed") charge=Number(bc.customer_charge||0);
@@ -905,7 +916,7 @@ function calculateBillingRow(row){
     }
   }
   if(svc.code==="CREDIT_CARD_BANK")profit=charge;
-  else if(["CURRENT_BILLS","MONEY_TRANSFER","PRIVATE_BUS_TICKET","APSRTC_TICKET","TTD_TICKET","AEPS_WITHDRAWAL"].includes(svc.code))profit=charge-cost;
+  else if(["CURRENT_BILLS","MONEY_TRANSFER","PRIVATE_BUS_TICKET","APSRTC_TICKET","TTD_TICKET"].includes(svc.code))profit=charge-cost;
   else if(svc.profit_mode==="manual")profit=charge-cost;
   const unitTotal=amount+charge;
   return {charge,cost,profit,unitTotal,total:unitTotal*qty};
@@ -942,11 +953,22 @@ function isManualJobApplicationWalletService(svc){
   const code=String(svc?.code||"").toUpperCase(),name=String(svc?.name||"").toUpperCase();
   return code.includes("JOB")||name.includes("JOB APPLICATION");
 }
+function serviceProcessingCost(amount,svc,row={}){
+  const cfg=svc?.processing_cost_config||{};
+  if(svc?.processing_cost_type==="no_cost")return 0;
+  if(svc?.processing_cost_type==="fixed")return Number(cfg.fixed_amount||0);
+  if(svc?.processing_cost_type==="percentage")return Math.round(amount*Number(cfg.percentage||0))/100;
+  if(svc?.processing_cost_type==="slabs"){
+    const slab=(cfg.slabs||[]).find(x=>amount>=Number(x.min||0)&&(x.max==null||amount<=Number(x.max)));
+    return Number(slab?.cost??slab?.processing_cost??0);
+  }
+  return Number(row.cost||cfg.fixed_amount||0);
+}
 function automaticWalletDebits(row,svc,allowJobApplication=false){
   if(svc?.code==="CREDIT_CARD_BANK"||(isManualJobApplicationWalletService(svc)&&!allowJobApplication))return [];
   const rules=billingWalletRules[row.service_id]||[];
   if(!rules.length)return [];
-  const amount=Number(row.base||0),processingCost=Number(row.cost||svc?.processing_cost_config?.fixed_amount||0);
+  const amount=Number(row.base||0),processingCost=serviceProcessingCost(amount,svc,row);
   const modes=rules.map(rule=>rule.debit_config?.mode||(rule.debit_config?.fixed_amount!=null?"fixed_amount":"processing_cost"));
   const hasBaseAmount=modes.includes("base_amount");
   let autoTarget=processingCost;
