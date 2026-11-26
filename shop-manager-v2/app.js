@@ -604,7 +604,7 @@ async function loadReportsData(){
  const period=$("report-period")?.value||"day",{start,end}=financeRange(period),startIso=start.toISOString(),endIso=end.toISOString(),startDate=financeYmd(start),endDate=financeYmd(new Date(end.getTime()-86400000));
  const [tx,ex,targets]=await Promise.all([
   supabase.from("billing_transactions").select("id,bill_number,customer_name,customer_total,processing_total,profit_total,payment_mode,created_at,business_date").gte("business_date",startDate).lte("business_date",endDate).order("created_at",{ascending:false}).limit(1000),
-  supabase.from("expenses").select("id,expense_date,category,description,amount,payment_mode").gte("expense_date",startDate).lte("expense_date",endDate).order("expense_date",{ascending:false}).limit(1000),
+  supabase.from("expenses").select("id,expense_date,business_date,category,description,amount,payment_mode").gte("business_date",startDate).lte("business_date",endDate).order("business_date",{ascending:false}).limit(1000),
   supabase.from("income_targets").select("period_type,target_amount,expense_target_amount,daily_target_start_date")
  ]);
  const failure=tx.error||ex.error||targets.error;if(failure){$("report-rows").innerHTML='<div class="empty-state">Unable to load financial report: '+escapeHtml(failure.message)+'</div>';return}
