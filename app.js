@@ -495,7 +495,7 @@ async function openServiceEditor(id=null){
         ${serviceSlabRows("profit",s?.profit_config?.slabs,"profit")}
       </div>
       <div class="wallet-map-box" id="credit-service-wallet-box" style="display:${s?.code==="CREDIT_CARD_BANK"?"block":"none"}"><strong>Credit Card profit wallet</strong><p>Only the calculated percentage profit is credited to the selected wallet. Transfer amount is never credited to a wallet.</p><div class="wallet-choice-grid">${walletOptions.map(w=>`<label class="wallet-choice"><input type="checkbox" data-credit-wallet-check value="${w.id}" ${selectedCreditWallets.includes(w.id)?"checked":""} ${w.is_active?"":"disabled"}><span>${escapeHtml(w.name)} <small>${escapeHtml(w.provider||w.wallet_type)}</small></span></label>`).join("")||'<small>No wallets created yet. Add wallets from Wallets section.</small>'}</div></div>
-      <div class="wallet-map-box"><strong>Processing wallets</strong><p>Assign allowed wallets and debit rules here. For Job Application, the operator manually selects one of these wallets while billing; other services follow their configured automatic debit rules.</p><div class="wallet-choice-grid">${walletOptions.map(w=>{const rule=selectedWalletRules.find(x=>x.wallet_id===w.id),cfg=rule?.debit_config||{},mode=cfg.mode||(cfg.fixed_amount!=null?"fixed_amount":"processing_cost"),value=mode==="percentage"?(cfg.percentage??""):(cfg.fixed_amount??"");return `<label class="wallet-choice"><input type="checkbox" data-admin-wallet-check value="${w.id}" ${rule?"checked":""} ${w.is_active?"":"disabled"}><span>${escapeHtml(w.name)} <small>${escapeHtml(w.provider||w.wallet_type)}</small><select data-admin-wallet-mode="${w.id}" ${rule?"":"disabled"}><option value="processing_cost" ${mode==="processing_cost"?"selected":""}>Processing cost</option><option value="base_amount" ${mode==="base_amount"?"selected":""}>Bill amount</option><option value="base_plus_processing_cost" ${mode==="base_plus_processing_cost"?"selected":""}>Bill + processing cost</option><option value="fixed_amount" ${mode==="fixed_amount"?"selected":""}>Fixed amount</option><option value="percentage" ${mode==="percentage"?"selected":""}>Percentage of bill</option></select><input type="number" min="0" step="0.01" data-admin-wallet-value="${w.id}" value="${value}" placeholder="Value for fixed / percentage" ${rule&&["fixed_amount","percentage"].includes(mode)?"":"disabled"}></span></label>`;}).join("")||'<small>No wallets created yet. Add wallets from Wallets section.</small>'}</div></div>
+      <div class="wallet-map-box"><strong>Processing wallets</strong><p>Assign allowed wallets and debit rules here. For Job Application, the operator manually selects one of these wallets while billing; AEPS, UPI to Cash and Cash to UPI let the operator choose one assigned transaction wallet; other services follow their configured automatic debit rules.</p><div class="wallet-choice-grid">${walletOptions.map(w=>{const rule=selectedWalletRules.find(x=>x.wallet_id===w.id),cfg=rule?.debit_config||{},mode=cfg.mode||(cfg.fixed_amount!=null?"fixed_amount":"processing_cost"),value=mode==="percentage"?(cfg.percentage??""):(cfg.fixed_amount??"");return `<label class="wallet-choice"><input type="checkbox" data-admin-wallet-check value="${w.id}" ${rule?"checked":""} ${w.is_active?"":"disabled"}><span>${escapeHtml(w.name)} <small>${escapeHtml(w.provider||w.wallet_type)}</small><select data-admin-wallet-mode="${w.id}" ${rule?"":"disabled"}><option value="processing_cost" ${mode==="processing_cost"?"selected":""}>Processing cost</option><option value="base_amount" ${mode==="base_amount"?"selected":""}>Bill amount</option><option value="base_plus_processing_cost" ${mode==="base_plus_processing_cost"?"selected":""}>Bill + processing cost</option><option value="fixed_amount" ${mode==="fixed_amount"?"selected":""}>Fixed amount</option><option value="percentage" ${mode==="percentage"?"selected":""}>Percentage of bill</option></select><input type="number" min="0" step="0.01" data-admin-wallet-value="${w.id}" value="${value}" placeholder="Value for fixed / percentage" ${rule&&["fixed_amount","percentage"].includes(mode)?"":"disabled"}></span></label>`;}).join("")||'<small>No wallets created yet. Add wallets from Wallets section.</small>'}</div></div>
       <label class="inline-check"><input id="svc-active" type="checkbox" ${s?.is_active===false?"":"checked"}> Service active</label>
       <div id="service-form-message" class="message"></div>
       <div class="admin-form-actions"><button type="button" class="text-btn" id="cancel-service">Cancel</button><button type="submit" class="primary-btn" id="save-service-btn">Save service</button></div>
@@ -991,13 +991,16 @@ function automaticWalletDebits(row,svc,allowJobApplication=false){
   if(autoIndexes.length)allocations[autoIndexes[autoIndexes.length-1]].amount=autoTarget;
   return allocations.filter(x=>Number(x.amount)>0);
 }
+function isManualProcessingWalletService(svc){
+  return isManualJobApplicationWalletService(svc)||["AEPS_WITHDRAWAL","UPI_TO_CASH","CASH_TO_UPI"].includes(svc?.code);
+}
 function walletDebitsForRow(row,svc){
-  if(!isManualJobApplicationWalletService(svc))return automaticWalletDebits(row,svc);
+  if(!isManualProcessingWalletService(svc))return automaticWalletDebits(row,svc);
   if(!row.processing_wallet_id)return [];
   const rule=(billingWalletRules[row.service_id]||[]).find(x=>x.wallet_id===row.processing_wallet_id);
   if(!rule)return [];
   const cfg=rule.debit_config||{},mode=cfg.mode||(cfg.fixed_amount!=null?"fixed_amount":"processing_cost");
-  const base=Number(row.base||0),processingCost=Number(row.cost||svc?.processing_cost_config?.fixed_amount||0);
+  const base=Number(row.base||0),processingCost=serviceProcessingCost(base,svc,row);
   let amount=processingCost;
   if(mode==="base_amount")amount=base;
   else if(mode==="base_plus_processing_cost")amount=base+processingCost;
@@ -1005,8 +1008,8 @@ function walletDebitsForRow(row,svc){
   else if(mode==="percentage")amount=Math.round(base*Number(cfg.percentage||0))/100;
   return Number.isFinite(amount)&&amount>0?[{wallet_id:rule.wallet_id,amount}]:[];
 }
-function manualJobApplicationWalletHtml(row,svc,index){
-  if(!isManualJobApplicationWalletService(svc))return null;
+function manualProcessingWalletHtml(row,svc,index){
+  if(!isManualProcessingWalletService(svc))return null;
   const rules=billingWalletRules[row.service_id]||[];
   const selected=String(row.processing_wallet_id||"");
   const opts=rules.map(rule=>{
@@ -1014,7 +1017,7 @@ function manualJobApplicationWalletHtml(row,svc,index){
     return w?'<option value="'+w.id+'" '+(selected===w.id?"selected":"")+'>'+escapeHtml(w.name)+' · Balance '+money(w.current_balance)+'</option>':"";
   }).join("");
   const debit=walletDebitsForRow(row,svc).reduce((n,x)=>n+Number(x.amount||0),0);
-  return '<div class="wallet-map-box"><strong>Processing wallet (select manually)</strong><p>Select which assigned wallet should be debited for this Job Application.</p><label>Processing Wallet<select data-field="processing_wallet_id" data-i="'+index+'"><option value="">Select processing wallet</option>'+opts+'</select></label><small>Debit amount: <span id="manual-wallet-debit-'+index+'">'+money(debit)+'</span></small></div>';
+  return '<div class="wallet-map-box"><strong>Transaction wallet (select manually)</strong><p>Select the wallet used for this '+escapeHtml(svc.name)+'. Only the selected wallet will be debited.</p><label>Wallet<select data-field="processing_wallet_id" data-i="'+index+'"><option value="">Select transaction wallet</option>'+opts+'</select></label><small>Wallet debit: <span id="manual-wallet-debit-'+index+'">'+money(debit)+'</span></small></div>';
 }
 async function setBillingRows(n){
   const {data:rules}=await supabase.from("service_wallet_rules").select("service_id,wallet_id,wallet_slot,debit_config").order("wallet_slot");
@@ -1027,7 +1030,7 @@ async function setBillingRows(n){
     const serviceOptions=services.filter(s=>s.is_active).map(s=>'<option value="'+s.id+'" '+(s.id===r.service_id?"selected":"")+'>'+escapeHtml(s.name)+'</option>').join("");
     const svc=services.find(s=>s.id===r.service_id),special=isPaperPageService(svc),alloc=walletDebitsForRow(r,svc);
     const pages=Number(r.unit_count||0)*Math.max(1,Number(r.sets||1)),count=svc?.code==="PRINTOUT"&&r.print_type==="both_side"?Math.ceil(pages/2):pages,rate=paperPageRate(r,svc,count);
-    const manualWalletHtml=manualJobApplicationWalletHtml(r,svc,i);
+    const manualWalletHtml=manualProcessingWalletHtml(r,svc,i);
     const walletOptionsHtml=(billingWalletRules[r.service_id]||[]).map(rule=>{
       const wallet=walletOptions.find(x=>x.id===rule.wallet_id),debit=alloc.find(x=>x.wallet_id===rule.wallet_id);
       return wallet?'<div class="wallet-choice"><span>'+escapeHtml(wallet.name)+' <small>Balance '+money(wallet.current_balance)+' · Auto debit '+money(debit?.amount||0)+'</small></span></div>':"";
@@ -1175,7 +1178,7 @@ async function saveQuickBilling(){
       if(!r.service_id||Number(r.base||0)<0)throw new Error("Every entered row needs a service and valid count or bill amount.");
       const svc=services.find(s=>s.id===r.service_id),special=isPaperPageService(svc);
       const wallet_debits=walletDebitsForRow(r,svc);
-      if(isManualJobApplicationWalletService(svc)){
+      if(isManualProcessingWalletService(svc)){
         if(!(billingWalletRules[r.service_id]||[]).length)throw new Error("Admin must assign one or more allowed processing wallets in Admin Services for Job Application.");
         if(!r.processing_wallet_id)throw new Error("Select the processing wallet for Job Application.");
         if(!wallet_debits.length)throw new Error("Enter a valid processing cost and select its wallet for Job Application.");
