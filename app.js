@@ -1056,7 +1056,7 @@ async function setBillingRows(n){
       : isCreditCard
         ? '<label>Transfer amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0.01" step="0.01" value="'+escapeHtml(r.base||"")+'" placeholder="Enter amount"></label><label>Profit percentage (%)<input data-field="charge_percent" data-i="'+i+'" type="number" min="0.01" max="100" step="0.01" value="'+escapeHtml(r.charge_percent??svc.billing_config?.charge_percent??2)+'"></label><label>Profit wallet<select data-field="credit_wallet_id" data-i="'+i+'"><option value="">Select profit wallet</option>'+ccWalletIds.map(id=>{const w=walletOptions.find(x=>x.id===id&&x.is_active);return w?'<option value="'+w.id+'" '+(r.credit_wallet_id===w.id?"selected":"")+'>'+escapeHtml(w.name)+' · '+money(w.current_balance)+'</option>':"";}).join("")+'</select></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label>'
         : isCashSlabService
-          ? '<label>Amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.base)+'" placeholder="Enter amount"></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label>'+(svc.code==="AEPS_WITHDRAWAL"?'<label>Bank (AEPS)<input data-field="bank" data-i="'+i+'" value="'+escapeHtml(r.bank)+'" placeholder="Bank name"></label>':'')+'<label>Slab customer charge (₹)<input id="slab-charge-'+i+'" type="text" readonly value="₹0.00"></label><label>Slab processing cost (₹)<input id="slab-cost-'+i+'" type="text" readonly value="₹0.00"></label>'
+          ? '<label>Amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.base)+'" placeholder="Enter amount"></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label>'+(svc.code==="AEPS_WITHDRAWAL"?'<label>Bank (AEPS)<input data-field="bank" data-i="'+i+'" value="'+escapeHtml(r.bank)+'" placeholder="Bank name"></label><label>Adjustment Type<select data-field="adjustment_type" data-i="'+i+'"><option value="">No adjustment</option><option value="deduct" '+(r.adjustment_type==="deduct"?"selected":"")+'>Amount Deduct</option><option value="extra" '+(r.adjustment_type==="extra"?"selected":"")+'>Amount Extra</option></select></label><label>Adjustment Amount (₹)<input data-field="adjustment_amount" data-i="'+i+'" type="number" min="0" step="0.01" value="'+Number(r.adjustment_amount||0)+'" placeholder="0.00"></label>'+(r.adjustment_type==="extra"?'<label>Extra Payment Mode<select data-field="adjustment_mode" data-i="'+i+'"><option value="cash" '+(r.adjustment_mode==="cash"?"selected":"")+'>Cash</option><option value="upi" '+(r.adjustment_mode==="upi"?"selected":"")+'>UPI</option></select></label>':''):'')+'<label>Slab customer charge (₹)<input id="slab-charge-'+i+'" type="text" readonly value="₹0.00"></label><label>Slab processing cost (₹)<input id="slab-cost-'+i+'" type="text" readonly value="₹0.00"></label>'
           : '<label>Bill / Transfer Amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.base)+'"></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label><label>Service charge (₹)<input data-field="charge" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.charge||"")+'"></label><label class="bank-field">Bank (AEPS)<input data-field="bank" data-i="'+i+'" value="'+escapeHtml(r.bank)+'" placeholder="Bank name"></label><label>Manual processing cost (₹)<input data-field="cost" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.cost)+'"></label>';
     return '<div class="billing-row" data-row="'+i+'"><div class="billing-row-head"><strong>Item '+(i+1)+'</strong><span class="billing-row-total" id="row-total-'+i+'">₹0.00</span></div><div class="billing-row-fields"><label>Service<div class="service-picker" data-service-picker="'+i+'"><input type="search" data-service-search="'+i+'" value="'+escapeHtml(svc?.name||"")+'" placeholder="Type one letter or service name…" autocomplete="off"><div class="service-picker-options hidden" id="service-picker-options-'+i+'"></div></div></label>'+serviceFields+'</div>'+(manualWalletHtml||('<div class="wallet-map-box"><strong>Processing wallet (automatic)</strong><p>Wallet and debit amount are taken from Admin service settings.</p><div class="wallet-choice-grid" id="wallet-auto-'+i+'">'+walletOptionsHtml+'</div></div>'))+'<div class="billing-row-result" id="row-result-'+i+'">Service Charge: ₹0.00</div></div>';
   }).join("");
@@ -1215,19 +1215,26 @@ async function saveQuickBilling(){
       customerTotal+=price*quantity;processingTotal+=calc.cost*quantity;profitTotal+=calc.profit*quantity;
     }
     if(!items.length)throw new Error("Enter at least one bill.");
+    const aepsRows=expandedBillingRows.filter(r=>services.find(s=>s.id===r.service_id)?.code==="AEPS_WITHDRAWAL");
+    if(aepsRows.length>1)throw new Error("Please bill one AEPS Cash Withdrawal row at a time when using cash adjustment.");
+    const aepsRow=aepsRows[0]||null,adjustmentType=aepsRow?.adjustment_type||null,adjustmentAmount=Math.max(0,Number(aepsRow?.adjustment_amount||0)),adjustmentMode=aepsRow?.adjustment_mode||null;
+    if(adjustmentAmount>0&&!adjustmentType)throw new Error("Select Amount Deduct or Amount Extra for AEPS adjustment.");
+    if(adjustmentType==="extra"&&adjustmentAmount>0&&!["cash","upi"].includes(adjustmentMode))throw new Error("Select Cash or UPI for Amount Extra.");
     const mode=$("bill-mode").value,ccOnly=items.length>0&&items.every(x=>services.find(s=>s.id===x.service_id)?.code==="CREDIT_CARD_BANK");
-    const received=ccOnly?0:Number($("bill-received").value||0);
-    const cash=ccOnly?0:mode==="upi"?0:mode==="cash"?received:Number($("bill-cash").value||0);
-    const upi=ccOnly?0:mode==="cash"?0:mode==="upi"?received:Number($("bill-upi").value||0);
+    const rawReceived=ccOnly?0:Number($("bill-received").value||0);
+    let received=rawReceived,cash=ccOnly?0:mode==="upi"?0:mode==="cash"?rawReceived:Number($("bill-cash").value||0),upi=ccOnly?0:mode==="cash"?0:mode==="upi"?rawReceived:Number($("bill-upi").value||0),finalMode=mode;
+    if(adjustmentType==="extra"&&adjustmentAmount>0){received+=adjustmentAmount;if(adjustmentMode==="cash")cash+=adjustmentAmount;else upi+=adjustmentAmount;if(cash>0&&upi>0)finalMode="split";else finalMode=cash>0?"cash":"upi";}
+    const customerTotalWithAdjustment=customerTotal+(adjustmentType==="extra"?adjustmentAmount:0);
     if(items.some(x=>services.find(s=>s.id===x.service_id)?.code==="CREDIT_CARD_BANK")&&!ccOnly)throw new Error("Credit Card to Bank Transfer must be billed separately from other services.");
-    if(!ccOnly&&received<customerTotal)throw new Error("Amount received must be equal to or greater than customer total.");
-    if(!ccOnly&&mode==="split"&&Math.abs(cash+upi-received)>0.009)throw new Error("Cash + UPI must equal amount received.");
+    if(!ccOnly&&received<customerTotalWithAdjustment)throw new Error("Amount received must be equal to or greater than customer total including AEPS extra amount.");
+    if(!ccOnly&&finalMode==="split"&&Math.abs(cash+upi-received)>0.009)throw new Error("Cash + UPI must equal amount received.");
     let activeDrawerId=null;if(currentProfile?.role==="employee"&&currentEmployee){const activeSession=await supabase.from("drawer_sessions").select("drawer_id").eq("employee_id",currentEmployee.id).eq("status","open").order("opened_at",{ascending:false}).limit(1).maybeSingle();if(activeSession.error)throw activeSession.error;activeDrawerId=activeSession.data?.drawer_id||null;}
-    const payload={drawer_id:activeDrawerId,customer_name:$("bill-customer").value.trim()||null,customer_phone:$("bill-phone").value.trim()||null,payment_mode:mode,customer_total:customerTotal,amount_received:received,cash_received:cash,upi_received:upi,items};
+    const payload={drawer_id:activeDrawerId,customer_name:$("bill-customer").value.trim()||null,customer_phone:$("bill-phone").value.trim()||null,payment_mode:finalMode,customer_total:customerTotalWithAdjustment,amount_received:received,cash_received:cash,upi_received:upi,items};
     const result=editingBillingTransactionId
       ? await supabase.rpc("update_bill_with_approval",{p_transaction_id:editingBillingTransactionId,p_payload:payload,p_edit_request_id:null})
       : await supabase.rpc("create_bill",{payload});
     if(result.error)throw result.error;
+    if(aepsRows.length){const adjustmentResult=await supabase.rpc("set_aeps_cash_adjustment",{p_transaction_id:result.data,p_adjustment_type:adjustmentType,p_amount:adjustmentAmount,p_mode:adjustmentMode});if(adjustmentResult.error)throw adjustmentResult.error;}
     const wasEditing=Boolean(editingBillingTransactionId);
     const successText=wasEditing
       ?"Bill #"+(editingBillingBillNumber||"")+" updated successfully."
@@ -1269,7 +1276,7 @@ let awaitUserId=null;
 async function loadBillIntoQuickBilling(id){
   try{
     const [{data:bill,error:bErr},{data:items,error:iErr}]=await Promise.all([
-      supabase.from("billing_transactions").select("id,bill_number,customer_name,customer_phone,payment_mode,customer_total,amount_received,cash_received,upi_received,notes").eq("id",id).single(),
+      supabase.from("billing_transactions").select("id,bill_number,customer_name,customer_phone,payment_mode,customer_total,amount_received,cash_received,upi_received,notes,cash_adjustment_type,cash_adjustment_amount,cash_adjustment_mode").eq("id",id).single(),
       supabase.from("billing_items").select("service_id,quantity,customer_unit_price,processing_unit_cost,pricing_snapshot").eq("transaction_id",id).order("created_at",{ascending:true})
     ]);
     if(bErr||iErr)throw bErr||iErr;
@@ -1296,7 +1303,10 @@ async function loadBillIntoQuickBilling(id){
         bill_amounts:isCurrent?[String(snap.base_amount??"")]:[""],
         credit_wallet_id:snap.credit_wallet_id||"",
         charge_percent:snap.charge_percent??svc?.billing_config?.charge_percent??2,
-        processing_wallet_id:walletDebits[0]?.wallet_id||""
+        processing_wallet_id:walletDebits[0]?.wallet_id||"",
+        adjustment_type:svc?.code==="AEPS_WITHDRAWAL"?(bill.cash_adjustment_type||""):"",
+        adjustment_amount:svc?.code==="AEPS_WITHDRAWAL"?Number(bill.cash_adjustment_amount||0):0,
+        adjustment_mode:svc?.code==="AEPS_WITHDRAWAL"?(bill.cash_adjustment_mode||"cash"):"cash"
       };
     });
     const host=$("other-view");
