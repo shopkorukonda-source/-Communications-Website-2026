@@ -436,7 +436,7 @@ async function openServiceEditor(id=null){
       <label>Description<input id="svc-description" value="${escapeHtml(s?.description||"")}" placeholder="Optional description"></label>
       <div class="admin-form-grid">
         <label>Billing type<select id="svc-billing"><option value="fixed">Fixed price</option><option value="percentage">Percentage</option><option value="slabs">Slabs</option><option value="manual">Manual</option></select></label>
-        <label>Processing cost type<select id="svc-cost"><option value="fixed">Fixed</option><option value="percentage">Percentage</option><option value="slabs">Slabs</option><option value="manual">Manual</option></select></label>
+        <label>Processing cost type<select id="svc-cost"><option value="no_cost">No Processing Cost</option><option value="fixed">Fixed</option><option value="percentage">Percentage</option><option value="slabs">Slabs</option><option value="manual">Manual</option></select></label>
         <label>Profit mode<select id="svc-profit"><option value="manual">Manual</option><option value="slabs">Slabs</option><option value="fixed">Fixed</option><option value="percentage">Percentage</option></select></label>
       </div>
       <div class="admin-form-grid service-amount-fields">
@@ -827,7 +827,8 @@ function calculateBillingRow(row){
       const slab=(bc.slabs||[]).find(x=>amount>=Number(x.min||0)&&amount<=Number(x.max||0));
       charge=slab?(slab.percentage!=null?Math.round(amount*Number(slab.percentage))/100:Number(slab.customer_charge??slab.charge??0)):0;
     } else charge=Number(row.charge||bc.customer_charge||0);
-    if(svc.processing_cost_type==="fixed") cost=Number(cc.fixed_amount||0);
+    if(svc.processing_cost_type==="no_cost") cost=0;
+    else if(svc.processing_cost_type==="fixed") cost=Number(cc.fixed_amount||0);
     else if(svc.processing_cost_type==="percentage") cost=Math.round(amount*Number(cc.percentage||0))/100;
     else if(svc.processing_cost_type==="slabs"){
       const slab=(cc.slabs||[]).find(x=>amount>=Number(x.min||0)&&amount<=Number(x.max||0));
