@@ -796,6 +796,8 @@ async function createEmployee(e){
 }
 
 let billingRows = [];
+let editingBillingTransactionId = null;
+let editingBillingBillNumber = null;
 let billingWalletRules = {};
 let billingCreditWalletRules = {};
 function money(n){return "₹"+Number(n||0).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2});}
@@ -870,6 +872,7 @@ function calculateBillingRow(row){
 }
 async function renderQuickBilling(){
   const host=$("other-view");
+  editingBillingTransactionId=null;editingBillingBillNumber=null;
   host.innerHTML=`
   <div class="admin-module-head"><div><div class="eyebrow">QUICK BILLING</div><h2>Single Customer · Multiple Services</h2><p>Add any number of services under one customer. Enter customer details and collect payment only once for the complete bill.</p></div></div>
   <div class="admin-editor billing-editor">
@@ -1103,9 +1106,16 @@ async function saveQuickBilling(){
     if(!ccOnly&&mode==="split"&&Math.abs(cash+upi-received)>0.009)throw new Error("Cash + UPI must equal amount received.");
     let activeDrawerId=null;if(currentProfile?.role==="employee"&&currentEmployee){const activeSession=await supabase.from("drawer_sessions").select("drawer_id").eq("employee_id",currentEmployee.id).eq("status","open").order("opened_at",{ascending:false}).limit(1).maybeSingle();if(activeSession.error)throw activeSession.error;activeDrawerId=activeSession.data?.drawer_id||null;}
     const payload={drawer_id:activeDrawerId,customer_name:$("bill-customer").value.trim()||null,customer_phone:$("bill-phone").value.trim()||null,payment_mode:mode,customer_total:customerTotal,amount_received:received,cash_received:cash,upi_received:upi,items};
-    const {data,error}=await supabase.rpc("create_bill",{payload});
-    if(error)throw error;
-    msg.textContent="Bills saved successfully. Transaction ID: "+data;
+    const result=editingBillingTransactionId
+      ? await supabase.rpc("update_bill_with_approval",{p_transaction_id:editingBillingTransactionId,p_payload:payload,p_edit_request_id:null})
+      : await supabase.rpc("create_bill",{payload});
+    if(result.error)throw result.error;
+    msg.textContent=editingBillingTransactionId
+      ?"Bill #"+(editingBillingBillNumber||"")+" updated successfully."
+      :"Bills saved successfully. Transaction ID: "+result.data;
+    editingBillingTransactionId=null;editingBillingBillNumber=null;
+    const heading=$("other-view")?.querySelector(".admin-module-head h2");if(heading)heading.textContent="Single Customer · Multiple Services";
+    const saveBtn=$("save-billing");if(saveBtn)saveBtn.textContent="Save one bill with all services";
     $("bill-received").value="0";$("bill-cash").value="0";$("bill-upi").value="0";
     $("bill-customer").value="";$("bill-phone").value="";
     billingRows=[];
@@ -1134,7 +1144,60 @@ async function loadRecentBills(){
   if(currentProfile?.role==="admin") await renderEditApprovals(reqs||[]);
 }
 let awaitUserId=null;
+async function loadBillIntoQuickBilling(id){
+  try{
+    const [{data:bill,error:bErr},{data:items,error:iErr}]=await Promise.all([
+      supabase.from("billing_transactions").select("id,bill_number,customer_name,customer_phone,payment_mode,customer_total,amount_received,cash_received,upi_received,notes").eq("id",id).single(),
+      supabase.from("billing_items").select("service_id,quantity,customer_unit_price,processing_unit_cost,pricing_snapshot").eq("transaction_id",id).order("created_at",{ascending:true})
+    ]);
+    if(bErr||iErr)throw bErr||iErr;
+    if(!items?.length)throw new Error("No bill items found to edit.");
+    const loadedRows=items.map(it=>{
+      const snap=it.pricing_snapshot||{},svc=services.find(x=>x.id===it.service_id);
+      const walletDebits=Array.isArray(snap.wallet_debits)?snap.wallet_debits:[];
+      const isSpecial=isPaperPageService(svc);
+      const isCurrent=svc?.code==="CURRENT_BILLS";
+      return {
+        service_id:it.service_id,
+        base:String(snap.base_amount??0),
+        charge:String(snap.service_charge??""),
+        cost:String(it.processing_unit_cost??0),
+        bank:String(snap.bank||""),
+        quantity:Number(it.quantity||1),
+        unit_count:isSpecial?String(snap.unit_count??snap.page_count??""):"",
+        print_type:snap.print_type||"single_side",
+        sets:Number(snap.sets||1),
+        item_label:snap.item_label||"",
+        discount:Number(snap.discount_amount||0),
+        wallet_debits:walletDebits,
+        bill_count:isCurrent?1:1,
+        bill_amounts:isCurrent?[String(snap.base_amount??"")]:[""],
+        credit_wallet_id:snap.credit_wallet_id||"",
+        charge_percent:snap.charge_percent??svc?.billing_config?.charge_percent??2,
+        processing_wallet_id:walletDebits[0]?.wallet_id||""
+      };
+    });
+    editingBillingTransactionId=id;editingBillingBillNumber=bill.bill_number||id.slice(0,8);
+    billingRows=loadedRows;
+    const host=$("other-view");
+    if(!host.querySelector("#billing-rows"))await renderQuickBilling();
+    $("bill-count").value=String(loadedRows.length);
+    $("bill-customer").value=bill.customer_name||"";
+    $("bill-phone").value=bill.customer_phone||"";
+    $("bill-mode").value=bill.payment_mode||"cash";
+    $("bill-received").value=String(bill.amount_received||0);
+    $("bill-cash").value=String(bill.cash_received||0);
+    $("bill-upi").value=String(bill.upi_received||0);
+    await setBillingRows(loadedRows.length);
+    $("billing-message").textContent="Editing Bill #"+(bill.bill_number||"")+" · Change the details below and click Update Bill.";
+    $("save-billing").textContent="Update Bill #"+(bill.bill_number||"");
+    const heading=host.querySelector(".admin-module-head h2");if(heading)heading.textContent="Edit Bill #"+(bill.bill_number||"")+" · Quick Billing";
+    updatePaymentFields();updateBillingTotals();
+    host.querySelector(".billing-editor")?.scrollIntoView({behavior:"smooth",block:"start"});
+  }catch(e){alert("Unable to load bill into billing form: "+(e.message||e));console.error(e);}
+}
 async function openBillEditor(id,requestOnly){
+  if(!requestOnly){await loadBillIntoQuickBilling(id);return;}
   const {data:userData}=await supabase.auth.getUser();awaitUserId=userData.user.id;
   const itemFields=currentProfile?.role==="admin"?"service_id,quantity,customer_unit_price,processing_unit_cost,profit_amount,pricing_snapshot":"service_id,quantity,customer_unit_price,pricing_snapshot";
   const [{data:bill,error:bErr},{data:items,error:iErr}]=await Promise.all([
