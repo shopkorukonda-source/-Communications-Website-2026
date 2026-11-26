@@ -1065,7 +1065,7 @@ async function setBillingRows(n){
     return '<div class="billing-row" data-row="'+i+'"><div class="billing-row-head"><strong>Item '+(i+1)+'</strong><span class="billing-row-total" id="row-total-'+i+'">₹0.00</span></div><div class="billing-row-fields"><label>Service<div class="service-picker" data-service-picker="'+i+'"><input type="search" data-service-search="'+i+'" value="'+escapeHtml(svc?.name||"")+'" placeholder="Type one letter or service name…" autocomplete="off"><div class="service-picker-options hidden" id="service-picker-options-'+i+'"></div></div></label>'+serviceFields+'</div>'+(manualWalletHtml||('<div class="wallet-map-box"><strong>Processing wallet (automatic)</strong><p>Wallet and debit amount are taken from Admin service settings.</p><div class="wallet-choice-grid" id="wallet-auto-'+i+'">'+walletOptionsHtml+'</div></div>'))+'<div class="billing-row-result" id="row-result-'+i+'">Service Charge: ₹0.00</div></div>';
   }).join("");
   $("billing-rows").querySelectorAll("[data-field]").forEach(el=>{
-    if(el.dataset.field==="bill_count")el.addEventListener("change",onBillingRowChange);
+    if(el.dataset.field==="bill_count"||el.type==="checkbox")el.addEventListener("change",onBillingRowChange);
     else {el.addEventListener("input",onBillingRowChange);el.addEventListener("change",onBillingRowChange);}
   });
   $("billing-rows").querySelectorAll("[data-service-search]").forEach(input=>{
