@@ -684,9 +684,9 @@ async function loadReportsData(){
  if(period==="day"&&baseTarget>0&&targetRow?.daily_target_start_date){
   const carryStart=new Date(targetRow.daily_target_start_date+"T00:00:00");
   if(carryStart<start){
-   const history=await supabase.from("billing_transactions").select("profit_total,created_at").gte("created_at",carryStart.toISOString()).lt("created_at",startIso).limit(10000);
+   const history=await supabase.rpc("get_daily_profit_totals",{p_start:carryStart.toISOString(),p_end:startIso});
    if(history.error){$("report-rows").innerHTML='<div class="empty-state">Unable to calculate daily target carry forward: '+escapeHtml(history.error.message)+'</div>';return}
-   const dailyIncome={};(history.data||[]).forEach(x=>{const key=financeYmd(new Date(x.created_at));dailyIncome[key]=(dailyIncome[key]||0)+Number(x.profit_total||0)});
+   const dailyIncome={};(history.data||[]).forEach(x=>{const key=String(x.profit_date);dailyIncome[key]=Number(x.profit_total||0)});
    for(let d=new Date(carryStart);d<start;d.setDate(d.getDate()+1)){const dayKey=financeYmd(d);carryForward=Math.max(0,baseTarget+carryForward-(dailyIncome[dayKey]||0))}
   }
  }
