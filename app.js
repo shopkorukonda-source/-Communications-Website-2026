@@ -538,12 +538,12 @@ async function renderWalletManager(){
   const {data:transferHistory,error:transferHistoryError}=await supabase.from("wallet_ledger")
     .select("id,wallet_id,transfer_group_id,amount,direction,description,created_at,entry_type")
     .order("created_at",{ascending:false}).limit(50);
-  const {data:profitRules,error:profitRulesError}=await supabase.from("service_credit_wallet_rules").select("wallet_id");
-  const profitWalletIds=[...new Set((profitRules||[]).map(r=>r.wallet_id))];
-  const profitWallets=walletOptions.filter(w=>profitWalletIds.includes(w.id));
+  const {data:creditRules,error:creditRulesError}=await supabase.from("service_credit_wallet_rules").select("wallet_id");
+  const creditWalletIds=[...new Set((creditRules||[]).map(r=>r.wallet_id))];
+  const serviceWallets=walletOptions.filter(w=>creditWalletIds.includes(w.id));
   host.innerHTML=`
     <div class="admin-module-head"><div><div class="eyebrow">ADMINISTRATION</div><h2>Wallet Management</h2><p>Manage service wallets, add or withdraw amounts, transfer balances and configure low-balance alerts.</p></div></div>
-    <div class="admin-editor"><h3>Assigned service wallets</h3><p class="muted">These wallets are assigned in Admin Service settings to receive customer credit-card transfer principal. Service charges are tracked separately as profit.</p><div class="employee-wallet-grid">${profitWallets.length?profitWallets.map(w=>`<article class="employee-wallet-card"><div><strong>${escapeHtml(w.name)}</strong><small>${escapeHtml(w.provider||w.wallet_type||"Wallet")} · Profit wallet</small></div><b>${money(w.current_balance)}</b></article>`).join(""):'<div class="empty-state">No profit wallets assigned yet. Open Services Management and assign wallets under the relevant service.</div>'}</div></div>
+    <div class="admin-editor"><h3>Assigned service wallets</h3><p class="muted">These wallets are assigned in Admin Service settings to receive customer credit-card transfer principal. Service charges are tracked separately as profit.</p><div class="employee-wallet-grid">${serviceWallets.length?serviceWallets.map(w=>`<article class="employee-wallet-card"><div><strong>${escapeHtml(w.name)}</strong><small>${escapeHtml(w.provider||w.wallet_type||"Wallet")} · Service wallet</small></div><b>${money(w.current_balance)}</b></article>`).join(""):'<div class="empty-state">No service wallets assigned yet. Open Services Management and assign wallets under Credit Card to Bank Transfer.</div>'}</div></div>
     <div class="admin-editor"><h3>Create wallet</h3><form id="wallet-form" class="service-form">
       <div class="admin-form-grid"><label>Wallet name<input id="wallet-name" required maxlength="100" placeholder="e.g. IDFC Bank"></label><label>Wallet type<select id="wallet-type"><option value="bank">Bank</option><option value="upi">UPI</option><option value="provider">Provider</option><option value="cash">Cash</option><option value="other">Other</option></select></label><label>Provider / account label<input id="wallet-provider" maxlength="100" placeholder="Optional"></label></div>
       <small class="muted">New wallets always start with ₹0 opening balance.</small><div id="wallet-message" class="message"></div><button class="primary-btn admin-add-btn" type="submit" id="wallet-save">Create wallet</button>
@@ -665,6 +665,7 @@ async function loadMonthlyFinancialArchive(){
  if(error){host.innerHTML='<div class="empty-state">Unable to load saved monthly history: '+escapeHtml(error.message)+'</div>';return;}
  const rows=data||[];
  const money=v=>"₹"+Number(v||0).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2});
+ $("finance-service-profit-rows").innerHTML=serviceProfitRows.length?serviceProfitRows.map(x=>'<div class="admin-service-row"><div class="admin-service-main"><strong>'+escapeHtml(x.name)+'</strong><small>'+escapeHtml(x.code||"Service")+' · '+x.bills.size+' bills · Qty '+x.quantity+'</small></div><div class="admin-service-meta"><strong>'+money(x.profit)+'</strong><span>Profit</span></div></div>').join(""):'<div class="empty-state">No service profit recorded in this period yet.</div>';
  host.innerHTML=rows.length?'<div class="admin-service-row"><div class="admin-service-main"><strong>Month</strong></div><div class="admin-service-meta"><strong>Income</strong><strong>Expenses</strong><strong>Net profit</strong></div></div>'+rows.map(x=>'<div class="admin-service-row"><div class="admin-service-main"><strong>'+escapeHtml(x.month_label)+'</strong><small>'+Number(x.bill_count||0)+' bills</small></div><div class="admin-service-meta"><strong>'+money(x.income_total)+'</strong><strong>'+money(x.expense_total)+'</strong><strong>'+money(x.net_profit)+'</strong></div></div>').join(""):'<div class="empty-state">Monthly history will appear after each month is completed.</div>';
 }
 async function loadReportsData(){
@@ -685,7 +686,7 @@ async function loadReportsData(){
   const row=serviceProfitMap.get(key);row.profit+=Number(item.profit_amount||0)*Number(item.quantity||1);row.quantity+=Number(item.quantity||1);row.bills.add(item.transaction_id);
  });
  const serviceProfitRows=[...serviceProfitMap.values()].sort((a,b)=>b.profit-a.profit);
- $("finance-service-profit-rows").innerHTML=serviceProfitRows.length?serviceProfitRows.map(x=>'<div class="admin-service-row"><div class="admin-service-main"><strong>'+escapeHtml(x.name)+'</strong><small>'+escapeHtml(x.code||"Service")+' · '+x.bills.size+' bills · Qty '+x.quantity+'</small></div><div class="admin-service-meta"><strong>'+money(x.profit)+'</strong><span>Profit</span></div></div>').join(""):'<div class="empty-state">No service profit recorded in this period yet.</div>';
+
  const sum=(arr,k)=>arr.reduce((n,x)=>n+Number(x[k]||0),0),income=sum(bills,"profit_total"),expenseTotal=sum(expenses,"amount"),collection=bills.reduce((n,x)=>n+Number(x.cash_received||0)+Number(x.upi_received||0),0),processing=sum(bills,"processing_total"),targetRow=targetRows.find(x=>x.period_type===financeDbPeriod[period]),baseTarget=Number(targetRow?.target_amount||0),expenseBudget=Number(targetRow?.expense_target_amount||0);
  let carryForward=0;
  if(period==="day"&&baseTarget>0&&targetRow?.daily_target_start_date){
