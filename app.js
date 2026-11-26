@@ -1229,8 +1229,10 @@ async function saveQuickBilling(){
     if(adjustmentAmount>0&&!adjustmentType)throw new Error("Select Amount Deduct or Amount Extra.");
     if(adjustmentType==="extra"&&adjustmentAmount>0&&adjustmentServiceCode!=="UPI_TO_CASH"&&!["cash","upi"].includes(adjustmentMode))throw new Error("Select Cash or UPI for Amount Extra.");
     const mode=$("bill-mode").value,ccOnly=items.length>0&&items.every(x=>services.find(s=>s.id===x.service_id)?.code==="CREDIT_CARD_BANK");
-    const rawReceived=ccOnly?0:Number($("bill-received").value||0);
-    let received=rawReceived,cash=ccOnly?0:mode==="upi"?0:mode==="cash"?rawReceived:Number($("bill-cash").value||0),upi=ccOnly?0:mode==="cash"?0:mode==="upi"?rawReceived:Number($("bill-upi").value||0),finalMode=mode;
+    const enteredReceived=ccOnly?0:Number($("bill-received").value||0);
+    let cash=ccOnly?0:mode==="upi"?0:mode==="cash"?enteredReceived:Number($("bill-cash").value||0),upi=ccOnly?0:mode==="cash"?0:mode==="upi"?enteredReceived:Number($("bill-upi").value||0),finalMode=mode;
+    const rawReceived=ccOnly?0:mode==="split"?cash+upi:enteredReceived;
+    let received=rawReceived;
     if(adjustmentType==="extra"&&adjustmentAmount>0){received+=adjustmentAmount;if(adjustmentMode==="cash")cash+=adjustmentAmount;else upi+=adjustmentAmount;if(cash>0&&upi>0)finalMode="split";else finalMode=cash>0?"cash":"upi";}
     const customerTotalWithAdjustment=customerTotal+(adjustmentType==="extra"?adjustmentAmount:0);
     if(items.some(x=>services.find(s=>s.id===x.service_id)?.code==="CREDIT_CARD_BANK")&&!ccOnly)throw new Error("Credit Card to Bank Transfer must be billed separately from other services.");
