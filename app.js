@@ -670,24 +670,15 @@ async function loadMonthlyFinancialArchive(){
 }
 async function loadReportsData(){
  const period=$("report-period")?.value||"day",{start,end}=financeRange(period),startIso=start.toISOString(),endIso=end.toISOString(),startDate=financeYmd(start),endDate=financeYmd(new Date(end.getTime()-86400000));
- const [tx,ex,targets,serviceItems]=await Promise.all([
+ const [tx,ex,targets,serviceProfit]=await Promise.all([
   supabase.from("billing_transactions").select("id,bill_number,customer_name,customer_total,amount_received,cash_received,upi_received,processing_total,profit_total,payment_mode,created_at").gte("created_at",startIso).lt("created_at",endIso).order("created_at",{ascending:false}).limit(1000),
   supabase.from("expenses").select("id,expense_date,category,description,amount,payment_mode").gte("expense_date",startDate).lte("expense_date",endDate).order("expense_date",{ascending:false}).limit(1000),
   supabase.from("income_targets").select("period_type,target_amount,expense_target_amount,daily_target_start_date"),
-  supabase.from("billing_items").select("transaction_id,service_id,quantity,profit_amount,services(name,code),billing_transactions!inner(created_at,status)").gte("billing_transactions.created_at",startIso).lt("billing_transactions.created_at",endIso).eq("billing_transactions.status","completed").limit(5000)
+  supabase.rpc("get_service_profit_summary",{p_start:startIso,p_end:endIso})
  ]);
- const failure=tx.error||ex.error||targets.error||serviceItems.error;if(failure){$("report-rows").innerHTML='<div class="empty-state">Unable to load financial report: '+escapeHtml(failure.message)+'</div>';return}
- const bills=tx.data||[],expenses=ex.data||[],targetRows=targets.data||[],serviceItemRows=serviceItems.data||[];
- const serviceProfitMap=new Map();
- services.filter(service=>service.is_active).forEach(service=>serviceProfitMap.set(service.id,{name:service.name,code:service.code||"",profit:0,quantity:0,bills:new Set()}));
- serviceItemRows.forEach(item=>{
-  const service=Array.isArray(item.services)?item.services[0]:item.services;
-  const key=item.service_id;
-  if(!serviceProfitMap.has(key))serviceProfitMap.set(key,{name:service?.name||"Unknown service",code:service?.code||"",profit:0,quantity:0,bills:new Set()});
-  const row=serviceProfitMap.get(key);row.profit+=Number(item.profit_amount||0)*Number(item.quantity||1);row.quantity+=Number(item.quantity||1);row.bills.add(item.transaction_id);
- });
- const serviceProfitRows=[...serviceProfitMap.values()].sort((a,b)=>b.profit-a.profit);
-
+ const failure=tx.error||ex.error||targets.error||serviceProfit.error;if(failure){$("report-rows").innerHTML='<div class="empty-state">Unable to load financial report: '+escapeHtml(failure.message)+'</div>';return}
+ const bills=tx.data||[],expenses=ex.data||[],targetRows=targets.data||[];
+ const serviceProfitRows=(serviceProfit.data||[]).map(x=>({name:x.service_name,code:x.service_code||"",bill_count:Number(x.bill_count||0),quantity:Number(x.quantity_total||0),profit:Number(x.profit_total||0)}));
  const sum=(arr,k)=>arr.reduce((n,x)=>n+Number(x[k]||0),0),income=sum(bills,"profit_total"),expenseTotal=sum(expenses,"amount"),collection=bills.reduce((n,x)=>n+Number(x.cash_received||0)+Number(x.upi_received||0),0),processing=sum(bills,"processing_total"),targetRow=targetRows.find(x=>x.period_type===financeDbPeriod[period]),baseTarget=Number(targetRow?.target_amount||0),expenseBudget=Number(targetRow?.expense_target_amount||0);
  let carryForward=0;
  if(period==="day"&&baseTarget>0&&targetRow?.daily_target_start_date){
