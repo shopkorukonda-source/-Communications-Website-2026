@@ -896,12 +896,8 @@ function calculateBillingRow(row){
       const slab=(bc.slabs||[]).find(x=>amount>=Number(x.min||0)&&(x.max==null||amount<=Number(x.max)));
       charge=slab?(slab.percentage!=null?Math.round(amount*Number(slab.percentage))/100:Number(slab.customer_charge??slab.charge??0)):0;
     }else charge=Math.ceil(amount/1000)*Number(bc.charge_per_1000||10);
-    cost=serviceProcessingCost(amount,svc,row);
-    profit=charge-cost;
-    if(svc.profit_mode==="slabs"&&Array.isArray(svc.profit_config?.slabs)&&svc.profit_config.slabs.length){
-      const slab=(svc.profit_config.slabs||[]).find(x=>amount>=Number(x.min||0)&&(x.max==null||amount<=Number(x.max)));
-      profit=Number(slab?.profit??slab?.amount??0);
-    }
+    cost=0;
+    profit=charge;
   } else {
     const bc=svc.billing_config||{},cc=svc.processing_cost_config||{},pc=svc.profit_config||{};
     if(svc.billing_type==="fixed") charge=Number(bc.customer_charge||0);
@@ -928,7 +924,7 @@ function calculateBillingRow(row){
   if(svc.code==="CREDIT_CARD_BANK")profit=charge;
   else if(["CURRENT_BILLS","MONEY_TRANSFER","PRIVATE_BUS_TICKET","APSRTC_TICKET","TTD_TICKET"].includes(svc.code))profit=charge-cost;
   else if(svc.profit_mode==="manual")profit=charge-cost;
-  const unitTotal=amount+charge;
+  const unitTotal=svc.code==="AEPS_WITHDRAWAL"?charge:amount+charge;
   return {charge,cost,profit,unitTotal,total:unitTotal*qty};
 }
 async function renderQuickBilling(){
@@ -1005,6 +1001,7 @@ function isManualProcessingWalletService(svc){
   return isManualJobApplicationWalletService(svc)||["AEPS_WITHDRAWAL","UPI_TO_CASH","CASH_TO_UPI"].includes(svc?.code);
 }
 function walletDebitsForRow(row,svc){
+  if(svc?.code==="AEPS_WITHDRAWAL")return [];
   if(!isManualProcessingWalletService(svc))return automaticWalletDebits(row,svc);
   const rules=billingWalletRules[row.service_id]||[];
   const selectedIds=svc?.multi_wallet_debit?rules.map(x=>String(x.wallet_id)):(row.processing_wallet_id?[String(row.processing_wallet_id)]:(Array.isArray(row.processing_wallet_ids)?row.processing_wallet_ids.map(String):[]));
@@ -1025,16 +1022,16 @@ function walletDebitsForRow(row,svc){
 function manualProcessingWalletHtml(row,svc,index){
   if(!isManualProcessingWalletService(svc))return null;
   const rules=billingWalletRules[row.service_id]||[];
-  const multi=svc?.multi_wallet_debit===true,selectedId=String(row.processing_wallet_id||"");
+  const multi=svc?.code!=="AEPS_WITHDRAWAL"&&svc?.multi_wallet_debit===true,selectedId=String(row.processing_wallet_id||"");
   const debits=walletDebitsForRow(row,svc);
   const opts=rules.map(rule=>{
     const w=walletOptions.find(x=>x.id===rule.wallet_id&&x.is_active),debit=debits.find(x=>x.wallet_id===rule.wallet_id);
     if(!w)return "";
     return multi?'<div class="wallet-choice"><span>'+escapeHtml(w.name)+' · Debit '+money(debit?.amount||0)+'</span></div>':'<option value="'+w.id+'" '+(selectedId===String(w.id)?"selected":"")+'>'+escapeHtml(w.name)+' · Balance '+money(w.current_balance)+'</option>';
   }).join("");
-  const debitTotal=debits.reduce((n,x)=>n+Number(x.amount||0),0);
+  const debitTotal=debits.reduce((n,x)=>n+Number(x.amount||0),0),aepsCredit=svc.code==="AEPS_WITHDRAWAL"?Number(row.base||0):0;
   const control=multi?'<p>Admin-selected wallets are automatically debited using each wallet rule.</p><div class="wallet-choice-grid">'+(opts||"<small>No processing wallets assigned. Configure them in Admin Services.</small>")+'</div>':'<label>Processing wallet <select data-field="processing_wallet_id" data-i="'+index+'"><option value="">Select one wallet</option>'+opts+'</select></label>';
-  return '<div class="wallet-map-box"><strong>Transaction wallet'+(multi?"s":"")+'</strong>'+control+'<small>Total wallet debit: <span id="manual-wallet-debit-'+index+'">'+money(debitTotal)+'</span></small></div>';
+  return '<div class="wallet-map-box"><strong>Transaction wallet'+(multi?"s":"")+'</strong>'+control+(svc.code==="AEPS_WITHDRAWAL"?'<small>Selected wallet credit: '+money(aepsCredit)+'</small>':'<small>Total wallet debit: <span id="manual-wallet-debit-'+index+'">'+money(debitTotal)+'</span></small>')+'</div>';
 }
 async function setBillingRows(n){
   const {data:rules}=await supabase.from("service_wallet_rules").select("service_id,wallet_id,wallet_slot,debit_config").order("wallet_slot");
@@ -1209,12 +1206,15 @@ async function saveQuickBilling(){
       const svc=services.find(s=>s.id===r.service_id),special=isPaperPageService(svc);
       const wallet_debits=walletDebitsForRow(r,svc);
       if(isManualProcessingWalletService(svc)){
-        const zeroCostAeps=svc.code==="AEPS_WITHDRAWAL"&&serviceProcessingCost(Number(r.base||0),svc,r)===0;
-        if(!zeroCostAeps){
-          if(!(billingWalletRules[r.service_id]||[]).length)throw new Error("Admin must assign one or more processing wallets in Admin Services for "+svc.name+".");
-          const selectedWalletIds=Array.isArray(r.processing_wallet_ids)?r.processing_wallet_ids.map(String):(r.processing_wallet_id?[String(r.processing_wallet_id)]:[]);
+        const assignedRules=billingWalletRules[r.service_id]||[];
+        const selectedWalletIds=r.processing_wallet_id?[String(r.processing_wallet_id)]:[];
+        if(svc.code==="AEPS_WITHDRAWAL"){
+          if(!selectedWalletIds.length)throw new Error("Select the wallet that should receive the AEPS amount.");
+          if(!assignedRules.some(x=>String(x.wallet_id)===selectedWalletIds[0]))throw new Error("Selected AEPS credit wallet is not assigned by Admin.");
+        }else{
+          if(!assignedRules.length)throw new Error("Admin must assign one or more processing wallets in Admin Services for "+svc.name+".");
           if(!selectedWalletIds.length)throw new Error("Select at least one transaction wallet for "+svc.name+".");
-          if(selectedWalletIds.some(id=>!(billingWalletRules[r.service_id]||[]).some(x=>x.wallet_id===id)))throw new Error("One or more selected wallets are not assigned to "+svc.name+".");
+          if(selectedWalletIds.some(id=>!assignedRules.some(x=>String(x.wallet_id)===id)))throw new Error("One or more selected wallets are not assigned to "+svc.name+".");
           if(!wallet_debits.length||wallet_debits.length!==selectedWalletIds.length)throw new Error("Check the debit amount configured for every selected wallet in Admin Services.");
         }
       }
@@ -1233,7 +1233,7 @@ async function saveQuickBilling(){
       const snapshot=special
         ? {base_amount:0,service_charge:calc.gross,count_unit:"papers",print_type:svc.code==="PRINTOUT"?(r.print_type||"single_side"):"single_side",page_count:Number(r.unit_count),unit_count:Number(r.unit_count),sets:Number(r.sets),total_count:calc.count,item_label:r.item_label||null,unit_rate:calc.rate,discount_amount:calc.discount,wallet_debits}
         : svc.code==="CREDIT_CARD_BANK" ? {base_amount:Number(r.base),service_charge:calc.charge,charge_percent:Number(r.charge_percent),credit_wallet_id:r.credit_wallet_id,wallet_debits}
-        : {base_amount:Number(r.base),service_charge:calc.charge,bank:r.bank||null,wallet_debits};
+        : {base_amount:Number(r.base),service_charge:calc.charge,bank:r.bank||null,aeps_wallet_id:svc.code==="AEPS_WITHDRAWAL"?(r.processing_wallet_id||null):null,wallet_debits};
       const itemPayload={service_id:r.service_id,quantity,customer_unit_price:price,processing_unit_cost:calc.cost,pricing_snapshot:snapshot,wallet_debits};
       if(currentProfile?.role==="admin")itemPayload.profit_amount=calc.profit;
       items.push(itemPayload);
