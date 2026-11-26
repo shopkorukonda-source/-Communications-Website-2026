@@ -746,7 +746,7 @@ function paperPageUnit(svc){return svc?.code==="PRINTOUT"?"page":"paper";}
 function paperPageRate(row,svc,count){
   const cfg=svc?.billing_config||{};
   const type=svc?.code==="PRINTOUT"?(row.print_type||"single_side"):"single_side";
-  const pricing=cfg[type]||((type==="single_side"&&Array.isArray(cfg.quantity_slabs))?cfg:{});
+  const pricing=cfg[type]||((type==="single_side"&&(svc?.code?.startsWith("XEROX_")||Array.isArray(cfg.quantity_slabs)||cfg.customer_charge!=null))?cfg:{});
   const slab=(pricing.quantity_slabs||[]).find(x=>count>=Number(x.min_quantity||x.min||0)&&(x.max_quantity==null&&x.max==null||count<=Number(x.max_quantity??x.max)));
   return Number(slab?.rate??slab?.customer_charge??pricing.customer_charge??0);
 }
