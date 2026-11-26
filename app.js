@@ -895,7 +895,7 @@ async function renderQuickBilling(){
   count.addEventListener("change",()=>{let n=Math.max(1,Math.min(100,Number(count.value)||1));count.value=n;setBillingRows(n);});
   $("bill-mode").addEventListener("change",updatePaymentFields);
   ["bill-received","bill-cash","bill-upi"].forEach(id=>$(id).addEventListener("input",updateBillingTotals));
-  setBillingRows(1);await loadRecentBills();
+  await setBillingRows(1);await loadRecentBills();
 }
 function isManualJobApplicationWalletService(svc){
   const code=String(svc?.code||"").toUpperCase(),name=String(svc?.name||"").toUpperCase();
@@ -1177,10 +1177,10 @@ async function loadBillIntoQuickBilling(id){
         processing_wallet_id:walletDebits[0]?.wallet_id||""
       };
     });
-    editingBillingTransactionId=id;editingBillingBillNumber=bill.bill_number||id.slice(0,8);
-    billingRows=loadedRows;
     const host=$("other-view");
     if(!host.querySelector("#billing-rows"))await renderQuickBilling();
+    editingBillingTransactionId=id;editingBillingBillNumber=bill.bill_number||id.slice(0,8);
+    billingRows=loadedRows;
     $("bill-count").value=String(loadedRows.length);
     $("bill-customer").value=bill.customer_name||"";
     $("bill-phone").value=bill.customer_phone||"";
