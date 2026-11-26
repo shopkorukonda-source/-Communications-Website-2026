@@ -858,7 +858,7 @@ async function setBillingRows(n){
     const serviceOptions=services.filter(s=>s.is_active).map(s=>'<option value="'+s.id+'" '+(s.id===r.service_id?"selected":"")+'>'+escapeHtml(s.name)+'</option>').join("");
     const svc=services.find(s=>s.id===r.service_id)||{},special=isPaperPageService(svc),alloc=automaticWalletDebits(r,svc);
     const count=Number(r.unit_count||0)*Math.max(1,Number(r.sets||1)),rate=paperPageRate(r,svc,count);
-    const walletOptionsHtml=svc?.code==="UPI_TO_CASH"?"<small>Customer UPI credits the selected destination. Cash payout debits Shop Cash.</small>":(billingWalletRules[r.service_id]||[]).map(rule=>{
+    const walletOptionsHtml=svc?.code==="UPI_TO_CASH"?"<small>Customer UPI credits the selected destination. Cash payout debits Shop Cash.</small>":((billingWalletRules[r.service_id]||[]).map(rule=>{
       const wallet=walletOptions.find(x=>x.id===rule.wallet_id),debit=alloc.find(x=>x.wallet_id===rule.wallet_id);
       return wallet?'<div class="wallet-choice"><span>'+escapeHtml(wallet.name)+' <small>Balance '+money(wallet.current_balance)+' · Auto debit '+money(debit?.amount||0)+'</small></span></div>':"";
     }).join("")||"<small>No processing wallet configured for this service.</small>");
