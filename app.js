@@ -419,11 +419,15 @@ async function openServiceEditor(id=null){
         <label>Processing cost type<select id="svc-cost"><option value="fixed">Fixed</option><option value="percentage">Percentage</option><option value="slabs">Slabs</option><option value="manual">Manual</option></select></label>
         <label>Profit mode<select id="svc-profit"><option value="manual">Manual</option><option value="slabs">Slabs</option><option value="fixed">Fixed</option><option value="percentage">Percentage</option></select></label>
       </div>
-      <div class="admin-form-grid">
-        <label>Billing config (JSON)<textarea id="svc-billing-config" rows="4">${escapeHtml(JSON.stringify(s?.billing_config||{},null,2))}</textarea><small class="muted">Xerox / Printing: customer_charge is the fixed rate per paper/page. Optional quantity_slabs use [{"min_quantity":1,"max_quantity":50,"rate":2},{"min_quantity":51,"max_quantity":null,"rate":1.5}]. Employees cannot edit rates; only discounts are entered at billing.</small></label>
-        <label>Processing cost config (JSON)<textarea id="svc-cost-config" rows="3">${escapeHtml(JSON.stringify(s?.processing_cost_config||{},null,2))}</textarea></label>
-        <label>Profit config (JSON)<textarea id="svc-profit-config" rows="3">${escapeHtml(JSON.stringify(s?.profit_config||{},null,2))}</textarea></label>
+      <div class="admin-form-grid service-amount-fields">
+        <label>Customer charge amount (₹)<input id="svc-billing-amount" type="number" min="0" step="0.01" value="${Number(s?.billing_config?.customer_charge||0)}" placeholder="Enter amount"></label>
+        <label>Customer charge percentage (%)<input id="svc-billing-percentage" type="number" min="0" step="0.01" value="${Number(s?.billing_config?.percentage||0)}" placeholder="Enter percentage"></label>
+        <label>Processing cost amount (₹)<input id="svc-cost-amount" type="number" min="0" step="0.01" value="${Number(s?.processing_cost_config?.fixed_amount||0)}" placeholder="Enter amount"></label>
+        <label>Processing cost percentage (%)<input id="svc-cost-percentage" type="number" min="0" step="0.01" value="${Number(s?.processing_cost_config?.percentage||0)}" placeholder="Enter percentage"></label>
+        <label>Profit amount (₹)<input id="svc-profit-amount" type="number" min="0" step="0.01" value="${Number(s?.profit_config?.fixed_amount||0)}" placeholder="Enter amount"></label>
+        <label>Profit percentage (%)<input id="svc-profit-percentage" type="number" min="0" step="0.01" value="${Number(s?.profit_config?.percentage||0)}" placeholder="Enter percentage"></label>
       </div>
+      <small class="muted">Enter normal amounts directly. Only the selected Billing type, Processing cost type and Profit mode are used. Existing slab settings are preserved when editing a service.</small>
       <div class="wallet-map-box" id="credit-profit-wallet-box" style="display:${s?.code==="CREDIT_CARD_BANK"?"block":"none"}"><strong>Credit Card profit wallets</strong><p>Select all wallets employees may choose. Each bill's calculated profit is credited to the selected wallet.</p><div class="wallet-choice-grid">${walletOptions.map(w=>`<label class="wallet-choice"><input type="checkbox" data-profit-wallet-check value="${w.id}" ${selectedProfitWallets.includes(w.id)?"checked":""} ${w.is_active?"":"disabled"}><span>${escapeHtml(w.name)} <small>${escapeHtml(w.provider||w.wallet_type)}</small></span></label>`).join("")||'<small>No wallets created yet. Add wallets from Wallets section.</small>'}</div></div>
       <div class="wallet-map-box"><strong>Processing wallets</strong><p>Admin selects the wallet and debit formula for each service.</p><div class="wallet-choice-grid">${walletOptions.map(w=>{const rule=selectedWalletRules.find(x=>x.wallet_id===w.id),cfg=rule?.debit_config||{},mode=cfg.mode||(cfg.fixed_amount!=null?"fixed_amount":"processing_cost"),value=mode==="percentage"?(cfg.percentage??""):(cfg.fixed_amount??"");return `<label class="wallet-choice"><input type="checkbox" data-admin-wallet-check value="${w.id}" ${rule?"checked":""} ${w.is_active?"":"disabled"}><span>${escapeHtml(w.name)} <small>${escapeHtml(w.provider||w.wallet_type)}</small><select data-admin-wallet-mode="${w.id}" ${rule?"":"disabled"}><option value="processing_cost" ${mode==="processing_cost"?"selected":""}>Processing cost</option><option value="base_amount" ${mode==="base_amount"?"selected":""}>Bill amount</option><option value="base_plus_processing_cost" ${mode==="base_plus_processing_cost"?"selected":""}>Bill + processing cost</option><option value="fixed_amount" ${mode==="fixed_amount"?"selected":""}>Fixed amount</option><option value="percentage" ${mode==="percentage"?"selected":""}>Percentage of bill</option></select><input type="number" min="0" step="0.01" data-admin-wallet-value="${w.id}" value="${value}" placeholder="Value for fixed / percentage" ${rule&&["fixed_amount","percentage"].includes(mode)?"":"disabled"}></span></label>`;}).join("")||'<small>No wallets created yet. Add wallets from Wallets section.</small>'}</div></div>
       <label class="inline-check"><input id="svc-active" type="checkbox" ${s?.is_active===false?"":"checked"}> Service active</label>
@@ -446,10 +450,14 @@ async function openServiceEditor(id=null){
 async function saveService(event){
   event.preventDefault();
   const btn=$("save-service-btn"), msg=$("service-form-message");
-  const parseConfig=id=>{const v=$(id).value.trim()||"{}";const parsed=JSON.parse(v);if(!parsed||Array.isArray(parsed)||typeof parsed!=="object")throw new Error("Configuration must be a JSON object");return parsed;};
+  const toAmount=id=>{const value=Number($(id).value||0);if(!Number.isFinite(value)||value<0)throw new Error("Enter a valid non-negative amount or percentage.");return value;};
   let billingConfig,costConfig,profitConfig;
-  try{billingConfig=parseConfig("svc-billing-config");costConfig=parseConfig("svc-cost-config");profitConfig=parseConfig("svc-profit-config");}
-  catch(e){msg.textContent="Invalid JSON: "+e.message;return;}
+  try{
+    const existing=editingServiceId?services.find(x=>x.id===editingServiceId):null;
+    billingConfig={...(existing?.billing_config||{}),customer_charge:toAmount("svc-billing-amount"),percentage:toAmount("svc-billing-percentage")};
+    costConfig={...(existing?.processing_cost_config||{}),fixed_amount:toAmount("svc-cost-amount"),percentage:toAmount("svc-cost-percentage")};
+    profitConfig={...(existing?.profit_config||{}),fixed_amount:toAmount("svc-profit-amount"),percentage:toAmount("svc-profit-percentage")};
+  }catch(e){msg.textContent=e.message;return;}
   const payload={category_id:$("svc-category").value,name:$("svc-name").value.trim(),code:$("svc-code").value.trim()||null,description:$("svc-description").value.trim()||null,billing_type:$("svc-billing").value,processing_cost_type:$("svc-cost").value,profit_mode:$("svc-profit").value,billing_config:billingConfig,processing_cost_config:costConfig,profit_config:profitConfig,is_active:$("svc-active").checked,updated_at:new Date().toISOString()};
   if(!payload.name){msg.textContent="Service name is required.";return;}
   btn.disabled=true;btn.textContent="Saving…";
