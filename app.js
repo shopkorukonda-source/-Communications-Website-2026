@@ -1030,7 +1030,7 @@ function manualProcessingWalletHtml(row,svc,index){
     return w?'<label class="wallet-choice"><input type="checkbox" data-field="processing_wallet_ids" data-i="'+index+'" value="'+w.id+'" '+(selectedIds.includes(w.id)?"checked":"")+'><span>'+escapeHtml(w.name)+' · Balance '+money(w.current_balance)+' · Debit '+money(debit?.amount||0)+'</span></label>':"";
   }).join("");
   const debitTotal=debits.reduce((n,x)=>n+Number(x.amount||0),0);
-  return '<div class="wallet-map-box"><strong>Transaction wallets (select one or more)</strong><p>Select all wallets to debit for this '+escapeHtml(svc.name)+'. Each selected wallet uses its own Admin Services debit rule.</p><div class="wallet-multi-select">'+(opts||"<small>No processing wallets assigned. Configure them in Admin Services.</small>")+'</div><small>Total wallet debit: <span id="manual-wallet-debit-'+index+'">'+money(debitTotal)+'</span></small></div>';
+  return '<div class="wallet-map-box"><strong>Transaction wallets (select one or more)</strong><p>Select all wallets to debit for this '+escapeHtml(svc.name)+'. Each selected wallet uses its own Admin Services debit rule.</p><div class="wallet-choice-grid">'+(opts||"<small>No processing wallets assigned. Configure them in Admin Services.</small>")+'</div><small>Total wallet debit: <span id="manual-wallet-debit-'+index+'">'+money(debitTotal)+'</span></small></div>';
 }
 async function setBillingRows(n){
   const {data:rules}=await supabase.from("service_wallet_rules").select("service_id,wallet_id,wallet_slot,debit_config").order("wallet_slot");
