@@ -995,6 +995,7 @@ async function saveQuickBilling(){
     if(adjustmentRows.length>1)throw new Error("Please bill one Cash to UPI / UPI to Cash service row at a time when using an adjustment.");
     const adjustmentRow=adjustmentRows[0]||null,adjustmentServiceCode=services.find(s=>s.id===adjustmentRow?.service_id)?.code||null,adjustmentType=adjustmentRow?.adjustment_type||null,adjustmentAmount=Math.max(0,Number(adjustmentRow?.adjustment_amount||0)),adjustmentMode=adjustmentRow?.adjustment_mode||null;
     if(adjustmentAmount>0&&!adjustmentType)throw new Error("Select Amount Deduct or Amount Extra.");
+    if(adjustmentServiceCode==="UPI_TO_CASH"&&adjustmentType==="deduct"&&adjustmentAmount>Number(adjustmentRow?.base||0)*Math.max(1,Number(adjustmentRow?.quantity||1)))throw new Error("Deduct charge cannot be greater than the UPI to Cash amount.");
     if(adjustmentAmount>0&&adjustmentType==="deduct"&&adjustmentServiceCode==="CASH_TO_UPI"&&!adjustmentRow?.selected_adjustment_wallet_id)throw new Error("Select the wallet for Cash to UPI deduction.");
     if(adjustmentServiceCode==="UPI_TO_CASH"&&!adjustmentRow?.selected_upi_to_cash_wallet_id)throw new Error("Select where the customer UPI amount should be credited.");
     if(adjustmentType==="extra"&&adjustmentAmount>0&&adjustmentServiceCode==="CASH_TO_UPI"&&!["cash","upi"].includes(adjustmentMode))throw new Error("Select Cash or UPI for Amount Extra.");
