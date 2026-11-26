@@ -120,8 +120,11 @@ function renderEmployeeWallets(){
  const isAdmin=currentProfile?.role==="admin";
  const heading=isAdmin?"ALL SHOP WALLETS":"MY ASSIGNED WALLETS";
  const title=isAdmin?"Wallet balances":"Assigned wallet balances";
+ const activeWallets=walletOptions.filter(w=>w.is_active!==false);
+ const walletTotal=activeWallets.reduce((sum,w)=>sum+Number(w.current_balance||0),0);
+ const cashTotal=activeWallets.filter(w=>w.wallet_type==="cash").reduce((sum,w)=>sum+Number(w.current_balance||0),0);
  if(!walletOptions.length){host.innerHTML='<div class="announcement-heading"><div><div class="eyebrow">'+heading+'</div><h3>'+(isAdmin?"No active wallets created":"No wallets assigned")+'</h3></div></div>';return;}
- host.innerHTML='<div class="announcement-heading"><div><div class="eyebrow">'+heading+'</div><h3>'+title+'</h3></div></div><div class="employee-wallet-grid">'+walletOptions.filter(w=>w.is_active!==false).map(w=>'<article class="employee-wallet-card"><div><strong>'+escapeHtml(w.name)+'</strong><small>'+escapeHtml(w.provider||w.wallet_type||"Wallet")+'</small></div><b>'+money(w.current_balance)+'</b></article>').join("")+'</div>';
+ host.innerHTML='<div class="announcement-heading"><div><div class="eyebrow">'+heading+'</div><h3>'+title+'</h3></div></div>'+(isAdmin?'<div class="admin-module-stats"><div><small>Total balance · All wallets including cash</small><strong>'+money(walletTotal)+'</strong></div><div><small>Cash balance</small><strong>'+money(cashTotal)+'</strong></div><div><small>Non-cash wallets</small><strong>'+money(walletTotal-cashTotal)+'</strong></div></div>':'')+'<div class="employee-wallet-grid">'+activeWallets.map(w=>'<article class="employee-wallet-card"><div><strong>'+escapeHtml(w.name)+'</strong><small>'+escapeHtml(w.provider||w.wallet_type||"Wallet")+'</small></div><b>'+money(w.current_balance)+'</b></article>').join("")+'</div>';
 }
 function renderWalletAlerts(){
  const host=$("wallet-alerts");if(!host)return;
