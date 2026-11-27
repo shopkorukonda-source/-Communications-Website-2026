@@ -724,7 +724,7 @@ async function loadReportsData(){
  const period=$("report-period")?.value||"day",{start,end}=financeRange(period),startIso=start.toISOString(),endIso=end.toISOString(),startDate=financeYmd(start),endDate=financeYmd(new Date(end.getTime()-86400000));
  const [tx,ex,targets,serviceProfit]=await Promise.all([
   supabase.from("billing_transactions").select("id,bill_number,customer_name,customer_total,amount_received,cash_received,upi_received,processing_total,profit_total,payment_mode,created_at").gte("created_at",startIso).lt("created_at",endIso).order("created_at",{ascending:false}).limit(1000),
-  supabase.from("expenses").select("id,expense_date,category,description,amount,payment_mode").gte("expense_date",startDate).lte("expense_date",endDate).order("expense_date",{ascending:false}).limit(1000),
+  supabase.from("expenses").select("id,expense_date,category,description,amount,payment_mode").eq("is_voided",false).gte("expense_date",startDate).lte("expense_date",endDate).order("expense_date",{ascending:false}).limit(1000),
   supabase.from("income_targets").select("period_type,target_amount,expense_target_amount,daily_target_start_date"),
   supabase.rpc("get_service_profit_summary",{p_start:startIso,p_end:endIso})
  ]);
