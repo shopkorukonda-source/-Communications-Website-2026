@@ -1053,14 +1053,14 @@ function walletDebitsForRow(row,svc){
 function manualProcessingWalletHtml(row,svc,index){
   if(!isManualProcessingWalletService(svc))return null;
   const rules=billingWalletRules[row.service_id]||[];
-  const multi=svc?.code!=="AEPS_WITHDRAWAL"&&svc?.multi_wallet_debit===true,selectedId=String(row.processing_wallet_id||"");
+  const multi=svc?.code!=="AEPS_WITHDRAWAL"&&svc?.code!=="CURRENT_BILLS"&&svc?.multi_wallet_debit===true,selectedId=String(row.processing_wallet_id||"");
   const debits=walletDebitsForRow(row,svc);
   const opts=rules.map(rule=>{
     const w=walletOptions.find(x=>x.id===rule.wallet_id&&x.is_active),debit=debits.find(x=>x.wallet_id===rule.wallet_id);
     if(!w)return "";
     return multi?'<div class="wallet-choice"><span>'+escapeHtml(w.name)+' · Debit '+money(debit?.amount||0)+'</span></div>':'<option value="'+w.id+'" '+(selectedId===String(w.id)?"selected":"")+'>'+escapeHtml(w.name)+' · Balance '+money(w.current_balance)+'</option>';
   }).join("");
-  const debitTotal=svc.code==="CASH_TO_UPI"?Number(row.base||0):debits.reduce((n,x)=>n+Number(x.amount||0),0),aepsCredit=svc.code==="AEPS_WITHDRAWAL"?Number(row.base||0):0;
+  const debitTotal=svc.code==="CASH_TO_UPI"?Number(row.base||0):svc.code==="CURRENT_BILLS"?(row.bill_amounts||[]).reduce((sum,amount)=>sum+walletDebitsForRow({...row,base:String(amount||0)},svc).reduce((n,x)=>n+Number(x.amount||0),0),0):debits.reduce((n,x)=>n+Number(x.amount||0),0),aepsCredit=svc.code==="AEPS_WITHDRAWAL"?Number(row.base||0):0;
   const control=multi?'<p>Admin-selected wallets are automatically debited using each wallet rule.</p><div class="wallet-choice-grid">'+(opts||"<small>No processing wallets assigned. Configure them in Admin Services.</small>")+'</div>':'<label>'+(svc.code==="AEPS_WITHDRAWAL"?"AEPS credit wallet":"Processing wallet")+' <select data-field="processing_wallet_id" data-i="'+index+'"><option value="">Select one wallet</option>'+opts+'</select></label>';
   return '<div class="wallet-map-box"><strong>Transaction wallet'+(multi?"s":"")+'</strong>'+control+(svc.code==="AEPS_WITHDRAWAL"?'<small>Selected wallet credit: <span id="manual-wallet-credit-'+index+'">'+money(aepsCredit)+'</span></small>':'<small>Total wallet debit: <span id="manual-wallet-debit-'+index+'">'+money(debitTotal)+'</span></small>')+'</div>';
 }
