@@ -15,6 +15,7 @@ let currentProfile = null;
 let currentEmployee = null;
 let walletOptions = [];
 let editingServiceId = null;
+let pendingEmployeeShiftCloseSessionId = null;
 
 function setMessage(message, isError = true) {
   $("login-message").textContent = message;
@@ -178,6 +179,7 @@ function renderEmployeeShiftControls(openSession,attendance,error){
  const button=host.querySelector("[data-employee-shift-action]");
  button.addEventListener("click",async()=>{
    if(action==="shift-start"||action==="shift-close"){
+     if(action==="shift-close")pendingEmployeeShiftCloseSessionId=openSession.id;
      const target=document.querySelector('.nav-item[data-view="drawers"]');if(target)target.click();
      return;
    }
@@ -367,6 +369,12 @@ document.querySelectorAll(".nav-item").forEach(btn=>btn.addEventListener("click"
     await renderEmployeeManager();
   } else if(["drawers","attendance","leave","payroll","incentives","ucl","walletaccess","tasks","inventory","expenses","settlement"].includes(view)) {
     await renderOperations(view,{supabase,host:$("other-view"),profile:currentProfile,$});
+    if(view==="drawers" && pendingEmployeeShiftCloseSessionId){
+      const closeButton=[...$("other-view").querySelectorAll("[data-op-close]")].find(x=>x.dataset.opClose===pendingEmployeeShiftCloseSessionId);
+      pendingEmployeeShiftCloseSessionId=null;
+      if(closeButton){closeButton.click();$("op-close-editor")?.scrollIntoView({behavior:"smooth",block:"start"});}
+      else alert("Your active shift close button was not found. Please refresh and try again.");
+    }
   } else {
     $("other-view").innerHTML='<div class="empty-panel"><div class="empty-icon">✦</div><h2 id="other-title"></h2><p>This module will be enabled after its complete workflow and safety checks are ready.</p></div>';
     $("other-title").textContent=btn.textContent.trim();
