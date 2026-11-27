@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#087b59">
+  <meta name="theme-color" content="#111111">
   <title>SLV Shop Manager</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles.css?v=github-pages-main-1">
 </head>
 <body>
   <main id="login-screen" class="login-shell">
@@ -48,7 +48,6 @@
       <button class="nav-item" data-view="quicklinks"><span>↗</span> Quick Links</button>
       <button class="nav-item" data-view="panforms"><span>▧</span> PAN Applications</button>
       <button class="nav-item" data-view="services"><span>▦</span> Services</button>
-      <button class="nav-item admin-only" data-view="printoutrates"><span>₹</span> Printout & Xerox Rates</button>
       <div class="nav-label nav-gap">MANAGEMENT</div>
       <button class="nav-item admin-only" data-view="wallets"><span>◉</span> Wallets</button>
       <button class="nav-item admin-only" data-view="employees"><span>♙</span> Employees</button>
@@ -71,14 +70,13 @@
     <section class="main-area">
       <header class="topbar">
         <div class="topbar-heading"><div class="topbar-brand"><span class="topbar-brand-mark">S</span><span>SLV COMMUNICATIONS</span></div><div><div class="eyebrow" id="greeting">GOOD DAY</div><h2 id="page-title">Overview</h2></div></div>
-        <div class="user-area"><div class="user-meta"><strong id="user-name">Team member</strong><small id="user-role">Employee</small></div><div class="avatar" id="avatar">S</div><button id="change-password-btn" class="signout-btn">Change password</button><button id="signout-btn" class="signout-btn">Sign out</button></div>
+        <div class="user-area"><div class="profile-menu" id="profile-menu"><button type="button" class="profile-trigger" id="profile-trigger" aria-expanded="false" aria-haspopup="true"><span class="user-meta"><strong id="user-name">Team member</strong><small id="user-role">Employee</small></span><span class="avatar" id="avatar">S</span><span class="profile-chevron">▾</span></button><div class="profile-dropdown hidden" id="profile-dropdown"><div class="profile-dropdown-heading">Account</div><button type="button" id="change-password-btn" class="profile-menu-item">Change password</button><button type="button" id="signout-btn" class="profile-menu-item profile-signout">Sign out</button></div></div></div>
       </header>
       <section id="overview-view" class="view">
         <div class="welcome-row"><div><h1>Your shop, <span>in control.</span></h1><p>Here’s a clear view of today’s operations.</p></div><div class="date-chip" id="today-date"></div></div>
         <div id="employee-announcements" class="employee-announcements"></div>
         <div id="employee-task-reminders" class="employee-announcements"></div>
         <div id="employee-wallets" class="employee-announcements"></div>
-        <div id="wallet-alerts" class="employee-announcements"></div>
         <div class="stat-grid">
           <article class="stat-card"><div class="stat-top"><span>Today’s bills</span><span class="stat-icon">▤</span></div><strong id="today-bill-count">0</strong><small id="today-bill-caption">Your billing activity today</small></article>
           <article class="stat-card"><div class="stat-top"><span>Cash position</span><span class="stat-icon">₹</span></div><strong id="cash-position">₹0.00</strong><small id="cash-position-caption">Shop Cash wallet balance</small></article>
@@ -127,6 +125,6 @@
     }, 5000);
   </script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-  <script type="module" src="./app.js?v=ccf3e9b"></script>
+  <script type="module" src="./app.js?v=github-pages-main-1"></script>
 </body>
 </html>
