@@ -1003,7 +1003,7 @@ async function saveQuickBilling(){
         if(!(billingProfitWalletRules[r.service_id]||[]).includes(r.profit_wallet_id))throw new Error("Select a profit wallet assigned by Admin for Credit Card service.");
         if(!(Number(r.base)>0)||!(Number(r.charge_percent)>0)||Number(r.charge_percent)>100)throw new Error("Enter a valid transfer amount and percentage (0.01–100).");
       }
-      if(svc.code!=="UPI_TO_CASH"&&(billingWalletRules[r.service_id]||[]).length&&!wallet_debits.length)throw new Error("Set processing wallet debit amounts in Admin Services for "+svc.name);
+      if(svc.code!=="UPI_TO_CASH"&&!isAepsWithdrawalService(svc)&&(billingWalletRules[r.service_id]||[]).length&&!wallet_debits.length)throw new Error("Set processing wallet debit amounts in Admin Services for "+svc.name);
       if(wallet_debits.some(x=>!Number.isFinite(Number(x.amount))||Number(x.amount)<=0))throw new Error("Invalid automatic wallet debit amount.");
       r.wallet_debits=wallet_debits;
       const calc=calculateBillingRow(r);
