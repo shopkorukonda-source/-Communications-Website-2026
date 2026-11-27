@@ -641,3 +641,6 @@ button:not(.nav-item):focus-visible,input:focus-visible,select:focus-visible,tex
 .quick-link-name{display:block;width:100%;font-size:13px;line-height:1.35;font-weight:700;overflow-wrap:anywhere}
 .quick-link-admin{justify-content:center}
 @media(max-width:760px){.quick-link-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.quick-link-card{padding:13px 7px}.quick-link-mark{width:64px;height:64px;border-radius:15px}.quick-link-mark img{width:52px;height:52px}.quick-link-name{font-size:12px}.quick-link-admin{gap:6px}.quick-link-admin span{width:100%;margin:0}}
+
+/* Employee view: keep the SLV logo beside the Overview heading only. */
+.employee-mode .sidebar-brand{display:none!important}
