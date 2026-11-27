@@ -1373,7 +1373,7 @@ async function saveQuickBilling(){
 async function loadPendingPanApplications(){
   const host=$("pan-pending-list");if(!host)return;
   const {data,error}=await supabase.from("pan_application_processing")
-    .select("id,billing_item_id,transaction_id,expected_cost,status,created_at,acknowledgement_number,billing_items(customer_unit_price,billing_transactions(bill_number,customer_name,customer_phone))")
+    .select("id,billing_item_id,transaction_id,expected_cost,status,created_at,acknowledgement_number,applicant_name,date_of_birth,pan_type,billing_items(customer_unit_price,billing_transactions(bill_number,customer_name,customer_phone))")
     .eq("status","pending").order("created_at",{ascending:true});
   if(error){host.textContent="Unable to load PAN pending list: "+error.message;return;}
   const panService=services.find(x=>x.code==="PAN_CARD");
@@ -1385,15 +1385,19 @@ async function loadPendingPanApplications(){
   host.innerHTML=(data||[]).map(q=>{
     const item=Array.isArray(q.billing_items)?q.billing_items[0]:q.billing_items;
     const bill=Array.isArray(item?.billing_transactions)?item.billing_transactions[0]:item?.billing_transactions;
-    return '<div class="admin-service-row"><div class="admin-service-main"><strong>PAN · Bill #'+escapeHtml(bill?.bill_number||"")+'</strong><small>'+escapeHtml(bill?.customer_name||"Customer")+' · '+escapeHtml(bill?.customer_phone||"")+' · Received '+new Date(q.created_at).toLocaleString("en-IN")+'</small></div><div class="admin-service-meta"><strong>Internal cost '+money(q.expected_cost)+'</strong><span>Pending submission</span></div><div class="admin-service-actions"><select data-pan-wallet="'+q.billing_item_id+'"><option value="">Select debit wallet</option>'+options+'</select><input data-pan-ack="'+q.billing_item_id+'" placeholder="Acknowledgement number (required)"><button data-pan-submit="'+q.billing_item_id+'">Save ACK & Debit Wallet</button></div></div>';
+    const applicantName=q.applicant_name||bill?.customer_name||"";
+    return '<div class="admin-service-row pan-pending-card"><div class="admin-service-main"><strong>PAN · Bill #'+escapeHtml(bill?.bill_number||"")+'</strong><small>'+escapeHtml(bill?.customer_name||"Customer")+' · '+escapeHtml(bill?.customer_phone||"")+' · Received '+new Date(q.created_at).toLocaleString("en-IN")+'</small></div><div class="admin-service-meta"><strong>Internal cost '+money(q.expected_cost)+'</strong><span>Pending submission</span></div><div class="admin-form-grid pan-pending-fields"><label>Applicant Name<input data-pan-name="'+q.billing_item_id+'" value="'+escapeHtml(applicantName)+'" placeholder="Applicant full name" required></label><label>Date of Birth<input data-pan-dob="'+q.billing_item_id+'" type="date" value="'+escapeHtml(q.date_of_birth||"")+'" required></label><label>PAN Type<select data-pan-type="'+q.billing_item_id+'" required><option value="">Select PAN type</option><option value="new_pan" '+(q.pan_type==="new_pan"?"selected":"")+'>New PAN</option><option value="correction" '+(q.pan_type==="correction"?"selected":"")+'>PAN Correction</option><option value="reprint" '+(q.pan_type==="reprint"?"selected":"")+'>PAN Reprint</option></select></label><label>ACK Number<input data-pan-ack="'+q.billing_item_id+'" value="'+escapeHtml(q.acknowledgement_number||"")+'" placeholder="Acknowledgement number (required)" required></label><label>Processing Wallet<select data-pan-wallet="'+q.billing_item_id+'" required><option value="">Select debit wallet</option>'+options+'</select></label><button data-pan-submit="'+q.billing_item_id+'">Save Details, ACK & Debit</button></div></div>';
   }).join("")||'<div class="empty-state">No PAN applications pending submission.</div>';
   host.querySelectorAll("[data-pan-submit]").forEach(btn=>btn.addEventListener("click",async()=>{
-    const id=btn.dataset.panSubmit,wallet=host.querySelector('[data-pan-wallet="'+id+'"]')?.value||"",ack=host.querySelector('[data-pan-ack="'+id+'"]')?.value||"";
+    const id=btn.dataset.panSubmit,wallet=host.querySelector('[data-pan-wallet="'+id+'"]')?.value||"",ack=host.querySelector('[data-pan-ack="'+id+'"]')?.value||"",applicantName=host.querySelector('[data-pan-name="'+id+'"]')?.value||"",dob=host.querySelector('[data-pan-dob="'+id+'"]')?.value||"",panType=host.querySelector('[data-pan-type="'+id+'"]')?.value||"";
+    if(!applicantName.trim()){alert("Enter applicant name.");return;}
+    if(!dob){alert("Enter applicant date of birth.");return;}
+    if(!panType){alert("Select PAN type.");return;}
     if(!ack.trim()){alert("Enter the PAN acknowledgement number first.");return;}
-     if(!wallet){alert("Select the PAN processing wallet first.");return;}
+    if(!wallet){alert("Select the PAN processing wallet first.");return;}
     btn.disabled=true;
     try{
-      const {error:rpcError}=await supabase.rpc("mark_pan_application_submitted",{p_billing_item_id:id,p_wallet_id:wallet,p_acknowledgement_number:ack});
+      const {error:rpcError}=await supabase.rpc("mark_pan_application_submitted",{p_billing_item_id:id,p_wallet_id:wallet,p_acknowledgement_number:ack,p_applicant_name:applicantName,p_date_of_birth:dob,p_pan_type:panType});
       if(rpcError)throw rpcError;
       await loadPendingPanApplications();await refreshWalletBalances();await loadRecentBills();
       alert("PAN marked as submitted. Processing cost debited from selected wallet.");
