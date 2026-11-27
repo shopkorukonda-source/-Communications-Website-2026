@@ -1389,7 +1389,8 @@ async function loadPendingPanApplications(){
   }).join("")||'<div class="empty-state">No PAN applications pending submission.</div>';
   host.querySelectorAll("[data-pan-submit]").forEach(btn=>btn.addEventListener("click",async()=>{
     const id=btn.dataset.panSubmit,wallet=host.querySelector('[data-pan-wallet="'+id+'"]')?.value||"",ack=host.querySelector('[data-pan-ack="'+id+'"]')?.value||"";
-    if(!ack.trim()){alert("Enter the PAN acknowledgement number first.");return;}\n     if(!wallet){alert("Select the PAN processing wallet first.");return;}
+    if(!ack.trim()){alert("Enter the PAN acknowledgement number first.");return;}
+     if(!wallet){alert("Select the PAN processing wallet first.");return;}
     btn.disabled=true;
     try{
       const {error:rpcError}=await supabase.rpc("mark_pan_application_submitted",{p_billing_item_id:id,p_wallet_id:wallet,p_acknowledgement_number:ack});
