@@ -919,6 +919,11 @@ function calculateBillingRow(row){
     }else charge=Math.ceil(amount/1000)*Number(bc.charge_per_1000||10);
     cost=0;
     profit=charge;
+  } else if(svc.code==="PAN_CARD"){
+    const bc=svc.billing_config||{};
+    charge=Number(row.charge||bc.customer_charge||0);
+    cost=0;
+    profit=0;
   } else {
     const bc=svc.billing_config||{},cc=svc.processing_cost_config||{},pc=svc.profit_config||{};
     if(svc.billing_type==="fixed") charge=Number(bc.customer_charge||0);
@@ -968,13 +973,14 @@ async function renderQuickBilling(){
     <div id="billing-message" class="message"></div>
     <button id="save-billing" class="primary-btn admin-add-btn">Save one bill with all services</button>
   </div>
-  <div class="admin-table-wrap"><h3>Recent bills & edit window</h3><div id="recent-bills"></div></div>`;
+  <div class="admin-table-wrap"><h3>Recent bills & edit window</h3><div id="recent-bills"></div></div>
+  <div class="admin-table-wrap"><h3>PAN Applications · Pending Submission</h3><p class="muted">Customer collection is saved immediately. PAN processing wallet debit happens only when you mark the application submitted.</p><div id="pan-pending-list"></div></div>`;
   $("save-billing").addEventListener("click",saveQuickBilling);
   const count=$("bill-count");
   count.addEventListener("change",()=>{let n=Math.max(1,Math.min(100,Number(count.value)||1));count.value=n;setBillingRows(n);});
   $("bill-mode").addEventListener("change",updatePaymentFields);
   ["bill-received","bill-cash","bill-upi"].forEach(id=>$(id).addEventListener("input",updateBillingTotals));
-  await setBillingRows(1);await loadRecentBills();
+  await setBillingRows(1);await loadRecentBills();await loadPendingPanApplications();
 }
 function isManualJobApplicationWalletService(svc){
   const code=String(svc?.code||"").toUpperCase(),name=String(svc?.name||"").toUpperCase();
@@ -1022,7 +1028,7 @@ function isManualProcessingWalletService(svc){
   return isManualJobApplicationWalletService(svc)||["AEPS_WITHDRAWAL","UPI_TO_CASH","CASH_TO_UPI","CURRENT_BILLS"].includes(svc?.code);
 }
 function walletDebitsForRow(row,svc){
-  if(["AEPS_WITHDRAWAL","CASH_TO_UPI"].includes(svc?.code))return [];
+  if(["AEPS_WITHDRAWAL","CASH_TO_UPI","PAN_CARD"].includes(svc?.code))return [];
   if(svc?.code==="CURRENT_BILLS"){
     const selectedId=String(row.processing_wallet_id||"");
     const rule=(billingWalletRules[row.service_id]||[]).find(x=>String(x.wallet_id)===selectedId);
@@ -1293,7 +1299,7 @@ async function saveQuickBilling(){
         if(!(billingCreditWalletRules[r.service_id]||[]).includes(r.credit_wallet_id))throw new Error("Select a profit wallet assigned by Admin for Credit Card service.");
         if(!(Number(r.base)>0)||!(Number(r.charge_percent)>0)||Number(r.charge_percent)>100)throw new Error("Enter a valid transfer amount and percentage (0.01–100).");
       }
-      if(svc.code!=="CREDIT_CARD_BANK"&&!isManualProcessingWalletService(svc)&&(billingWalletRules[r.service_id]||[]).length&&!wallet_debits.length)throw new Error("Set processing wallet debit amounts in Admin Services for "+svc.name);
+      if(!["CREDIT_CARD_BANK","PAN_CARD"].includes(svc.code)&&!isManualProcessingWalletService(svc)&&(billingWalletRules[r.service_id]||[]).length&&!wallet_debits.length)throw new Error("Set processing wallet debit amounts in Admin Services for "+svc.name);
       if(wallet_debits.some(x=>!Number.isFinite(Number(x.amount))||Number(x.amount)<=0))throw new Error("Invalid automatic wallet debit amount.");
       r.wallet_debits=wallet_debits;
       const calc=calculateBillingRow(r);
@@ -1306,9 +1312,10 @@ async function saveQuickBilling(){
         : isAepsWithdrawalService(svc) ? {base_amount:Number(r.base),service_charge:calc.charge,bank:r.bank||null,aeps_wallet_id:r.processing_wallet_id||null,aeps_charge_mode:r.aeps_charge_mode||"deduct",wallet_debits}
         : svc.code==="CASH_TO_UPI" ? {base_amount:Number(r.base),service_charge:calc.charge,cash_to_upi_wallet_id:r.processing_wallet_id||null,wallet_debits}
         : svc.code==="CURRENT_BILLS" ? {base_amount:Number(r.base),service_charge:calc.charge,current_bills_wallet_id:r.processing_wallet_id,wallet_debits}
+        : svc.code==="PAN_CARD" ? {base_amount:Number(r.base),service_charge:calc.charge,pan_processing_pending:true,pan_processing_cost:Number(svc.billing_config?.base_amount||r.base||0),wallet_debits:[]}
         : {base_amount:Number(r.base),service_charge:calc.charge,bank:r.bank||null,wallet_debits};
       const itemPayload={service_id:r.service_id,quantity,customer_unit_price:price,processing_unit_cost:calc.cost,pricing_snapshot:snapshot,wallet_debits};
-      if(currentProfile?.role==="admin")itemPayload.profit_amount=calc.profit;
+      if(currentProfile?.role==="admin"&&svc.code!=="PAN_CARD")itemPayload.profit_amount=calc.profit;
       items.push(itemPayload);
       customerTotal+=price*quantity;processingTotal+=calc.cost*quantity;profitTotal+=calc.profit*quantity;
     }
@@ -1359,9 +1366,38 @@ async function saveQuickBilling(){
     await setBillingRows(1);
     updatePaymentFields();updateBillingTotals();
     showBillSavedAnimation(wasEditing?"Bill Updated Successfully!":"Bill Saved Successfully!");
-    await loadRecentBills();await refreshWalletBalances();
+    await loadRecentBills();await loadPendingPanApplications();await refreshWalletBalances();
   }catch(e){msg.textContent=e.message||"Unable to save bills.";console.error(e);}
   finally{btn.disabled=false;}
+}
+async function loadPendingPanApplications(){
+  const host=$("pan-pending-list");if(!host)return;
+  const {data,error}=await supabase.from("pan_application_processing")
+    .select("id,billing_item_id,transaction_id,expected_cost,status,created_at,acknowledgement_number,billing_items(customer_unit_price,billing_transactions(bill_number,customer_name,customer_phone))")
+    .eq("status","pending").order("created_at",{ascending:true});
+  if(error){host.textContent="Unable to load PAN pending list: "+error.message;return;}
+  const panService=services.find(x=>x.code==="PAN_CARD");
+  const rules=panService?(billingWalletRules[panService.id]||[]):[];
+  const options=rules.map(rule=>{
+    const wallet=walletOptions.find(w=>w.id===rule.wallet_id&&w.is_active);
+    return wallet?'<option value="'+wallet.id+'">'+escapeHtml(wallet.name)+' · Balance '+money(wallet.current_balance)+'</option>':"";
+  }).join("");
+  host.innerHTML=(data||[]).map(q=>{
+    const item=Array.isArray(q.billing_items)?q.billing_items[0]:q.billing_items;
+    const bill=Array.isArray(item?.billing_transactions)?item.billing_transactions[0]:item?.billing_transactions;
+    return '<div class="admin-service-row"><div class="admin-service-main"><strong>PAN · Bill #'+escapeHtml(bill?.bill_number||"")+'</strong><small>'+escapeHtml(bill?.customer_name||"Customer")+' · '+escapeHtml(bill?.customer_phone||"")+' · Received '+new Date(q.created_at).toLocaleString("en-IN")+'</small></div><div class="admin-service-meta"><strong>Internal cost '+money(q.expected_cost)+'</strong><span>Pending submission</span></div><div class="admin-service-actions"><select data-pan-wallet="'+q.billing_item_id+'"><option value="">Select debit wallet</option>'+options+'</select><input data-pan-ack="'+q.billing_item_id+'" placeholder="Acknowledgement no. (optional)"><button data-pan-submit="'+q.billing_item_id+'">Mark as Submitted</button></div></div>';
+  }).join("")||'<div class="empty-state">No PAN applications pending submission.</div>';
+  host.querySelectorAll("[data-pan-submit]").forEach(btn=>btn.addEventListener("click",async()=>{
+    const id=btn.dataset.panSubmit,wallet=host.querySelector('[data-pan-wallet="'+id+'"]')?.value||"",ack=host.querySelector('[data-pan-ack="'+id+'"]')?.value||"";
+    if(!wallet){alert("Select the PAN processing wallet first.");return;}
+    btn.disabled=true;
+    try{
+      const {error:rpcError}=await supabase.rpc("mark_pan_application_submitted",{p_billing_item_id:id,p_wallet_id:wallet,p_acknowledgement_number:ack});
+      if(rpcError)throw rpcError;
+      await loadPendingPanApplications();await refreshWalletBalances();await loadRecentBills();
+      alert("PAN marked as submitted. Processing cost debited from selected wallet.");
+    }catch(err){alert(err.message||"Unable to mark PAN as submitted.");btn.disabled=false;}
+  }));
 }
 async function loadRecentBills(){
   const {data:userData}=await supabase.auth.getUser();awaitUserId=userData?.user?.id||null;
