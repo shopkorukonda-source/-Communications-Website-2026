@@ -1017,10 +1017,22 @@ function automaticWalletDebits(row,svc,allowJobApplication=false){
   return allocations.filter(x=>Number(x.amount)>0);
 }
 function isManualProcessingWalletService(svc){
-  return isManualJobApplicationWalletService(svc)||["AEPS_WITHDRAWAL","UPI_TO_CASH","CASH_TO_UPI"].includes(svc?.code);
+  return isManualJobApplicationWalletService(svc)||["AEPS_WITHDRAWAL","UPI_TO_CASH","CASH_TO_UPI","CURRENT_BILLS"].includes(svc?.code);
 }
 function walletDebitsForRow(row,svc){
   if(["AEPS_WITHDRAWAL","CASH_TO_UPI"].includes(svc?.code))return [];
+  if(svc?.code==="CURRENT_BILLS"){
+    const selectedId=String(row.processing_wallet_id||"");
+    const rule=(billingWalletRules[row.service_id]||[]).find(x=>String(x.wallet_id)===selectedId);
+    if(!rule)return [];
+    const amount=Number(row.base||0),cfg=svc.billing_config||{},costCfg=svc.processing_cost_config||{},ruleCfg=rule.debit_config||{};
+    const costSlab=(costCfg.slabs||[]).find(x=>amount>=Number(x.min||0)&&(x.max==null||amount<=Number(x.max)));
+    const billSlab=(cfg.slabs||[]).find(x=>amount>=Number(x.min||0)&&amount<=Number(x.max||0));
+    const extra=Number(costSlab?.cost??costSlab?.processing_cost??billSlab?.wallet_extra??cfg.above_1000?.wallet_extra??row.cost??0);
+    const applyCharge=ruleCfg.apply_processing_charge!==false;
+    const debit=amount+(applyCharge?extra:0);
+    return debit>0?[{wallet_id:rule.wallet_id,amount:debit}]:[];
+  }
   if(!isManualProcessingWalletService(svc))return automaticWalletDebits(row,svc);
   const rules=billingWalletRules[row.service_id]||[];
   const selectedIds=svc?.multi_wallet_debit?rules.map(x=>String(x.wallet_id)):(row.processing_wallet_id?[String(row.processing_wallet_id)]:(Array.isArray(row.processing_wallet_ids)?row.processing_wallet_ids.map(String):[]));
@@ -1262,7 +1274,13 @@ async function saveQuickBilling(){
           if(!wallet_debits.length||wallet_debits.length!==selectedWalletIds.length)throw new Error("Check the debit amount configured for every selected wallet in Admin Services.");
         }
       }
-      if(svc.code==="CURRENT_BILLS"&&Number(r.base)>=10&&!(billingWalletRules[r.service_id]||[]).length)throw new Error("Admin must assign a processing wallet to Current Bills.");
+      if(svc.code==="CURRENT_BILLS"){
+        const assignedRules=billingWalletRules[r.service_id]||[];
+        if(!assignedRules.length)throw new Error("Admin must assign at least one processing wallet to Current Bills.");
+        if(!r.processing_wallet_id)throw new Error("Select one processing wallet for Current Bills.");
+        if(!assignedRules.some(x=>String(x.wallet_id)===String(r.processing_wallet_id)))throw new Error("Selected Current Bills wallet is not assigned by Admin.");
+        if(Number(r.base)>0&&(!wallet_debits.length||wallet_debits.length!==1))throw new Error("Select exactly one Current Bills processing wallet.");
+      }
       if(svc.code==="CREDIT_CARD_BANK"){
         if(!(billingCreditWalletRules[r.service_id]||[]).includes(r.credit_wallet_id))throw new Error("Select a profit wallet assigned by Admin for Credit Card service.");
         if(!(Number(r.base)>0)||!(Number(r.charge_percent)>0)||Number(r.charge_percent)>100)throw new Error("Enter a valid transfer amount and percentage (0.01–100).");
@@ -1279,6 +1297,7 @@ async function saveQuickBilling(){
         : svc.code==="CREDIT_CARD_BANK" ? {base_amount:Number(r.base),service_charge:calc.charge,charge_percent:Number(r.charge_percent),credit_wallet_id:r.credit_wallet_id,wallet_debits}
         : isAepsWithdrawalService(svc) ? {base_amount:Number(r.base),service_charge:calc.charge,bank:r.bank||null,aeps_wallet_id:r.processing_wallet_id||null,aeps_charge_mode:r.aeps_charge_mode||"deduct",wallet_debits}
         : svc.code==="CASH_TO_UPI" ? {base_amount:Number(r.base),service_charge:calc.charge,cash_to_upi_wallet_id:r.processing_wallet_id||null,wallet_debits}
+        : svc.code==="CURRENT_BILLS" ? {base_amount:Number(r.base),service_charge:calc.charge,current_bills_wallet_id:r.processing_wallet_id,wallet_debits}
         : {base_amount:Number(r.base),service_charge:calc.charge,bank:r.bank||null,wallet_debits};
       const itemPayload={service_id:r.service_id,quantity,customer_unit_price:price,processing_unit_cost:calc.cost,pricing_snapshot:snapshot,wallet_debits};
       if(currentProfile?.role==="admin")itemPayload.profit_amount=calc.profit;
