@@ -870,11 +870,14 @@ async function setBillingRows(n){
     const isCurrentBills=svc?.code==="CURRENT_BILLS";
     const billAmounts=Array.isArray(r.bill_amounts)?r.bill_amounts:[];
     const isCashTransfer=["CASH_TO_UPI","UPI_TO_CASH"].includes(svc?.code);
+    const isAeps=isAepsWithdrawalService(svc);
     const serviceFields=isCurrentBills
       ? '<label>Processing wallet<select data-field="current_bills_wallet_id" data-i="'+i+'"><option value="">Select one wallet</option>'+(billingWalletRules[r.service_id]||[]).map(rule=>{const w=walletOptions.find(x=>x.id===rule.wallet_id&&x.is_active);return w?'<option value="'+w.id+'" '+(r.current_bills_wallet_id===w.id?"selected":"")+'>'+escapeHtml(w.name)+' · Processing charge '+(rule.debit_config?.apply_processing_charge===false?"OFF":"ON")+'</option>':"";}).join("")+'</select></label><label>Number of current bills<input data-field="bill_count" data-i="'+i+'" type="number" min="1" max="100" step="1" value="'+Math.max(1,Number(r.bill_count||billAmounts.length||1))+'"></label><div class="current-bills-grid-wrap"><table class="current-bills-grid"><thead><tr><th>#</th><th>Bill amount (₹)</th><th>Service charge (₹)</th><th>Customer total (₹)</th></tr></thead><tbody>'+Array.from({length:Math.max(1,Number(r.bill_count||billAmounts.length||1))},(_,j)=>{const amount=Number(billAmounts[j]||0),calc=calculateBillingRow({...r,base:amount});return '<tr><td>'+(j+1)+'</td><td><input data-field="bill_amount" data-i="'+i+'" data-j="'+j+'" type="number" min="0" step="0.01" value="'+(billAmounts[j]??"")+'" placeholder="Enter bill amount"></td><td><span data-current-charge="'+i+'-'+j+'">'+money(calc.charge)+'</span></td><td><strong data-current-total="'+i+'-'+j+'">'+money(calc.total)+'</strong></td></tr>';}).join("")+'</tbody></table></div>'
       : special
       ? '<label>Book / PDF name (optional)<input data-field="item_label" data-i="'+i+'" value="'+escapeHtml(r.item_label||"")+'" placeholder="Book 1 / PDF 1"></label><label>'+(svc.code==="PRINTOUT"?"PDF pages":"Xerox papers")+'<input data-field="unit_count" data-i="'+i+'" type="number" min="1" step="1" value="'+escapeHtml(r.unit_count||"")+'" placeholder="Enter count"></label><label>Number of sets<input data-field="sets" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.sets||1)+'"></label><label>Admin fixed rate (automatic)<input type="text" readonly value="'+money(rate)+' / '+(svc.code==="PRINTOUT"?"page":"paper")+'"></label><label>Discount (₹)<input data-field="discount" data-i="'+i+'" type="number" min="0" step="0.01" value="'+Number(r.discount||0)+'" placeholder="Optional"></label>'
-      : isCreditCard
+      : isAeps
+        ? '<label>Withdrawal Amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0.01" step="0.01" value="'+escapeHtml(r.base||"")+'" placeholder="Enter AEPS amount"></label><label>Bank (AEPS)<input data-field="bank" data-i="'+i+'" value="'+escapeHtml(r.bank||"")+'" placeholder="Bank name"></label><label>AEPS Credit Wallet<select data-field="aeps_wallet_id" data-i="'+i+'"><option value="">Select wallet to credit</option>'+(billingWalletRules[r.service_id]||[]).map(rule=>{const w=walletOptions.find(x=>x.id===rule.wallet_id&&x.is_active);return w?'<option value="'+w.id+'" '+(r.aeps_wallet_id===w.id?"selected":"")+'>'+escapeHtml(w.name)+' · '+money(w.current_balance)+'</option>':"";}).join("")+'</select></label><label>AEPS Service Charge<select data-field="aeps_charge_mode" data-i="'+i+'"><option value="deduct" '+((r.aeps_charge_mode||"deduct")==="deduct"?"selected":"")+' >Deduct from customer payout</option><option value="extra_upi" '+(r.aeps_charge_mode==="extra_upi"?"selected":"")+' >Extra charge – collect through UPI</option></select></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label>'
+        : isCreditCard
         ? '<label>Transfer amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0.01" step="0.01" value="'+escapeHtml(r.base||"")+'" placeholder="Enter amount"></label><label>Service charge (%)<input data-field="charge_percent" data-i="'+i+'" type="number" min="0.01" max="100" step="0.01" value="'+escapeHtml(r.charge_percent??svc.billing_config?.charge_percent??2)+'"></label><label>Profit wallet<select data-field="profit_wallet_id" data-i="'+i+'"><option value="">Select wallet</option>'+ccWalletIds.map(id=>{const w=walletOptions.find(x=>x.id===id&&x.is_active);return w?'<option value="'+w.id+'" '+(r.profit_wallet_id===w.id?"selected":"")+'>'+escapeHtml(w.name)+' · '+money(w.current_balance)+'</option>':"";}).join("")+'</select></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label>'
         : isCashTransfer
           ? '<label>Amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.base)+'" placeholder="Enter transfer amount"></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label><label>Adjustment Type<select data-field="adjustment_type" data-i="'+i+'"><option value="">No adjustment</option><option value="deduct" '+(r.adjustment_type==="deduct"?"selected":"")+'>Amount Deduct</option><option value="extra" '+(r.adjustment_type==="extra"?"selected":"")+'>Amount Extra</option></select></label><label>Adjustment Amount (₹)<input data-field="adjustment_amount" data-i="'+i+'" type="number" min="0" step="0.01" value="'+Number(r.adjustment_amount||0)+'" placeholder="0.00"></label>'+(svc.code==="UPI_TO_CASH"?'<label>UPI Credit Destination<select data-field="selected_upi_to_cash_wallet_id" data-i="'+i+'"><option value="">Select UPI Collection / Bank Account</option>'+walletOptions.filter(w=>w.is_active&&["upi","bank"].includes(w.wallet_type)).map(w=>'<option value="'+w.id+'" '+(r.selected_upi_to_cash_wallet_id===w.id?"selected":"")+'>'+escapeHtml(w.name)+' · '+money(w.current_balance)+'</option>').join("")+'</select></label>':"")+(svc.code==="CASH_TO_UPI"&&r.adjustment_type==="deduct"?'<label>Deduct from Wallet<select data-field="selected_adjustment_wallet_id" data-i="'+i+'"><option value="">Select wallet</option>'+(billingWalletRules[r.service_id]||[]).map(rule=>{const w=walletOptions.find(x=>x.id===rule.wallet_id&&x.is_active);return w?'<option value="'+w.id+'" '+(r.selected_adjustment_wallet_id===w.id?"selected":"")+'>'+escapeHtml(w.name)+' · '+money(w.current_balance)+'</option>':"";}).join("")+'</select></label>':"")+(r.adjustment_type==="extra"?(svc.code==="UPI_TO_CASH"?'<small>Extra amount will be added to the selected UPI / Bank wallet.</small>':'<label>Extra Payment Mode<select data-field="adjustment_mode" data-i="'+i+'"><option value="cash" '+((r.adjustment_mode||"cash")==="cash"?"selected":"")+'>Cash</option><option value="upi" '+(r.adjustment_mode==="upi"?"selected":"")+'>UPI</option></select></label>'):"")
@@ -921,6 +924,7 @@ function onBillingRowChange(e){
     const svc=services.find(s=>s.id===e.target.value);
     billingRows[i].base=svc?.billing_config?.base_amount??"";
     billingRows[i].charge=svc?.billing_config?.customer_charge??"";
+    billingRows[i].aeps_wallet_id=(billingWalletRules[svc?.id]||[])[0]?.wallet_id||"";billingRows[i].aeps_charge_mode="deduct";
     billingRows[i].cost=svc?.processing_cost_config?.fixed_amount??"";
     billingRows[i].charge_percent=svc?.billing_config?.charge_percent??2;
     billingRows[i].profit_wallet_id="";
@@ -933,10 +937,10 @@ function onBillingWalletChange(){}
 
 function isAepsWithdrawalService(svc){return !!svc&&(svc.code==="AEPS_WITHDRAWAL"||/aeps.*withdrawal|withdrawal.*aeps/i.test(svc.name||""));}
 function updateBillingTotals(){
-  let base=0,charges=0,costs=0,total=0,aepsCashPayout=0,hasAepsSettlement=false;
+  let base=0,charges=0,costs=0,total=0,aepsCashPayout=0,aepsExtraUpiCharge=0,hasAepsSettlement=false;
   billingRows.forEach((r,i)=>{
     const svc=services.find(s=>s.id===r.service_id),isCurrentBills=svc?.code==="CURRENT_BILLS",special=isPaperPageService(svc),alloc=automaticWalletDebits(r,svc),t=$("row-total-"+i),res=$("row-result-"+i),walletBox=$("wallet-auto-"+i);
-    if(isAepsWithdrawalService(svc)){hasAepsSettlement=true;aepsCashPayout+=Number(r.base||0)*Math.max(1,Number(r.quantity||1));}
+    if(isAepsWithdrawalService(svc)){hasAepsSettlement=true;aepsCashPayout+=Number(r.base||0)*Math.max(1,Number(r.quantity||1));if(r.aeps_charge_mode==="extra_upi")aepsExtraUpiCharge+=calculateBillingRow(r).charge*Math.max(1,Number(r.quantity||1));}
     const currentCalcs=isCurrentBills?(r.bill_amounts||[]).map(amount=>calculateBillingRow({...r,base:amount})):null;
     if(isCurrentBills)currentCalcs.forEach((x,j)=>{const charge=$("[data-current-charge='"+i+"-"+j+"']"),lineTotal=$("[data-current-total='"+i+"-"+j+"']");if(charge)charge.textContent=money(x.charge);if(lineTotal)lineTotal.textContent=money(x.total);});
     const calc=isCurrentBills?{charge:currentCalcs.reduce((a,x)=>a+x.charge,0),cost:currentCalcs.reduce((a,x)=>a+x.cost,0),profit:currentCalcs.reduce((a,x)=>a+x.profit,0),total:currentCalcs.reduce((a,x)=>a+x.total,0)}:calculateBillingRow(r);
@@ -952,12 +956,13 @@ function updateBillingTotals(){
   const paymentPanel=document.querySelector(".billing-payment");
   status.classList.remove("payment-short","payment-exact","payment-change");
   if(hasAepsSettlement){
-    $("bill-mode").value="cash";
+    const cashOffset=Math.max(0,total-aepsExtraUpiCharge),upiCharge=Math.max(0,aepsExtraUpiCharge);
+    $("bill-mode").value=cashOffset>0&&upiCharge>0?"split":upiCharge>0?"upi":"cash";
     $("bill-received").value=total.toFixed(2);
-    $("bill-cash").value=total.toFixed(2);
-    $("bill-upi").value="0";
+    $("bill-cash").value=cashOffset.toFixed(2);
+    $("bill-upi").value=upiCharge.toFixed(2);
     if(paymentPanel)paymentPanel.classList.add("hidden");
-    const net=aepsCashPayout-total;
+    const net=aepsCashPayout-cashOffset;
     if(net>0.009){status.classList.add("payment-change");status.textContent="CASH TO GIVE CUSTOMER  ·  "+money(net);}
     else if(net< -0.009){status.classList.add("payment-short");status.textContent="CASH TO COLLECT FROM CUSTOMER  ·  "+money(Math.abs(net));}
     else{status.classList.add("payment-exact");status.textContent="SETTLEMENT EXACT  ·  ₹0.00";}
@@ -993,6 +998,7 @@ async function saveQuickBilling(){
       const svc=services.find(s=>s.id===r.service_id),special=isPaperPageService(svc);
       const wallet_debits=automaticWalletDebits(r,svc);
       if(svc.code==="CURRENT_BILLS"&&Number(r.base)>=10&&!(billingWalletRules[r.service_id]||[]).some(x=>x.wallet_id===r.current_bills_wallet_id))throw new Error("Select one Current Bills processing wallet assigned by Admin.");
+      if(isAepsWithdrawalService(svc)&&!(billingWalletRules[r.service_id]||[]).some(x=>x.wallet_id===r.aeps_wallet_id))throw new Error("Select an AEPS credit wallet assigned by Admin.");
       if(svc.code==="CREDIT_CARD_BANK"){
         if(!(billingProfitWalletRules[r.service_id]||[]).includes(r.profit_wallet_id))throw new Error("Select a profit wallet assigned by Admin for Credit Card service.");
         if(!(Number(r.base)>0)||!(Number(r.charge_percent)>0)||Number(r.charge_percent)>100)throw new Error("Enter a valid transfer amount and percentage (0.01–100).");
@@ -1007,6 +1013,7 @@ async function saveQuickBilling(){
       const snapshot=special
         ? {base_amount:0,service_charge:calc.gross,count_unit:svc.code==="PRINTOUT"?"pages":"papers",unit_count:Number(r.unit_count),sets:Number(r.sets),total_count:calc.count,item_label:r.item_label||null,unit_rate:calc.rate,discount_amount:calc.discount,wallet_debits}
         : svc.code==="CREDIT_CARD_BANK" ? {base_amount:Number(r.base),service_charge:calc.charge,charge_percent:Number(r.charge_percent),profit_wallet_id:r.profit_wallet_id,wallet_debits}
+        : isAepsWithdrawalService(svc) ? {base_amount:Number(r.base),service_charge:calc.charge,bank:r.bank||null,aeps_wallet_id:r.aeps_wallet_id||null,aeps_charge_mode:r.aeps_charge_mode||"deduct",wallet_debits}
         : {base_amount:Number(r.base),service_charge:calc.charge,bank:r.bank||null,upi_to_cash_wallet_id:svc.code==="UPI_TO_CASH"?r.selected_upi_to_cash_wallet_id||null:null,current_bills_wallet_id:svc.code==="CURRENT_BILLS"?r.current_bills_wallet_id||null:null,wallet_debits};
       const itemPayload={service_id:r.service_id,quantity,customer_unit_price:price,processing_unit_cost:calc.cost,pricing_snapshot:snapshot,wallet_debits};
       if(currentProfile?.role==="admin")itemPayload.profit_amount=calc.profit;
@@ -1082,7 +1089,7 @@ async function openBillEditor(id,requestOnly){
   editingBillId=id;
   billingRows=(items||[]).map(it=>{
     const snap=it.pricing_snapshot||{},svc=services.find(x=>x.id===it.service_id),special=isPaperPageService(svc);
-    return {service_id:it.service_id,base:String(snap.base_amount??0),charge:String(snap.service_charge??""),cost:String(it.processing_unit_cost??0),bank:snap.bank||"",selected_upi_to_cash_wallet_id:snap.upi_to_cash_wallet_id||"",adjustment_type:bill.cash_adjustment_type||"",adjustment_amount:Number(bill.cash_adjustment_amount||0),adjustment_mode:bill.cash_adjustment_mode||"upi",quantity:Number(it.quantity||1),unit_count:special?String(snap.unit_count||""):"",sets:special?Number(snap.sets||1):1,item_label:snap.item_label||"",discount:Number(snap.discount_amount||0),wallet_debits:snap.wallet_debits||[],current_bills_wallet_id:snap.current_bills_wallet_id||snap.wallet_debits?.[0]?.wallet_id||"",charge_percent:snap.charge_percent??svc?.billing_config?.charge_percent??2,profit_wallet_id:snap.profit_wallet_id||"",bill_count:1,bill_amounts:[""]};
+    return {service_id:it.service_id,base:String(snap.base_amount??0),charge:String(snap.service_charge??""),cost:String(it.processing_unit_cost??0),bank:snap.bank||"",aeps_wallet_id:snap.aeps_wallet_id||"",aeps_charge_mode:snap.aeps_charge_mode||"deduct",selected_upi_to_cash_wallet_id:snap.upi_to_cash_wallet_id||"",adjustment_type:bill.cash_adjustment_type||"",adjustment_amount:Number(bill.cash_adjustment_amount||0),adjustment_mode:bill.cash_adjustment_mode||"upi",quantity:Number(it.quantity||1),unit_count:special?String(snap.unit_count||""):"",sets:special?Number(snap.sets||1):1,item_label:snap.item_label||"",discount:Number(snap.discount_amount||0),wallet_debits:snap.wallet_debits||[],current_bills_wallet_id:snap.current_bills_wallet_id||snap.wallet_debits?.[0]?.wallet_id||"",charge_percent:snap.charge_percent??svc?.billing_config?.charge_percent??2,profit_wallet_id:snap.profit_wallet_id||"",bill_count:1,bill_amounts:[""]};
   });
   $("bill-count").value=Math.max(1,billingRows.length);await setBillingRows(billingRows.length);
   $("bill-customer").value=payload.customer_name||"";$("bill-phone").value=payload.customer_phone||"";
