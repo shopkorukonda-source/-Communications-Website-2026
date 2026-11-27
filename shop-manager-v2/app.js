@@ -370,10 +370,24 @@ document.querySelectorAll(".nav-item").forEach(btn=>btn.addEventListener("click"
   } else if(["drawers","attendance","leave","payroll","incentives","ucl","walletaccess","tasks","inventory","expenses","settlement"].includes(view)) {
     await renderOperations(view,{supabase,host:$("other-view"),profile:currentProfile,$});
     if(view==="drawers" && pendingEmployeeShiftCloseSessionId){
-      const closeButton=[...$("other-view").querySelectorAll("[data-op-close]")].find(x=>x.dataset.opClose===pendingEmployeeShiftCloseSessionId);
+      const sessionId=pendingEmployeeShiftCloseSessionId;
       pendingEmployeeShiftCloseSessionId=null;
-      if(closeButton){closeButton.click();$("op-close-editor")?.scrollIntoView({behavior:"smooth",block:"start"});}
-      else alert("Your active shift close button was not found. Please refresh and try again.");
+      const activeSession=await supabase.from("drawer_sessions").select("id,drawer_id,expected_cash").eq("id",sessionId).eq("status","open").maybeSingle();
+      if(activeSession.error||!activeSession.data){alert(activeSession.error?.message||"Your active shift was not found. Refresh and try again.");return;}
+      const drawer=await supabase.from("cash_drawers").select("id,drawer_type,name").eq("id",activeSession.data.drawer_id).maybeSingle();
+      if(drawer.error||!drawer.data){alert(drawer.error?.message||"Unable to identify your cash drawer.");return;}
+      if(drawer.data.drawer_type==="shared"){
+        const expected=Number(activeSession.data.expected_cash);
+        if(!Number.isFinite(expected)){alert("Expected cash is not available. Please contact Admin; shift was not closed.");return;}
+        const closeResult=await supabase.rpc("close_drawer_session",{p_session_id:sessionId,p_counted_cash:expected,p_denominations:[]});
+        if(closeResult.error){alert("Shift close failed: "+closeResult.error.message);return;}
+        alert("Shared drawer shift closed. Expected cash ₹"+expected.toFixed(2)+" was used as counted cash.");
+        const overview=document.querySelector('.nav-item[data-view="overview"]');if(overview)overview.click();
+      }else{
+        const closeButton=[...$("other-view").querySelectorAll("[data-op-close]")].find(x=>x.dataset.opClose===sessionId);
+        if(closeButton){closeButton.click();$("op-close-editor")?.scrollIntoView({behavior:"smooth",block:"start"});}
+        else alert("Your separate drawer close form was not found. Refresh and try again.");
+      }
     }
   } else {
     $("other-view").innerHTML='<div class="empty-panel"><div class="empty-icon">✦</div><h2 id="other-title"></h2><p>This module will be enabled after its complete workflow and safety checks are ready.</p></div>';
