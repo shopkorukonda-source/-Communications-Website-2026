@@ -15,9 +15,6 @@ let currentProfile = null;
 let currentEmployee = null;
 let walletOptions = [];
 let editingServiceId = null;
-let walletRefreshChannel = null;
-let walletRefreshTimer = null;
-let walletRefreshInFlight = false;
 
 function setMessage(message, isError = true) {
   $("login-message").textContent = message;
@@ -53,6 +50,8 @@ async function showApp(user) {
   appScreen.classList.remove("hidden");
   appScreen.classList.toggle("admin-mode", profile.role === "admin");
   appScreen.classList.toggle("employee-mode", profile.role === "employee");
+  const sidebarBrand = document.querySelector("#app-screen .sidebar > .sidebar-brand");
+  if (sidebarBrand) sidebarBrand.hidden = profile.role === "employee";
   $("user-name").textContent = profile.display_name || user.email;
   $("user-role").textContent = profile.role;
   $("avatar").textContent = (profile.display_name || user.email || "S").slice(0,1).toUpperCase();
@@ -71,14 +70,13 @@ async function showApp(user) {
     document.querySelector(".stat-card:nth-child(2) small").textContent = "Shop Cash wallet balance";
   }
   await loadCatalog();
-  startWalletAutoRefresh();
   if (profile.role === "employee") { await loadEmployeeAnnouncements(); await loadEmployeeTaskReminders(); }
 }
 
 async function loadCatalog() {
   const grid = $("category-grid");
   grid.innerHTML = '<div class="loading-card">Loading categories…</div>';
-  const serviceFields=currentProfile?.role==="admin"?"id,category_id,name,code,description,billing_type,processing_cost_type,profit_mode,billing_config,processing_cost_config,profit_config,multi_wallet_debit,sort_order,is_active":"id,category_id,name,code,description,billing_type,processing_cost_type,profit_mode,billing_config,processing_cost_config,sort_order,is_active,multi_wallet_debit";
+  const serviceFields=currentProfile?.role==="admin"?"id,category_id,name,code,description,billing_type,processing_cost_type,profit_mode,billing_config,processing_cost_config,profit_config,sort_order,is_active":"id,category_id,name,code,description,billing_type,processing_cost_type,profit_mode,billing_config,processing_cost_config,sort_order,is_active";
   const [{data: cats, error: catError},{data: rows,error: serviceError}] = await Promise.all([
     supabase.from("service_categories").select("id,name,slug,sort_order,is_active").order("sort_order"),
     supabase.from("services").select(serviceFields).order("sort_order")
@@ -98,7 +96,6 @@ async function loadCatalog() {
     }else if(currentEmployee?.id){
       const {data: assigned, error: assignedError}=await supabase.from("employee_wallet_access").select("wallet_id").eq("employee_id",currentEmployee.id).eq("is_active",true);
       if(assignedError)console.warn("Assigned wallet list unavailable",assignedError);
-      // Employee dashboard and billing may expose only wallets explicitly assigned to this employee.
       const ids=[...new Set((assigned||[]).map(x=>x.wallet_id))];
       if(ids.length){
         const {data: wallets,error:walletError}=await supabase.from("wallets").select("id,name,wallet_type,provider,current_balance,is_active,low_balance_threshold,low_balance_alert_enabled").eq("is_active",true).in("id",ids).order("name");
@@ -121,51 +118,12 @@ function renderEmployeeWallets(){
  const isAdmin=currentProfile?.role==="admin";
  const heading=isAdmin?"ALL SHOP WALLETS":"MY ASSIGNED WALLETS";
  const title=isAdmin?"Wallet balances":"Assigned wallet balances";
- const activeWallets=walletOptions.filter(w=>w.is_active!==false);
- const walletTotal=activeWallets.reduce((sum,w)=>sum+Number(w.current_balance||0),0);
- const cashTotal=activeWallets.filter(w=>w.wallet_type==="cash").reduce((sum,w)=>sum+Number(w.current_balance||0),0);
  if(!walletOptions.length){host.innerHTML='<div class="announcement-heading"><div><div class="eyebrow">'+heading+'</div><h3>'+(isAdmin?"No active wallets created":"No wallets assigned")+'</h3></div></div>';return;}
- host.innerHTML='<div class="announcement-heading"><div><div class="eyebrow">'+heading+'</div><h3>'+title+'</h3></div></div>'+(isAdmin?'<div class="admin-module-stats"><div><small>Total balance · All wallets including cash</small><strong>'+money(walletTotal)+'</strong></div><div><small>Cash balance</small><strong>'+money(cashTotal)+'</strong></div><div><small>Non-cash wallets</small><strong>'+money(walletTotal-cashTotal)+'</strong></div></div>':'')+'<div class="employee-wallet-grid">'+activeWallets.map(w=>'<article class="employee-wallet-card"><div><strong>'+escapeHtml(w.name)+'</strong><small>'+escapeHtml(w.provider||w.wallet_type||"Wallet")+'</small></div><b>'+money(w.current_balance)+'</b></article>').join("")+'</div>';
-}
-async function refreshWalletBalances(){
-  if(walletRefreshInFlight || !currentProfile)return;
-  walletRefreshInFlight=true;
-  try{
-    let ids=null;
-    if(currentProfile.role!=="admin" && currentEmployee?.id){
-      const {data:assigned,error:assignedError}=await supabase.from("employee_wallet_access").select("wallet_id").eq("employee_id",currentEmployee.id).eq("is_active",true);
-      if(assignedError)throw assignedError;
-      // Never add service credit/profit wallets to an employee's visible balance list.
-      ids=[...new Set((assigned||[]).map(x=>x.wallet_id))];
-    }
-    let query=supabase.from("wallets").select("id,name,wallet_type,provider,current_balance,is_active,low_balance_threshold,low_balance_alert_enabled").order("name");
-    if(currentProfile.role!=="admin")query=ids?.length?query.in("id",ids):query.eq("id","00000000-0000-0000-0000-000000000000");
-    const {data,error}=await query;if(error)throw error;
-    walletOptions=data||[];renderEmployeeWallets();renderWalletAlerts();await loadOverviewStats();
-    if($("other-view")?.querySelector("#wallet-rows")){
-      const updateOptions=id=>{const el=$(id);if(!el)return;const selected=el.value;el.innerHTML=walletOptions.filter(w=>w.is_active).map(w=>'<option value="'+w.id+'">'+escapeHtml(w.name)+' · '+money(w.current_balance)+'</option>').join("");if(walletOptions.some(w=>w.id===selected&&w.is_active))el.value=selected;};
-      updateOptions("load-wallet");updateOptions("withdraw-wallet");
-      const from=$("transfer-from")?.value,to=$("transfer-to")?.value;fillTransferWallets();if(from)$("transfer-from").value=from;if(to)$("transfer-to").value=to;
-    }
-    document.querySelectorAll("[data-wallet-balance]").forEach(el=>{const wallet=walletOptions.find(w=>w.id===el.dataset.walletBalance);if(wallet)el.textContent=money(wallet.current_balance);});
-  }catch(error){console.warn("Wallet balance refresh failed:",error);}
-  finally{walletRefreshInFlight=false;}
-}
-function startWalletAutoRefresh(){
-  if(walletRefreshChannel){supabase.removeChannel(walletRefreshChannel);walletRefreshChannel=null;}
-  if(walletRefreshTimer)clearInterval(walletRefreshTimer);
-  walletRefreshChannel=supabase.channel("slv-wallet-balances-live").on("postgres_changes",{event:"*",schema:"public",table:"wallets"},()=>refreshWalletBalances()).subscribe();
-  walletRefreshTimer=setInterval(()=>refreshWalletBalances(),10000);
-}
-function stopWalletAutoRefresh(){
-  if(walletRefreshChannel){supabase.removeChannel(walletRefreshChannel);walletRefreshChannel=null;}
-  if(walletRefreshTimer){clearInterval(walletRefreshTimer);walletRefreshTimer=null;}
+ const lowIds=new Set(walletOptions.filter(w=>w.low_balance_alert_enabled!==false&&Number(w.current_balance||0)<=Number(w.low_balance_threshold||0)).map(w=>w.id));
+ host.innerHTML='<div class="announcement-heading"><div><div class="eyebrow">'+heading+'</div><h3>'+title+'</h3></div></div><div class="employee-wallet-grid">'+walletOptions.filter(w=>w.is_active!==false).map(w=>{const low=lowIds.has(w.id);return '<article class="employee-wallet-card'+(low?' wallet-low-balance':'')+'"><div><strong>'+escapeHtml(w.name)+'</strong><small>'+escapeHtml(w.provider||w.wallet_type||"Wallet")+(low?'<em class="wallet-recharge-flag">RECHARGE REQUIRED</em>':'')+'</small></div><b>'+money(w.current_balance)+'</b></article>';}).join("")+'</div>';
 }
 function renderWalletAlerts(){
- const host=$("wallet-alerts");if(!host)return;
- const low=walletOptions.filter(w=>w.low_balance_alert_enabled!==false&&Number(w.current_balance||0)<=Number(w.low_balance_threshold||0));
- if(!low.length){host.innerHTML="";return;}
- host.innerHTML='<div class="announcement-heading"><div><div class="eyebrow">WALLET BALANCE ALERT</div><h3>Recharge Required</h3></div></div><div class="announcement-list">'+low.map(w=>'<article class="announcement-card wallet-low-balance"><div class="announcement-icon">₹</div><div class="announcement-copy"><strong>'+escapeHtml(w.name)+'</strong><p>Current balance '+money(w.current_balance)+' · Minimum '+money(w.low_balance_threshold||0)+'</p></div></article>').join("")+'</div>';
+ const host=$("wallet-alerts");if(host)host.innerHTML="";
 }
 async function loadOverviewStats(){
   const start=new Date();start.setHours(0,0,0,0);
@@ -330,7 +288,7 @@ supabase.auth.onAuthStateChange((event,session)=>{
   }
 });
 
-$("signout-btn").addEventListener("click",async()=>{stopWalletAutoRefresh();await supabase.auth.signOut();showLogin();});
+$("signout-btn").addEventListener("click",async()=>{await supabase.auth.signOut();showLogin();});
 $("service-search").addEventListener("input",renderServices);
 document.querySelectorAll(".nav-item").forEach(btn=>btn.addEventListener("click",async()=>{
   if(currentProfile?.role!=="admin" && (btn.classList.contains("admin-only") || btn.dataset.view==="services")) return;
@@ -369,8 +327,6 @@ document.querySelectorAll(".nav-item").forEach(btn=>btn.addEventListener("click"
     await renderAnnouncementManager();
   } else if(view==="services") {
     await renderServiceManager();
-  } else if(view==="printoutrates") {
-    await renderPrintoutRates();
   } else if(view==="wallets") {
     await renderWalletManager();
   } else if(view==="reports") {
@@ -378,7 +334,7 @@ document.querySelectorAll(".nav-item").forEach(btn=>btn.addEventListener("click"
   } else if(view==="employees") {
     await renderEmployeeManager();
   } else if(["drawers","attendance","leave","payroll","incentives","ucl","walletaccess","tasks","inventory","expenses","settlement"].includes(view)) {
-    await renderOperations(view,{supabase,host:$("other-view"),profile:currentProfile,$,refreshWalletBalances});
+    await renderOperations(view,{supabase,host:$("other-view"),profile:currentProfile,$});
   } else {
     $("other-view").innerHTML='<div class="empty-panel"><div class="empty-icon">✦</div><h2 id="other-title"></h2><p>This module will be enabled after its complete workflow and safety checks are ready.</p></div>';
     $("other-title").textContent=btn.textContent.trim();
@@ -386,22 +342,6 @@ document.querySelectorAll(".nav-item").forEach(btn=>btn.addEventListener("click"
 }));
 
 
-async function renderPrintoutRates(){
- const host=$("other-view");
- if(currentProfile?.role!=="admin"){host.innerHTML='<div class="empty-panel"><h2>Printout & Xerox Rates</h2><p>Only Admin can manage rates.</p></div>';return;}
- const rateServices=services.filter(x=>(x.code||"").toUpperCase()==="PRINTOUT"||(x.code||"").toUpperCase().startsWith("XEROX_"));
- if(!rateServices.length){host.innerHTML='<div class="empty-state">Printout/Xerox services not found. Set service codes in Services.</div>';return;}
- host.innerHTML='<div class="admin-module-head"><div><div class="eyebrow">ADMINISTRATION</div><h2>Printout & Xerox Rate Settings</h2><p>Set separate quantity slabs for each Printout and Xerox service. Rates are calculated using physical paper quantity.</p></div></div><div class="admin-editor"><div class="admin-form-grid"><label>Select service<select id="paper-rate-service">'+rateServices.map(x=>'<option value="'+escapeHtml(x.id)+'">'+escapeHtml(x.name)+' ('+escapeHtml(x.code)+')</option>').join("")+'</select></label><label>Default rate per paper (₹)<input id="printout-default-rate" type="number" min="0" step="0.01"></label></div><div class="admin-table-wrap"><h3>Paper quantity slabs</h3><div id="printout-slab-rows"></div><div class="admin-form-actions"><button type="button" class="secondary-btn" id="printout-add-slab">+ Add rate slab</button></div></div><div id="printout-rate-message" class="message"></div><div class="admin-form-actions"><button type="button" class="primary-btn" id="printout-save-rates">Save rates</button></div></div>';
- let activeSvc=rateServices[0],cfg=activeSvc.billing_config||{},slabs=[];
- const rows=$("printout-slab-rows");
- const readRows=()=>{slabs=[...rows.querySelectorAll(".printout-rate-row")].map(el=>({min_quantity:Number(el.querySelector("[data-printout-min]").value||0),max_quantity:el.querySelector("[data-printout-max]").value===""?null:Number(el.querySelector("[data-printout-max]").value),rate:Number(el.querySelector("[data-printout-rate]").value||0)}));};
- const draw=()=>{rows.innerHTML=slabs.length?slabs.map((x,i)=>'<div class="admin-service-row printout-rate-row"><div class="admin-form-grid"><label>From papers<input data-printout-min="'+i+'" type="number" min="1" value="'+x.min_quantity+'"></label><label>To papers<input data-printout-max="'+i+'" type="number" min="1" value="'+(x.max_quantity??"")+'" placeholder="No limit"></label><label>Rate per paper (₹)<input data-printout-rate="'+i+'" type="number" min="0" step="0.01" value="'+x.rate+'"></label></div><div class="admin-service-actions"><button type="button" data-printout-remove="'+i+'">Remove</button></div></div>').join(""):'<div class="empty-state">No slabs added. Default rate will apply.</div>';rows.querySelectorAll("[data-printout-remove]").forEach(btn=>btn.onclick=()=>{readRows();slabs.splice(Number(btn.dataset.printoutRemove),1);draw();});};
- const load=()=>{cfg=activeSvc.billing_config||{};slabs=Array.isArray(cfg.quantity_slabs)?cfg.quantity_slabs.map(x=>({min_quantity:Number(x.min_quantity??x.min??1),max_quantity:x.max_quantity??x.max??null,rate:Number(x.rate??x.customer_charge??0)})):[];$("printout-default-rate").value=Number(cfg.customer_charge||0);draw();};
- $("paper-rate-service").onchange=()=>{readRows();activeSvc=rateServices.find(x=>x.id===$("paper-rate-service").value)||rateServices[0];load();};
- $("printout-add-slab").onclick=()=>{readRows();slabs.push({min_quantity:slabs.length?Math.max(...slabs.map(x=>Number(x.max_quantity||x.min_quantity)))+1:1,max_quantity:null,rate:0});draw();};
- $("printout-save-rates").onclick=async()=>{readRows();const defaultRate=Number($("printout-default-rate").value||0),msg=$("printout-rate-message"),btn=$("printout-save-rates");slabs.sort((x,y)=>x.min_quantity-y.min_quantity);if(defaultRate<0||!Number.isFinite(defaultRate)){msg.textContent="Invalid default rate.";return;}for(let i=0;i<slabs.length;i++){const x=slabs[i],p=slabs[i-1];if(!Number.isInteger(x.min_quantity)||x.min_quantity<1||x.rate<0||(x.max_quantity!==null&&(!Number.isInteger(x.max_quantity)||x.max_quantity<x.min_quantity))||(p&&(p.max_quantity===null||x.min_quantity<=p.max_quantity))){msg.textContent="Check slab ranges; ranges must be valid and non-overlapping.";return;}}const next={...cfg,customer_charge:defaultRate,quantity_slabs:slabs};btn.disabled=true;msg.textContent="Saving…";const {error}=await supabase.from("services").update({billing_config:next,updated_at:new Date().toISOString()}).eq("id",activeSvc.id);if(error){msg.textContent=error.message;btn.disabled=false;return;}activeSvc.billing_config=next;msg.textContent=activeSvc.name+" rates saved successfully.";btn.disabled=false;};
- load();
-}
 async function renderServiceManager() {
   const host = $("other-view");
   if (currentProfile?.role !== "admin") {
@@ -426,48 +366,16 @@ function renderAdminServiceRows(){
   document.querySelectorAll("[data-edit-service]").forEach(b=>b.addEventListener("click",()=>openServiceEditor(b.dataset.editService)));
   document.querySelectorAll("[data-toggle-service]").forEach(b=>b.addEventListener("click",()=>toggleService(b.dataset.toggleService)));
 }
-function serviceSlabRows(kind, rows, valueKey) {
-  const data=Array.isArray(rows)?rows:[];
-  return '<div class="service-slab-group" data-slab-group="'+kind+'"><div class="service-slab-head"><strong>'+({billing:"Customer charge slabs",cost:"Processing cost slabs",profit:"Profit slabs"}[kind])+'</strong><button type="button" class="secondary-btn" data-add-slab="'+kind+'">+ Add slab</button></div><div class="service-slab-rows">'+data.map((x,i)=>'<div class="service-slab-row" data-slab-row><label>Amount from ₹<input type="number" min="0" step="0.01" data-slab-min value="'+Number(x.min??0)+'"></label><label>Amount to ₹<input type="number" min="0" step="0.01" data-slab-max value="'+(x.max==null?'':Number(x.max))+'" placeholder="No limit"></label><label>'+({billing:"Customer charge ₹",cost:"Processing cost ₹",profit:"Profit ₹"}[kind])+'<input type="number" min="0" step="0.01" data-slab-value value="'+Number(x[valueKey]??0)+'"></label><button type="button" class="text-btn" data-remove-slab>Remove</button></div>').join('')+'</div></div>';
-}
-function readServiceSlabs(kind,valueKey){
-  return [...document.querySelectorAll('[data-slab-group="'+kind+'"] [data-slab-row]')].map(row=>({
-    min:Number(row.querySelector('[data-slab-min]').value||0),
-    max:row.querySelector('[data-slab-max]').value===''?null:Number(row.querySelector('[data-slab-max]').value),
-    [valueKey]:Number(row.querySelector('[data-slab-value]').value||0)
-  }));
-}
-function wireServiceSlabEditor(editor){
-  editor.querySelectorAll('[data-add-slab]').forEach(btn=>btn.addEventListener('click',()=>{
-    const kind=btn.dataset.addSlab,host=editor.querySelector('[data-slab-group="'+kind+'"] .service-slab-rows');
-    const rows=[...host.querySelectorAll('[data-slab-row]')],last=rows.at(-1);
-    const min=last?Number(last.querySelector('[data-slab-max]').value||last.querySelector('[data-slab-min]').value)+1:0;
-    const title=kind==='billing'?'Customer charge':kind==='cost'?'Processing cost':'Profit';
-    const row=document.createElement('div');row.className='service-slab-row';row.dataset.slabRow='';
-    row.innerHTML='<label>Amount from ₹<input type="number" min="0" step="0.01" data-slab-min value="'+min+'"></label><label>Amount to ₹<input type="number" min="0" step="0.01" data-slab-max placeholder="No limit"></label><label>'+title+' ₹<input type="number" min="0" step="0.01" data-slab-value value="0"></label><button type="button" class="text-btn" data-remove-slab>Remove</button>';
-    host.appendChild(row);row.querySelector('[data-remove-slab]').onclick=()=>row.remove();
-  }));
-  editor.querySelectorAll('[data-remove-slab]').forEach(btn=>btn.addEventListener('click',()=>btn.closest('[data-slab-row]').remove()));
-}
 async function openServiceEditor(id=null){
   editingServiceId=id;
   const s=id?services.find(x=>x.id===id):null;
-  // Admin service setup must always offer every active shop wallet, including
-  // wallets not yet assigned to any service.
-  const {data:activeServiceWallets,error:activeServiceWalletsError}=await supabase
-    .from("wallets")
-    .select("id,name,wallet_type,provider,current_balance,is_active,low_balance_threshold,low_balance_alert_enabled")
-    .eq("is_active",true)
-    .order("name");
-  if(activeServiceWalletsError)throw activeServiceWalletsError;
-  walletOptions=activeServiceWallets||[];
-  let selectedWalletRules=[],selectedCreditWallets=[];
+  let selectedWalletRules=[],selectedProfitWallets=[];
   if(s){
-    const [{data},{data:creditWallets}]=await Promise.all([
+    const [{data},{data:profitWallets}]=await Promise.all([
       supabase.from("service_wallet_rules").select("wallet_id,debit_config").eq("service_id",id).order("wallet_slot"),
-      supabase.from("service_credit_wallet_rules").select("wallet_id").eq("service_id",id)
+      supabase.from("service_profit_wallet_rules").select("wallet_id").eq("service_id",id)
     ]);
-    selectedWalletRules=data||[];selectedCreditWallets=(creditWallets||[]).map(x=>x.wallet_id);
+    selectedWalletRules=data||[];selectedProfitWallets=(profitWallets||[]).map(x=>x.wallet_id);
   }
   const editor=$("service-editor");
   editor.classList.remove("hidden");
@@ -480,27 +388,22 @@ async function openServiceEditor(id=null){
       <label>Description<input id="svc-description" value="${escapeHtml(s?.description||"")}" placeholder="Optional description"></label>
       <div class="admin-form-grid">
         <label>Billing type<select id="svc-billing"><option value="fixed">Fixed price</option><option value="percentage">Percentage</option><option value="slabs">Slabs</option><option value="manual">Manual</option></select></label>
-        <label>Processing cost type<select id="svc-cost"><option value="no_cost">No Processing Cost</option><option value="fixed">Fixed</option><option value="percentage">Percentage</option><option value="slabs">Slabs</option><option value="manual">Manual</option></select></label>
+        <label>Processing cost type<select id="svc-cost"><option value="fixed">Fixed</option><option value="percentage">Percentage</option><option value="slabs">Slabs</option><option value="manual">Manual</option></select></label>
         <label>Profit mode<select id="svc-profit"><option value="manual">Manual</option><option value="slabs">Slabs</option><option value="fixed">Fixed</option><option value="percentage">Percentage</option></select></label>
       </div>
-      <div class="admin-form-grid service-amount-fields">
-        <label>Customer charge amount (₹)<input id="svc-billing-amount" type="number" min="0" step="0.01" value="${Number(s?.billing_config?.customer_charge||0)}" placeholder="Enter amount"></label>
-        <label>Customer charge percentage (%)<input id="svc-billing-percentage" type="number" min="0" step="0.01" value="${Number(s?.billing_config?.percentage||0)}" placeholder="Enter percentage"></label>
-        <label>Processing cost amount (₹)<input id="svc-cost-amount" type="number" min="0" step="0.01" value="${Number(s?.processing_cost_config?.fixed_amount||0)}" placeholder="Enter amount"></label>
-        <label>Processing cost percentage (%)<input id="svc-cost-percentage" type="number" min="0" step="0.01" value="${Number(s?.processing_cost_config?.percentage||0)}" placeholder="Enter percentage"></label>
-        <label>Profit amount (₹)<input id="svc-profit-amount" type="number" min="0" step="0.01" value="${Number(s?.profit_config?.fixed_amount||0)}" placeholder="Enter amount"></label>
-        <label>Profit percentage (%)<input id="svc-profit-percentage" type="number" min="0" step="0.01" value="${Number(s?.profit_config?.percentage||0)}" placeholder="Enter percentage"></label>
+      <div class="admin-form-grid">
+        <label>Billing config (JSON)<textarea id="svc-billing-config" rows="4">${escapeHtml(JSON.stringify(s?.billing_config||{},null,2))}</textarea><small class="muted">Xerox / Printing: customer_charge is the fixed rate per paper/page. Optional quantity_slabs use [{"min_quantity":1,"max_quantity":50,"rate":2},{"min_quantity":51,"max_quantity":null,"rate":1.5}]. Employees cannot edit rates; only discounts are entered at billing.</small></label>
+        <label>Processing cost config (JSON)<textarea id="svc-cost-config" rows="3">${escapeHtml(JSON.stringify(s?.processing_cost_config||{},null,2))}</textarea></label>
+        <label>Profit config (JSON)<textarea id="svc-profit-config" rows="3">${escapeHtml(JSON.stringify(s?.profit_config||{},null,2))}</textarea></label>
       </div>
-      <small class="muted">Enter normal amounts directly. Only the selected Billing type, Processing cost type and Profit mode are used. Existing slab settings are preserved when editing a service.</small>
-      <div class="service-slab-editor">
-        <p class="muted">Slab rates are matched against the transaction amount. Add non-overlapping ranges for each selected Slabs mode.</p>
-        ${serviceSlabRows("billing",s?.billing_config?.slabs,"customer_charge")}
-        ${serviceSlabRows("cost",s?.processing_cost_config?.slabs,"cost")}
-        ${serviceSlabRows("profit",s?.profit_config?.slabs,"profit")}
+      <div class="wallet-map-box" id="printout-slab-editor" style="display:${s?.code==="PRINTOUT"?"block":"none"}">
+        <strong>Printout quantity-wise customer rates</strong>
+        <p>Set page ranges and rate per page. Leave the maximum blank for the last unlimited slab. Rate is applied to total pages (pages × sets).</p>
+        <div id="printout-slab-rows">${(s?.billing_config?.quantity_slabs||[{min_quantity:1,max_quantity:null,rate:Number(s?.billing_config?.customer_charge||0)}]).map((x)=>'<div class="admin-form-grid printout-slab-row" style="align-items:end"><label>From pages<input data-slab-min type="number" min="1" step="1" value="'+Number(x.min_quantity??x.min??1)+'"></label><label>To pages (blank = unlimited)<input data-slab-max type="number" min="1" step="1" value="'+(x.max_quantity??x.max??"")+'"></label><label>Rate per page (₹)<input data-slab-rate type="number" min="0" step="0.01" value="'+Number(x.rate??x.customer_charge??0)+'"></label><button type="button" class="text-btn" data-remove-printout-slab>Remove</button></div>').join("")}</div>
+        <button type="button" class="secondary-btn" id="add-printout-slab">+ Add rate slab</button>
       </div>
-      <div class="wallet-map-box" id="credit-service-wallet-box" style="display:${s?.code==="CREDIT_CARD_BANK"?"block":"none"}"><strong>Credit Card profit wallet</strong><p>Only the calculated percentage profit is credited to the selected wallet. Transfer amount is never credited to a wallet.</p><div class="wallet-choice-grid">${walletOptions.map(w=>`<label class="wallet-choice"><input type="checkbox" data-credit-wallet-check value="${w.id}" ${selectedCreditWallets.includes(w.id)?"checked":""} ${w.is_active?"":"disabled"}><span>${escapeHtml(w.name)} <small>${escapeHtml(w.provider||w.wallet_type)}</small></span></label>`).join("")||'<small>No wallets created yet. Add wallets from Wallets section.</small>'}</div></div>
-      <label class="inline-check"><input id="svc-multi-wallet" type="checkbox" > Multi-Wallet Mode — automatically debit every assigned wallet</label>
-      <div class="wallet-map-box"><strong>Processing wallets</strong><p>Add unlimited wallets for this service and set the debit rule for each wallet. During billing, the operator selects exactly one assigned wallet for Job Application, AEPS, UPI to Cash or Cash to UPI; only that selected wallet is debited. Other services follow their configured automatic debit rules.</p><div class="wallet-choice-grid">${walletOptions.map(w=>{const rule=selectedWalletRules.find(x=>x.wallet_id===w.id),cfg=rule?.debit_config||{},mode=cfg.mode||(cfg.fixed_amount!=null?"fixed_amount":"processing_cost"),value=mode==="percentage"?(cfg.percentage??""):(cfg.fixed_amount??"");return `<label class="wallet-choice"><input type="checkbox" data-admin-wallet-check value="${w.id}" ${rule?"checked":""} ${w.is_active?"":"disabled"}><span>${escapeHtml(w.name)} <small>${escapeHtml(w.provider||w.wallet_type)}</small><select data-admin-wallet-mode="${w.id}" ${rule?"":"disabled"}><option value="processing_cost" ${mode==="processing_cost"?"selected":""}>Processing cost</option><option value="base_amount" ${mode==="base_amount"?"selected":""}>Bill amount</option><option value="base_plus_processing_cost" ${mode==="base_plus_processing_cost"?"selected":""}>Bill + processing cost</option><option value="fixed_amount" ${mode==="fixed_amount"?"selected":""}>Fixed amount</option><option value="percentage" ${mode==="percentage"?"selected":""}>Percentage of bill</option></select><input type="number" min="0" step="0.01" data-admin-wallet-value="${w.id}" value="${value}" placeholder="Value for fixed / percentage" ${rule&&["fixed_amount","percentage"].includes(mode)?"":"disabled"}></span></label>`;}).join("")||'<small>No wallets created yet. Add wallets from Wallets section.</small>'}</div></div>
+      <div class="wallet-map-box" id="credit-profit-wallet-box" style="display:${s?.code==="CREDIT_CARD_BANK"?"block":"none"}"><strong>Credit Card profit wallets</strong><p>Select all wallets employees may choose. Each bill's calculated profit is credited to the selected wallet.</p><div class="wallet-choice-grid">${walletOptions.map(w=>`<label class="wallet-choice"><input type="checkbox" data-profit-wallet-check value="${w.id}" ${selectedProfitWallets.includes(w.id)?"checked":""} ${w.is_active?"":"disabled"}><span>${escapeHtml(w.name)} <small>${escapeHtml(w.provider||w.wallet_type)}</small></span></label>`).join("")||'<small>No wallets created yet. Add wallets from Wallets section.</small>'}</div></div>
+      <div class="wallet-map-box"><strong>Processing wallets</strong><p>For Current Bills, choose which wallets can be selected and whether slab-wise processing charge applies to each wallet.</p><div class="wallet-choice-grid">${walletOptions.map(w=>{const rule=selectedWalletRules.find(x=>x.wallet_id===w.id),cfg=rule?.debit_config||{},mode=cfg.mode||(cfg.fixed_amount!=null?"fixed_amount":"processing_cost"),value=mode==="percentage"?(cfg.percentage??""):(cfg.fixed_amount??"");return `<label class="wallet-choice"><input type="checkbox" data-admin-wallet-check value="${w.id}" ${rule?"checked":""} ${w.is_active?"":"disabled"}><span>${escapeHtml(w.name)} <small>${escapeHtml(w.provider||w.wallet_type)}</small><select data-admin-current-processing="${w.id}" ${rule?"":"disabled"} style="display:${s?.code==="CURRENT_BILLS"?"block":"none"}"><option value="on" ${cfg.apply_processing_charge!==false?"selected":""}>Processing charge: ON</option><option value="off" ${cfg.apply_processing_charge===false?"selected":""}>Processing charge: OFF</option></select><select data-admin-wallet-mode="${w.id}" ${rule?"":"disabled"} style="display:${s?.code==="CURRENT_BILLS"?"none":"block"}"><option value="processing_cost" ${mode==="processing_cost"?"selected":""}>Processing cost</option><option value="base_amount" ${mode==="base_amount"?"selected":""}>Bill amount</option><option value="base_plus_processing_cost" ${mode==="base_plus_processing_cost"?"selected":""}>Bill + processing cost</option><option value="fixed_amount" ${mode==="fixed_amount"?"selected":""}>Fixed amount</option><option value="percentage" ${mode==="percentage"?"selected":""}>Percentage of bill</option></select><input type="number" min="0" step="0.01" data-admin-wallet-value="${w.id}" value="${value}" placeholder="Value for fixed / percentage" style="display:${s?.code==="CURRENT_BILLS"?"none":"block"}" ${rule&&["fixed_amount","percentage"].includes(mode)?"":"disabled"}></span></label>`;}).join("")||'<small>No wallets created yet. Add wallets from Wallets section.</small>'}</div></div>
       <label class="inline-check"><input id="svc-active" type="checkbox" ${s?.is_active===false?"":"checked"}> Service active</label>
       <div id="service-form-message" class="message"></div>
       <div class="admin-form-actions"><button type="button" class="text-btn" id="cancel-service">Cancel</button><button type="submit" class="primary-btn" id="save-service-btn">Save service</button></div>
@@ -508,10 +411,20 @@ async function openServiceEditor(id=null){
   $("svc-billing").value=s?.billing_type||"fixed";
   $("svc-cost").value=s?.processing_cost_type||"fixed";
   $("svc-profit").value=s?.profit_mode||"manual";
-  const syncCreditProfitWalletBox=()=>{const box=$("credit-service-wallet-box");if(box)box.style.display=$("svc-code").value.trim().toUpperCase()==="CREDIT_CARD_BANK"?"block":"none";};
+  const syncCreditProfitWalletBox=()=>{const box=$("credit-profit-wallet-box");if(box)box.style.display=$("svc-code").value.trim().toUpperCase()==="CREDIT_CARD_BANK"?"block":"none";};
   $("svc-code").addEventListener("input",syncCreditProfitWalletBox);syncCreditProfitWalletBox();
-  wireServiceSlabEditor(editor);
-  const syncWalletRule=(walletId,checked)=>{const mode=editor.querySelector('[data-admin-wallet-mode="'+walletId+'"]'),value=editor.querySelector('[data-admin-wallet-value="'+walletId+'"]');if(mode)mode.disabled=!checked;if(value)value.disabled=!checked||!["fixed_amount","percentage"].includes(mode?.value);};
+  const printoutSlabBox=$("printout-slab-editor"),printoutSlabRows=$("printout-slab-rows");
+  const syncPrintoutSlabBox=()=>{if(printoutSlabBox)printoutSlabBox.style.display=$("svc-code").value.trim().toUpperCase()==="PRINTOUT"?"block":"none";};
+  const addPrintoutSlab=(slab={min_quantity:1,max_quantity:"",rate:0})=>{
+    const row=document.createElement("div");row.className="admin-form-grid printout-slab-row";row.style.alignItems="end";
+    row.innerHTML='<label>From pages<input data-slab-min type="number" min="1" step="1" value="'+Number(slab.min_quantity??slab.min??1)+'"></label><label>To pages (blank = unlimited)<input data-slab-max type="number" min="1" step="1" value="'+(slab.max_quantity??slab.max??"")+'"></label><label>Rate per page (₹)<input data-slab-rate type="number" min="0" step="0.01" value="'+Number(slab.rate??slab.customer_charge??0)+'"></label><button type="button" class="text-btn" data-remove-printout-slab>Remove</button>';
+    printoutSlabRows.appendChild(row);
+  };
+  $("svc-code").addEventListener("input",syncPrintoutSlabBox);
+  $("add-printout-slab")?.addEventListener("click",()=>{const rows=[...printoutSlabRows.querySelectorAll(".printout-slab-row")],last=rows.at(-1),next=last?Number(last.querySelector("[data-slab-max]").value||last.querySelector("[data-slab-min]").value)+1:1;addPrintoutSlab({min_quantity:next,max_quantity:"",rate:0});});
+  printoutSlabRows?.addEventListener("click",e=>{if(e.target.closest("[data-remove-printout-slab]")){const rows=printoutSlabRows.querySelectorAll(".printout-slab-row");if(rows.length>1)e.target.closest(".printout-slab-row").remove();}});
+
+  const syncWalletRule=(walletId,checked)=>{const mode=editor.querySelector('[data-admin-wallet-mode="'+walletId+'"]'),value=editor.querySelector('[data-admin-wallet-value="'+walletId+'"]'),current=editor.querySelector('[data-admin-current-processing="'+walletId+'"]');if(mode)mode.disabled=!checked;if(value)value.disabled=!checked||!["fixed_amount","percentage"].includes(mode?.value);if(current)current.disabled=!checked;};
   editor.querySelectorAll("[data-admin-wallet-check]").forEach(ch=>ch.addEventListener("change",()=>syncWalletRule(ch.value,ch.checked)));
   editor.querySelectorAll("[data-admin-wallet-mode]").forEach(sel=>sel.addEventListener("change",()=>syncWalletRule(sel.dataset.adminWalletMode,editor.querySelector('[data-admin-wallet-check][value="'+sel.dataset.adminWalletMode+'"]')?.checked)));
   $("close-service-editor").addEventListener("click",()=>editor.classList.add("hidden"));
@@ -522,39 +435,32 @@ async function openServiceEditor(id=null){
 async function saveService(event){
   event.preventDefault();
   const btn=$("save-service-btn"), msg=$("service-form-message");
-  const toAmount=id=>{const value=Number($(id).value||0);if(!Number.isFinite(value)||value<0)throw new Error("Enter a valid non-negative amount or percentage.");return value;};
+  const parseConfig=id=>{const v=$(id).value.trim()||"{}";const parsed=JSON.parse(v);if(!parsed||Array.isArray(parsed)||typeof parsed!=="object")throw new Error("Configuration must be a JSON object");return parsed;};
   let billingConfig,costConfig,profitConfig;
-  try{
-    const existing=editingServiceId?services.find(x=>x.id===editingServiceId):null;
-    billingConfig={...(existing?.billing_config||{}),customer_charge:toAmount("svc-billing-amount"),percentage:toAmount("svc-billing-percentage")};
-    costConfig={...(existing?.processing_cost_config||{}),fixed_amount:toAmount("svc-cost-amount"),percentage:toAmount("svc-cost-percentage")};
-    profitConfig={...(existing?.profit_config||{}),fixed_amount:toAmount("svc-profit-amount"),percentage:toAmount("svc-profit-percentage")};
-  }catch(e){msg.textContent=e.message;return;}
-  const billingType=$("svc-billing").value,costType=$("svc-cost").value,profitMode=$("svc-profit").value;
-  const billingSlabs=readServiceSlabs("billing","customer_charge"),costSlabs=readServiceSlabs("cost","cost"),profitSlabs=readServiceSlabs("profit","profit");
-  const validateSlabs=(rows,label)=>{rows.sort((a,b)=>a.min-b.min);for(let i=0;i<rows.length;i++){const x=rows[i],p=rows[i-1];if(!Number.isFinite(x.min)||x.min<0||(x.max!==null&&(!Number.isFinite(x.max)||x.max<x.min))||!Number.isFinite(x[Object.keys(x).find(k=>!["min","max"].includes(k))])||x[Object.keys(x).find(k=>!["min","max"].includes(k))]<0||(p&&(p.max===null||x.min<=p.max)))throw new Error(label+" slab ranges must be valid and non-overlapping.");}};
-  try{
-    if(billingType==="slabs"){validateSlabs(billingSlabs,"Customer charge");billingConfig.slabs=billingSlabs;}
-    if(costType==="slabs"){validateSlabs(costSlabs,"Processing cost");costConfig.slabs=costSlabs;}
-    if(profitMode==="slabs"){validateSlabs(profitSlabs,"Profit");profitConfig.slabs=profitSlabs;}
-  }catch(e){msg.textContent=e.message;return;}
-  if($("svc-active").checked&&billingType==="slabs"&&!billingSlabs.length){msg.textContent="Add at least one customer charge slab before activating this service.";return;}
-  if($("svc-active").checked&&costType==="slabs"&&!costSlabs.length){msg.textContent="Add at least one processing cost slab before activating this service.";return;}
-  if($("svc-active").checked&&profitMode==="slabs"&&!profitSlabs.length){msg.textContent="Add at least one profit slab before activating this service.";return;}
-  const payload={category_id:$("svc-category").value,name:$("svc-name").value.trim(),code:$("svc-code").value.trim()||null,description:$("svc-description").value.trim()||null,billing_type:billingType,processing_cost_type:costType,profit_mode:profitMode,billing_config:billingConfig,processing_cost_config:costConfig,profit_config:profitConfig,multi_wallet_debit:$("svc-multi-wallet").checked,is_active:$("svc-active").checked,updated_at:new Date().toISOString()};
+  try{billingConfig=parseConfig("svc-billing-config");costConfig=parseConfig("svc-cost-config");profitConfig=parseConfig("svc-profit-config");}
+  catch(e){msg.textContent="Invalid JSON: "+e.message;return;}
+  if($("svc-code").value.trim().toUpperCase()==="PRINTOUT"){
+    const rows=[...document.querySelectorAll("#printout-slab-rows .printout-slab-row")];
+    const slabs=rows.map(el=>({min_quantity:Number(el.querySelector("[data-slab-min]").value),max_quantity:el.querySelector("[data-slab-max]").value===""?null:Number(el.querySelector("[data-slab-max]").value),rate:Number(el.querySelector("[data-slab-rate]").value)}));
+    if(!slabs.length||slabs.some(x=>!Number.isInteger(x.min_quantity)||x.min_quantity<1||x.rate<0||!Number.isFinite(x.rate)||(x.max_quantity!==null&&(!Number.isInteger(x.max_quantity)||x.max_quantity<x.min_quantity)))){msg.textContent="Enter valid printout slabs: positive page ranges and non-negative per-page rates.";return;}
+    const sorted=[...slabs].sort((a,b)=>a.min_quantity-b.min_quantity);
+    for(let i=1;i<sorted.length;i++){if(sorted[i-1].max_quantity===null||sorted[i].min_quantity<=sorted[i-1].max_quantity){msg.textContent="Printout slab ranges must not overlap.";return;}}
+    billingConfig={...billingConfig,quantity_slabs:sorted};
+  }
+  const payload={category_id:$("svc-category").value,name:$("svc-name").value.trim(),code:$("svc-code").value.trim()||null,description:$("svc-description").value.trim()||null,billing_type:$("svc-billing").value,processing_cost_type:$("svc-cost").value,profit_mode:$("svc-profit").value,billing_config:billingConfig,processing_cost_config:costConfig,profit_config:profitConfig,is_active:$("svc-active").checked,updated_at:new Date().toISOString()};
   if(!payload.name){msg.textContent="Service name is required.";return;}
   btn.disabled=true;btn.textContent="Saving…";
   try{
     let saved;
     if(editingServiceId){const {data,error}=await supabase.from("services").update(payload).eq("id",editingServiceId).select("id").single();if(error)throw error;saved=data;}
     else{const {data,error}=await supabase.from("services").insert(payload).select("id").single();if(error)throw error;saved=data;}
-    const chosen=[...document.querySelectorAll("[data-admin-wallet-check]:checked")].map((el,i)=>{const mode=document.querySelector('[data-admin-wallet-mode="'+el.value+'"]')?.value||"processing_cost",value=Number(document.querySelector('[data-admin-wallet-value="'+el.value+'"]')?.value||0),debit_config={mode};if(mode==="fixed_amount")debit_config.fixed_amount=value;if(mode==="percentage")debit_config.percentage=value;return {service_id:saved.id,wallet_id:el.value,wallet_slot:i+1,debit_order:i+1,debit_config,is_required:true};});
+    const chosen=[...document.querySelectorAll("[data-admin-wallet-check]:checked")].map((el,i)=>{const currentBills=payload.code==="CURRENT_BILLS",mode=document.querySelector('[data-admin-wallet-mode="'+el.value+'"]')?.value||"processing_cost",value=Number(document.querySelector('[data-admin-wallet-value="'+el.value+'"]')?.value||0),debit_config=currentBills?{mode:"base_amount",apply_processing_charge:document.querySelector('[data-admin-current-processing="'+el.value+'"]')?.value!=="off"}:{mode};if(!currentBills&&mode==="fixed_amount")debit_config.fixed_amount=value;if(!currentBills&&mode==="percentage")debit_config.percentage=value;return {service_id:saved.id,wallet_id:el.value,wallet_slot:i+1,debit_order:i+1,debit_config,is_required:true};});
     if(chosen.some(x=>(x.debit_config.mode==="fixed_amount"||x.debit_config.mode==="percentage")&&(!(Number(x.debit_config.fixed_amount??x.debit_config.percentage)>0))))throw new Error("Enter a positive value for every fixed or percentage wallet rule.");
-    if(payload.code==="CREDIT_CARD_BANK"&&!document.querySelectorAll("[data-credit-wallet-check]:checked").length)throw new Error("Assign at least one Credit Card service wallet.");
-    const creditWalletIds=[...document.querySelectorAll("[data-credit-wallet-check]:checked")].map(el=>el.value);
-    const {error:profitDelError}=await supabase.from("service_credit_wallet_rules").delete().eq("service_id",saved.id);
+    if(payload.code==="CREDIT_CARD_BANK"&&!document.querySelectorAll("[data-profit-wallet-check]:checked").length)throw new Error("Assign at least one Credit Card profit wallet.");
+    const profitWalletIds=[...document.querySelectorAll("[data-profit-wallet-check]:checked")].map(el=>el.value);
+    const {error:profitDelError}=await supabase.from("service_profit_wallet_rules").delete().eq("service_id",saved.id);
     if(profitDelError)throw profitDelError;
-    if(creditWalletIds.length){const {error:creditRuleError}=await supabase.from("service_credit_wallet_rules").insert(creditWalletIds.map(wallet_id=>({service_id:saved.id,wallet_id})));if(creditRuleError)throw creditRuleError;}
+    if(profitWalletIds.length){const {error:profitRuleError}=await supabase.from("service_profit_wallet_rules").insert(profitWalletIds.map(wallet_id=>({service_id:saved.id,wallet_id})));if(profitRuleError)throw profitRuleError;}
     const {error:delError}=await supabase.from("service_wallet_rules").delete().eq("service_id",saved.id);
     if(delError)throw delError;
     if(chosen.length){const {error:ruleError}=await supabase.from("service_wallet_rules").insert(chosen);if(ruleError)throw ruleError;}
@@ -565,11 +471,6 @@ async function saveService(event){
 }
 async function toggleService(id){
   const s=services.find(x=>x.id===id);if(!s)return;
-  if(!s.is_active){
-    if(s.billing_type==="slabs"&&!(s.billing_config?.slabs||[]).length){alert("Add customer charge slabs before activating this service.");return;}
-    if(s.processing_cost_type==="slabs"&&!(s.processing_cost_config?.slabs||[]).length){alert("Add processing cost slabs before activating this service.");return;}
-    if(s.profit_mode==="slabs"&&!(s.profit_config?.slabs||[]).length){alert("Add profit slabs before activating this service.");return;}
-  }
   const {error}=await supabase.from("services").update({is_active:!s.is_active,updated_at:new Date().toISOString()}).eq("id",id);
   if(error){alert(error.message);return;}
   await loadCatalog();await renderServiceManager();
@@ -581,33 +482,26 @@ async function renderWalletManager(){
   await loadCatalog();
   const host=$("other-view");
   const {data:transferHistory,error:transferHistoryError}=await supabase.from("wallet_ledger")
-    .select("id,wallet_id,transfer_group_id,amount,direction,description,created_at,entry_type")
-    .order("created_at",{ascending:false}).limit(50);
-  const {data:creditRules,error:creditRulesError}=await supabase.from("service_credit_wallet_rules").select("wallet_id");
-  const creditWalletIds=[...new Set((creditRules||[]).map(r=>r.wallet_id))];
-  const serviceWallets=walletOptions.filter(w=>creditWalletIds.includes(w.id));
+    .select("id,wallet_id,transfer_group_id,amount,direction,description,created_at")
+    .in("entry_type",["wallet_transfer_in","wallet_transfer_out"])
+    .order("created_at",{ascending:false}).limit(30);
   host.innerHTML=`
-    <div class="admin-module-head"><div><div class="eyebrow">ADMINISTRATION</div><h2>Wallet Management</h2><p>Manage service wallets, add or withdraw amounts, transfer balances and configure low-balance alerts.</p></div></div>
-    <div class="admin-editor"><h3>Assigned service wallets</h3><p class="muted">These wallets are assigned in Admin Service settings to receive customer credit-card transfer principal. Service charges are tracked separately as profit.</p><div class="employee-wallet-grid">${serviceWallets.length?serviceWallets.map(w=>`<article class="employee-wallet-card"><div><strong>${escapeHtml(w.name)}</strong><small>${escapeHtml(w.provider||w.wallet_type||"Wallet")} · Service wallet</small></div><b data-wallet-balance="${w.id}">${money(w.current_balance)}</b></article>`).join(""):'<div class="empty-state">No service wallets assigned yet. Open Services Management and assign wallets under Credit Card to Bank Transfer.</div>'}</div></div>
+    <div class="admin-module-head"><div><div class="eyebrow">ADMINISTRATION</div><h2>Wallet Management</h2><p>Create wallets, load balances, recharge between wallets and configure low-balance alerts.</p></div></div>
     <div class="admin-editor"><h3>Create wallet</h3><form id="wallet-form" class="service-form">
       <div class="admin-form-grid"><label>Wallet name<input id="wallet-name" required maxlength="100" placeholder="e.g. IDFC Bank"></label><label>Wallet type<select id="wallet-type"><option value="bank">Bank</option><option value="upi">UPI</option><option value="provider">Provider</option><option value="cash">Cash</option><option value="other">Other</option></select></label><label>Provider / account label<input id="wallet-provider" maxlength="100" placeholder="Optional"></label></div>
       <small class="muted">New wallets always start with ₹0 opening balance.</small><div id="wallet-message" class="message"></div><button class="primary-btn admin-add-btn" type="submit" id="wallet-save">Create wallet</button>
     </form></div>
-    <div class="admin-editor"><h3>Add amount to wallet</h3><form id="load-form" class="service-form"><div class="admin-form-grid"><label>Wallet<select id="load-wallet" required></select></label><label>Add amount (₹)<input id="load-amount" type="number" min="0.01" step="0.01" required></label><label>Source / bank account<input id="load-source" placeholder="e.g. SBI / IDFC / cash" maxlength="100"></label></div><div id="load-message" class="message"></div><button class="primary-btn" type="submit">Add amount</button></form></div>
-    <div class="admin-editor"><h3>Withdraw from wallet</h3><form id="withdraw-form" class="service-form"><div class="admin-form-grid"><label>Wallet<select id="withdraw-wallet" required></select></label><label>Withdraw amount (₹)<input id="withdraw-amount" type="number" min="0.01" step="0.01" required></label><label>Reason / destination<input id="withdraw-note" maxlength="160" placeholder="e.g. Cash withdrawal / bank transfer"></label></div><div id="withdraw-message" class="message"></div><button class="primary-btn" type="submit" id="withdraw-save">Withdraw amount</button></form></div>
+    <div class="admin-editor"><h3>Load wallet balance</h3><form id="load-form" class="service-form"><div class="admin-form-grid"><label>Wallet<select id="load-wallet" required></select></label><label>Load amount (₹)<input id="load-amount" type="number" min="0.01" step="0.01" required></label><label>Source / bank account<input id="load-source" placeholder="e.g. SBI / IDFC / cash" maxlength="100"></label></div><div id="load-message" class="message"></div><button class="primary-btn" type="submit">Record wallet load</button></form></div>
     <div class="admin-editor"><h3>Wallet-to-Wallet Recharge / Transfer</h3><form id="transfer-form" class="service-form">
       <div class="admin-form-grid"><label>From wallet<select id="transfer-from" required></select></label><label>To wallet<select id="transfer-to" required></select></label><label>Amount (₹)<input id="transfer-amount" type="number" min="0.01" step="0.01" required></label></div>
       <label>Note<input id="transfer-note" maxlength="200" placeholder="Optional transfer note"></label><div id="transfer-message" class="message"></div><button class="primary-btn admin-add-btn" type="submit" id="transfer-save">Recharge / Transfer</button>
     </form></div>
     <div class="admin-table-wrap"><div class="admin-table-head"><h3>All wallets · Set low-balance alert limits</h3><input id="wallet-search" class="search-input" placeholder="Search wallets"></div><div id="wallet-rows"></div></div>
-    <div class="admin-table-wrap"><h3>Recent wallet transactions</h3><div id="wallet-transfer-history">${transferHistoryError?'<div class="empty-state">Transfer history unavailable.</div>':(transferHistory||[]).map(x=>{const w=walletOptions.find(y=>y.id===x.wallet_id);return '<div class="admin-service-row"><div class="admin-service-main"><strong>'+escapeHtml(w?.name||"Wallet")+' · '+(x.direction==="out"?"Debited":"Credited")+'</strong><small>'+escapeHtml(x.description||"Wallet transaction")+' · '+new Date(x.created_at).toLocaleString("en-IN")+'</small></div><div class="admin-service-meta"><strong>'+(x.direction==="out"?"−":"+")+money(x.amount)+'</strong></div></div>';}).join("")||'<div class="empty-state">No wallet transactions recorded yet.</div>'}</div></div>`;
+    <div class="admin-table-wrap"><h3>Recent wallet-to-wallet transfers</h3><div id="wallet-transfer-history">${transferHistoryError?'<div class="empty-state">Transfer history unavailable.</div>':(transferHistory||[]).map(x=>{const w=walletOptions.find(y=>y.id===x.wallet_id);return '<div class="admin-service-row"><div class="admin-service-main"><strong>'+escapeHtml(w?.name||"Wallet")+' · '+(x.direction==="out"?"Sent":"Received")+'</strong><small>'+escapeHtml(x.description||"Wallet transfer")+' · '+new Date(x.created_at).toLocaleString("en-IN")+'</small></div><div class="admin-service-meta"><strong>'+(x.direction==="out"?"−":"+")+money(x.amount)+'</strong></div></div>';}).join("")||'<div class="empty-state">No wallet-to-wallet transfers recorded yet.</div>'}</div></div>`;
   fillTransferWallets();renderWalletRows();
   $("wallet-form").addEventListener("submit",createWallet);
-  const walletSelectOptions=walletOptions.filter(w=>w.is_active).map(w=>`<option value="${w.id}">${escapeHtml(w.name)} · ${money(w.current_balance)}</option>`).join("");
-  $("load-wallet").innerHTML=walletSelectOptions;
-  $("withdraw-wallet").innerHTML=walletSelectOptions;
+  $("load-wallet").innerHTML=walletOptions.filter(w=>w.is_active).map(w=>`<option value="${w.id}">${escapeHtml(w.name)}</option>`).join("");
   $("load-form").addEventListener("submit",loadWallet);
-  $("withdraw-form").addEventListener("submit",withdrawWallet);
   $("transfer-form").addEventListener("submit",transferWallet);
   $("wallet-search").addEventListener("input",renderWalletRows);
 }
@@ -621,7 +515,7 @@ function renderWalletRows(){
   const q=$("wallet-search")?.value.trim().toLowerCase()||"";
   const rows=walletOptions.filter(w=>w.name.toLowerCase().includes(q)||(w.provider||"").toLowerCase().includes(q));
   $("wallet-rows").innerHTML=rows.length?rows.map(w=>`
-    <div class="admin-service-row ${w.low_balance_alert_enabled!==false&&Number(w.current_balance||0)<=Number(w.low_balance_threshold||0)?"wallet-low-balance":""}"><div class="admin-service-main"><strong>${escapeHtml(w.name)}</strong><small>${escapeHtml(w.provider||w.wallet_type)} · ${escapeHtml(w.wallet_type)}</small><label>Low balance alert at ₹<input type="number" min="0" step=".01" value="${Number(w.low_balance_threshold||0)}" data-wallet-threshold="${w.id}" style="width:110px"></label><label><input type="checkbox" data-wallet-alert="${w.id}" ${w.low_balance_alert_enabled!==false?"checked":""}> Alert enabled</label><button class="secondary-btn" data-wallet-threshold-save="${w.id}">Save alert</button></div><div class="admin-service-meta"><strong data-wallet-balance="${w.id}">${money(w.current_balance)}</strong><span class="status-pill ${w.is_active?"is-active":"is-inactive"}">${w.is_active?"Active":"Inactive"}</span></div><div class="admin-service-actions"><button data-wallet-toggle="${w.id}">${w.is_active?"Deactivate":"Activate"}</button></div></div>`).join(""):'<div class="empty-state">No wallets created yet.</div>';
+    <div class="admin-service-row ${w.low_balance_alert_enabled!==false&&Number(w.current_balance||0)<=Number(w.low_balance_threshold||0)?"wallet-low-balance":""}"><div class="admin-service-main"><strong>${escapeHtml(w.name)}</strong><small>${escapeHtml(w.provider||w.wallet_type)} · ${escapeHtml(w.wallet_type)}</small><label>Low balance alert at ₹<input type="number" min="0" step=".01" value="${Number(w.low_balance_threshold||0)}" data-wallet-threshold="${w.id}" style="width:110px"></label><label><input type="checkbox" data-wallet-alert="${w.id}" ${w.low_balance_alert_enabled!==false?"checked":""}> Alert enabled</label><button class="secondary-btn" data-wallet-threshold-save="${w.id}">Save alert</button></div><div class="admin-service-meta"><strong>${money(w.current_balance)}</strong><span class="status-pill ${w.is_active?"is-active":"is-inactive"}">${w.is_active?"Active":"Inactive"}</span></div><div class="admin-service-actions"><button data-wallet-toggle="${w.id}">${w.is_active?"Deactivate":"Activate"}</button></div></div>`).join(""):'<div class="empty-state">No wallets created yet.</div>';
   document.querySelectorAll("[data-wallet-toggle]").forEach(b=>b.addEventListener("click",()=>toggleWallet(b.dataset.walletToggle)));
   document.querySelectorAll("[data-wallet-threshold-save]").forEach(b=>b.addEventListener("click",async()=>{
     const id=b.dataset.walletThresholdSave,threshold=Number(document.querySelector('[data-wallet-threshold="'+id+'"]').value),enabled=document.querySelector('[data-wallet-alert="'+id+'"]').checked;
@@ -644,15 +538,6 @@ async function loadWallet(e){
     const {error}=await supabase.from("wallet_ledger").insert({wallet_id:$("load-wallet").value,entry_type:"top_up",amount,direction:"in",description:"Wallet load from "+($("load-source").value.trim()||"unspecified source"),created_by:(await supabase.auth.getUser()).data.user.id});
     if(error)throw error;msg.textContent="Wallet load recorded and balance updated.";await loadCatalog();await renderWalletManager();
   }catch(err){msg.textContent=err.message||"Unable to record wallet load.";}finally{btn.disabled=false;}
-}
-async function withdrawWallet(e){
-  e.preventDefault();const msg=$("withdraw-message"),btn=$("withdraw-save");btn.disabled=true;
-  try{
-    const walletId=$("withdraw-wallet").value,amount=Number($("withdraw-amount").value),note=$("withdraw-note").value.trim();
-    if(!walletId||!Number.isFinite(amount)||amount<=0)throw new Error("Choose a wallet and enter a positive amount.");
-    const {error}=await supabase.rpc("withdraw_wallet_balance",{p_wallet:walletId,p_amount:amount,p_note:note||null});
-    if(error)throw error;msg.textContent="Withdrawal recorded and wallet balance updated.";$("withdraw-form").reset();await loadCatalog();await renderWalletManager();
-  }catch(err){msg.textContent=err.message||"Unable to withdraw from wallet.";}finally{btn.disabled=false;}
 }
 async function toggleWallet(id){
   const w=walletOptions.find(x=>x.id===id);if(!w)return;
@@ -691,7 +576,6 @@ async function renderReports(){
   <article class="finance-kpi"><small>Net profit after expenses</small><strong id="finance-net">₹0.00</strong><span>Earned income − operating expenses</span></article>
  </div>
  <div class="finance-secondary-stats"><div><small>Customer collections (not income)</small><strong id="finance-collections">₹0.00</strong></div><div><small>Processing costs already deducted in earned income</small><strong id="finance-processing">₹0.00</strong></div></div>
- <div class="admin-table-wrap"><h3>Service-wise profit</h3><p class="muted">Automatically updated from each completed bill. Wallet top-ups and customer collections are not counted as profit.</p><div id="finance-service-profit-rows"></div></div>
  <div class="admin-editor finance-target-editor"><h3>Set income targets</h3><p>Set a recurring target for each period. Actual income is compared with the selected period's target.</p><form id="finance-target-form" class="finance-target-form"><label>Target period<select id="finance-target-period"><option value="day">Daily</option><option value="week">Weekly</option><option value="fortnight">Fortnightly</option><option value="month">Monthly</option><option value="year">Yearly</option></select></label><label>Income target (₹)<input id="finance-target-input" type="number" min="0" step=".01" required></label><label>Expense budget (₹)<input id="finance-expense-target-input" type="number" min="0" step=".01" required value="0"></label><button class="primary-btn" type="submit">Save target</button></form><div id="finance-target-message" class="message"></div><div class="finance-target-chips" id="finance-target-chips"></div></div>
  <div class="finance-lower-grid"><div class="admin-table-wrap"><h3>Expense category breakdown</h3><div id="finance-category-rows"></div></div><div class="admin-table-wrap"><h3>Recent expenses</h3><div id="finance-expense-rows"></div></div></div>
  <div class="admin-table-wrap"><h3>Recent bills</h3><div id="report-rows"></div></div><div class="admin-table-wrap"><h3>Permanent monthly income & expense history</h3><p class="muted">Monthly totals remain available even after old bill and expense details are cleaned up.</p><div id="monthly-financial-archive"></div></div>`;
@@ -710,28 +594,25 @@ async function loadMonthlyFinancialArchive(){
  if(error){host.innerHTML='<div class="empty-state">Unable to load saved monthly history: '+escapeHtml(error.message)+'</div>';return;}
  const rows=data||[];
  const money=v=>"₹"+Number(v||0).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2});
- $("finance-service-profit-rows").innerHTML=serviceProfitRows.length?serviceProfitRows.map(x=>'<div class="admin-service-row"><div class="admin-service-main"><strong>'+escapeHtml(x.name)+'</strong><small>'+escapeHtml(x.code||"Service")+' · '+x.bills.size+' bills · Qty '+x.quantity+'</small></div><div class="admin-service-meta"><strong>'+money(x.profit)+'</strong><span>Profit</span></div></div>').join(""):'<div class="empty-state">No service profit recorded in this period yet.</div>';
  host.innerHTML=rows.length?'<div class="admin-service-row"><div class="admin-service-main"><strong>Month</strong></div><div class="admin-service-meta"><strong>Income</strong><strong>Expenses</strong><strong>Net profit</strong></div></div>'+rows.map(x=>'<div class="admin-service-row"><div class="admin-service-main"><strong>'+escapeHtml(x.month_label)+'</strong><small>'+Number(x.bill_count||0)+' bills</small></div><div class="admin-service-meta"><strong>'+money(x.income_total)+'</strong><strong>'+money(x.expense_total)+'</strong><strong>'+money(x.net_profit)+'</strong></div></div>').join(""):'<div class="empty-state">Monthly history will appear after each month is completed.</div>';
 }
 async function loadReportsData(){
  const period=$("report-period")?.value||"day",{start,end}=financeRange(period),startIso=start.toISOString(),endIso=end.toISOString(),startDate=financeYmd(start),endDate=financeYmd(new Date(end.getTime()-86400000));
- const [tx,ex,targets,serviceProfit]=await Promise.all([
-  supabase.from("billing_transactions").select("id,bill_number,customer_name,customer_total,amount_received,cash_received,upi_received,processing_total,profit_total,payment_mode,created_at").gte("created_at",startIso).lt("created_at",endIso).order("created_at",{ascending:false}).limit(1000),
-  supabase.from("expenses").select("id,expense_date,category,description,amount,payment_mode").eq("is_voided",false).gte("expense_date",startDate).lte("expense_date",endDate).order("expense_date",{ascending:false}).limit(1000),
-  supabase.from("income_targets").select("period_type,target_amount,expense_target_amount,daily_target_start_date"),
-  supabase.rpc("get_service_profit_summary",{p_start:startIso,p_end:endIso})
+ const [tx,ex,targets]=await Promise.all([
+  supabase.from("billing_transactions").select("id,bill_number,customer_name,customer_total,processing_total,profit_total,payment_mode,created_at,business_date").gte("business_date",startDate).lte("business_date",endDate).order("created_at",{ascending:false}).limit(1000),
+  supabase.from("expenses").select("id,expense_date,business_date,category,description,amount,payment_mode").gte("business_date",startDate).lte("business_date",endDate).order("business_date",{ascending:false}).limit(1000),
+  supabase.from("income_targets").select("period_type,target_amount,expense_target_amount,daily_target_start_date")
  ]);
- const failure=tx.error||ex.error||targets.error||serviceProfit.error;if(failure){$("report-rows").innerHTML='<div class="empty-state">Unable to load financial report: '+escapeHtml(failure.message)+'</div>';return}
+ const failure=tx.error||ex.error||targets.error;if(failure){$("report-rows").innerHTML='<div class="empty-state">Unable to load financial report: '+escapeHtml(failure.message)+'</div>';return}
  const bills=tx.data||[],expenses=ex.data||[],targetRows=targets.data||[];
- const serviceProfitRows=(serviceProfit.data||[]).map(x=>({name:x.service_name,code:x.service_code||"",bill_count:Number(x.bill_count||0),quantity:Number(x.quantity_total||0),profit:Number(x.profit_total||0)}));
- const sum=(arr,k)=>arr.reduce((n,x)=>n+Number(x[k]||0),0),income=serviceProfitRows.reduce((n,x)=>n+Number(x.profit||0),0),expenseTotal=sum(expenses,"amount"),collection=bills.reduce((n,x)=>n+Number(x.cash_received||0)+Number(x.upi_received||0),0),processing=sum(bills,"processing_total"),targetRow=targetRows.find(x=>x.period_type===financeDbPeriod[period]),baseTarget=Number(targetRow?.target_amount||0),expenseBudget=Number(targetRow?.expense_target_amount||0);
+ const sum=(arr,k)=>arr.reduce((n,x)=>n+Number(x[k]||0),0),income=sum(bills,"profit_total"),expenseTotal=sum(expenses,"amount"),collection=sum(bills,"customer_total"),processing=sum(bills,"processing_total"),targetRow=targetRows.find(x=>x.period_type===financeDbPeriod[period]),baseTarget=Number(targetRow?.target_amount||0),expenseBudget=Number(targetRow?.expense_target_amount||0);
  let carryForward=0;
  if(period==="day"&&baseTarget>0&&targetRow?.daily_target_start_date){
   const carryStart=new Date(targetRow.daily_target_start_date+"T00:00:00");
   if(carryStart<start){
-   const history=await supabase.rpc("get_daily_profit_totals",{p_start:carryStart.toISOString(),p_end:startIso});
+   const history=await supabase.from("billing_transactions").select("profit_total,business_date").gte("business_date",financeYmd(carryStart)).lt("business_date",startDate).limit(10000);
    if(history.error){$("report-rows").innerHTML='<div class="empty-state">Unable to calculate daily target carry forward: '+escapeHtml(history.error.message)+'</div>';return}
-   const dailyIncome={};(history.data||[]).forEach(x=>{const key=String(x.profit_date);dailyIncome[key]=Number(x.profit_total||0)});
+   const dailyIncome={};(history.data||[]).forEach(x=>{const key=x.business_date;dailyIncome[key]=(dailyIncome[key]||0)+Number(x.profit_total||0)});
    for(let d=new Date(carryStart);d<start;d.setDate(d.getDate()+1)){const dayKey=financeYmd(d);carryForward=Math.max(0,baseTarget+carryForward-(dailyIncome[dayKey]||0))}
   }
  }
@@ -841,35 +722,23 @@ async function createEmployee(e){
 }
 
 let billingRows = [];
-let editingBillingTransactionId = null;
-let editingBillingBillNumber = null;
 let billingWalletRules = {};
-let billingCreditWalletRules = {};
+let billingProfitWalletRules = {};
 function money(n){return "₹"+Number(n||0).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2});}
 function serviceByCode(code){return services.find(s=>s.code===code);}
 function isPaperPageService(svc){return !!svc&&(svc.code==="PRINTOUT"||svc.code?.startsWith("XEROX_"));}
 function paperPageUnit(svc){return svc?.code==="PRINTOUT"?"page":"paper";}
 function paperPageRate(row,svc,count){
   const cfg=svc?.billing_config||{};
-  const type=svc?.code==="PRINTOUT"?(row.print_type||"single_side"):"single_side";
-  const pricing=cfg[type]||((type==="single_side"&&(svc?.code?.startsWith("XEROX_")||Array.isArray(cfg.quantity_slabs)||cfg.customer_charge!=null))?cfg:{});
-  const slab=(pricing.quantity_slabs||[]).find(x=>count>=Number(x.min_quantity||x.min||0)&&(x.max_quantity==null&&x.max==null||count<=Number(x.max_quantity??x.max)));
-  return Number(slab?.rate??slab?.customer_charge??pricing.customer_charge??0);
+  const slab=(cfg.quantity_slabs||[]).find(x=>count>=Number(x.min_quantity||x.min||0)&&(x.max_quantity==null&&x.max==null||count<=Number(x.max_quantity??x.max)));
+  return Number(slab?.rate??slab?.customer_charge??cfg.customer_charge??0);
 }
-function cashToUpiFeeBase(row){
-  const amount=Math.max(0,Number(row.base||0));
-  const aepsTotal=billingRows.reduce((sum,r)=>{
-    const service=services.find(s=>s.id===r.service_id);
-    return sum+(service?.code==="AEPS_WITHDRAWAL"?Math.max(0,Number(r.base||0))*Math.max(1,Number(r.quantity||1)):0);
-  },0);
-  return Math.max(0,amount-aepsTotal);
-}
+function currentBillsProcessingCost(amount,svc,rule){if(rule?.debit_config?.apply_processing_charge===false)return 0;const cfg=svc?.billing_config||{},costCfg=svc?.processing_cost_config||{},slab=(costCfg.slabs||[]).find(x=>amount>=Number(x.min||0)&&(x.max==null||amount<=Number(x.max))),billSlab=(cfg.slabs||[]).find(x=>amount>=Number(x.min||0)&&amount<=Number(x.max||0));const raw=slab?.cost??slab?.processing_cost??billSlab?.wallet_extra??cfg.above_1000?.wallet_extra??0;return Math.max(0,Number(raw)||0);}
 function calculateBillingRow(row){
   const svc=services.find(s=>s.id===row.service_id), amount=Number(row.base||0),qty=Math.max(1,Number(row.quantity||1));
   if(!svc||amount<0)return {charge:0,cost:0,profit:0,unitTotal:0,total:0};
   if(isPaperPageService(svc)){
-    const pages=Math.max(0,Number(row.unit_count||0))*Math.max(1,Number(row.sets||1));
-    const count=svc.code==="PRINTOUT"&&row.print_type==="both_side"?Math.ceil(pages/2):pages;
+    const count=Math.max(0,Number(row.unit_count||0))*Math.max(1,Number(row.sets||1));
     const rate=paperPageRate(row,svc,count),gross=count*rate,discount=Math.min(gross,Math.max(0,Number(row.discount||0)));
     const cost=Number(row.cost||svc.processing_cost_config?.fixed_amount||0);
     return {charge:gross,cost,profit:gross-discount-cost,unitTotal:gross-discount,total:gross-discount,gross,discount,count,rate,quantity:1};
@@ -878,22 +747,11 @@ function calculateBillingRow(row){
   if(svc.code==="CURRENT_BILLS"){
     const cfg=svc.billing_config||{}, costCfg=svc.processing_cost_config||{}, slabs=cfg.slabs||[];
     const slab=slabs.find(x=>amount>=Number(x.min)&&amount<=Number(x.max));
-    const costSlab=(costCfg.slabs||[]).find(x=>amount>=Number(x.min)&& (x.max==null||amount<=Number(x.max)));
     const debitTotal=(row.wallet_debits||[]).reduce((sum,x)=>sum+Number(x.amount||0),0);
-    const configuredCost=costSlab?Number(costSlab.cost??costSlab.processing_cost??0):(slab?.wallet_extra!=null?Number(slab.wallet_extra):Number(cfg.above_1000?.wallet_extra??row.cost??0));
+    const selectedRule=(billingWalletRules[row.service_id]||[]).find(x=>x.wallet_id===row.current_bills_wallet_id);
+    const configuredCost=currentBillsProcessingCost(amount,svc,selectedRule);
     if(slab){charge=Number(slab.customer_charge||0);cost=debitTotal>0?debitTotal-amount:configuredCost;}
     else if(amount>1000){charge=10+Math.ceil((amount-1000)/100)*Number(cfg.above_1000?.extra_per_100||1);cost=debitTotal>0?debitTotal-amount:configuredCost;}
-  } else if(svc.code==="CASH_TO_UPI"){
-    const feeBase=cashToUpiFeeBase(row),bc=svc.billing_config||{};
-    if(feeBase>0){
-      if(svc.billing_type==="fixed")charge=Number(bc.customer_charge||0);
-      else if(svc.billing_type==="percentage")charge=Math.round(feeBase*Number(bc.percentage||0))/100;
-      else if(svc.billing_type==="slabs"){
-        const slab=(bc.slabs||[]).find(x=>feeBase>=Number(x.min||0)&&(x.max==null||feeBase<=Number(x.max)));
-        charge=slab?(slab.percentage!=null?Math.round(feeBase*Number(slab.percentage))/100:Number(slab.customer_charge??slab.charge??0)):0;
-      }else charge=Number(row.charge||bc.customer_charge||0);
-    }
-    cost=0;profit=charge;
   } else if(svc.code==="MONEY_TRANSFER"){
     charge=Math.ceil(amount/1000)*Number(svc.billing_config?.charge_per_1000||10);cost=Number(row.cost||0);
   } else if(svc.code==="PRIVATE_BUS_TICKET"){
@@ -904,19 +762,15 @@ function calculateBillingRow(row){
     const pct=Number(row.charge_percent??svc.billing_config?.charge_percent??2);
     charge=Math.round((amount*pct/100)*100)/100;cost=0;profit=charge;
   } else if(svc.code==="AEPS_WITHDRAWAL"){
-    const bank=(row.bank||"").toLowerCase(),bc=svc.billing_config||{};
+    const bank=(row.bank||"").toLowerCase(),cfg=svc.billing_config||{};
     if(bank.includes("union"))charge=0;
     else if(svc.billing_type==="slabs"){
-      const slab=(bc.slabs||[]).find(x=>amount>=Number(x.min||0)&&(x.max==null||amount<=Number(x.max)));
-      charge=slab?(slab.percentage!=null?Math.round(amount*Number(slab.percentage))/100:Number(slab.customer_charge??slab.charge??0)):0;
-    }else charge=Math.ceil(amount/1000)*Number(bc.charge_per_1000||10);
+      const slab=(cfg.slabs||[]).find(x=>amount>=Number(x.min||0)&&(x.max==null||amount<=Number(x.max)));
+      charge=slab?Number(slab.customer_charge??slab.charge??0):0;
+      if(slab&&slab.percentage!=null)charge=Math.round(amount*Number(slab.percentage))/100;
+    } else charge=Math.ceil(amount/1000)*Number(cfg.charge_per_1000||10);
     cost=0;
-    profit=charge;
-  } else if(svc.code==="PAN_CARD"){
-    const bc=svc.billing_config||{};
-    charge=Number(row.charge||bc.customer_charge||0);
-    cost=0;
-    profit=0;
+    return {charge,cost,profit:charge,unitTotal:charge,total:charge};
   } else {
     const bc=svc.billing_config||{},cc=svc.processing_cost_config||{},pc=svc.profit_config||{};
     if(svc.billing_type==="fixed") charge=Number(bc.customer_charge||0);
@@ -925,8 +779,7 @@ function calculateBillingRow(row){
       const slab=(bc.slabs||[]).find(x=>amount>=Number(x.min||0)&&amount<=Number(x.max||0));
       charge=slab?(slab.percentage!=null?Math.round(amount*Number(slab.percentage))/100:Number(slab.customer_charge??slab.charge??0)):0;
     } else charge=Number(row.charge||bc.customer_charge||0);
-    if(svc.processing_cost_type==="no_cost") cost=0;
-    else if(svc.processing_cost_type==="fixed") cost=Number(cc.fixed_amount||0);
+    if(svc.processing_cost_type==="fixed") cost=Number(cc.fixed_amount||0);
     else if(svc.processing_cost_type==="percentage") cost=Math.round(amount*Number(cc.percentage||0))/100;
     else if(svc.processing_cost_type==="slabs"){
       const slab=(cc.slabs||[]).find(x=>amount>=Number(x.min||0)&&amount<=Number(x.max||0));
@@ -941,15 +794,14 @@ function calculateBillingRow(row){
     }
   }
   if(svc.code==="CREDIT_CARD_BANK")profit=charge;
-  else if(["CURRENT_BILLS","MONEY_TRANSFER","PRIVATE_BUS_TICKET","APSRTC_TICKET","TTD_TICKET"].includes(svc.code))profit=charge-cost;
-  else if(svc.profit_mode==="manual"&&svc.code!=="PAN_CARD")profit=charge-cost;
-  const unitTotal=(svc.code==="AEPS_WITHDRAWAL"||svc.code==="CASH_TO_UPI")?charge:amount+charge;
+  else if(svc.code==="CASH_TO_UPI"){cost=0;profit=charge;}
+  else if(["CURRENT_BILLS","MONEY_TRANSFER","PRIVATE_BUS_TICKET","APSRTC_TICKET","TTD_TICKET","AEPS_WITHDRAWAL"].includes(svc.code))profit=charge-cost;
+  else if(svc.profit_mode==="manual")profit=charge-cost;
+  const unitTotal=svc.code==="CASH_TO_UPI"&&row.adjustment_type==="deduct"?amount:amount+charge;
   return {charge,cost,profit,unitTotal,total:unitTotal*qty};
 }
 async function renderQuickBilling(){
   const host=$("other-view");
-  editingBillingTransactionId=null;editingBillingBillNumber=null;
-  billingRows=[];
   host.innerHTML=`
   <div class="admin-module-head"><div><div class="eyebrow">QUICK BILLING</div><h2>Single Customer · Multiple Services</h2><p>Add any number of services under one customer. Enter customer details and collect payment only once for the complete bill.</p></div></div>
   <div class="admin-editor billing-editor">
@@ -966,35 +818,28 @@ async function renderQuickBilling(){
     <div id="billing-message" class="message"></div>
     <button id="save-billing" class="primary-btn admin-add-btn">Save one bill with all services</button>
   </div>
-  <div class="admin-table-wrap"><h3>Recent bills & edit window</h3><div id="recent-bills"></div></div>
-  <div class="admin-table-wrap"><h3>PAN Applications · Pending Submission</h3><p class="muted">Customer collection is saved immediately. Enter the ACK number and select a processing wallet, then save to debit the PAN processing cost.</p><div id="pan-pending-list"></div><div class="admin-table-wrap pan-search-panel"><h3>Search PAN Applications</h3><p class="muted">Search pending and submitted applications using applicant name, date of birth, PAN type, ACK number, mobile number or bill number.</p><div id="pan-application-search"></div></div></div>`;
+  <div class="admin-table-wrap"><h3>Recent bills & edit window</h3><div id="recent-bills"></div></div>`;
   $("save-billing").addEventListener("click",saveQuickBilling);
   const count=$("bill-count");
   count.addEventListener("change",()=>{let n=Math.max(1,Math.min(100,Number(count.value)||1));count.value=n;setBillingRows(n);});
   $("bill-mode").addEventListener("change",updatePaymentFields);
   ["bill-received","bill-cash","bill-upi"].forEach(id=>$(id).addEventListener("input",updateBillingTotals));
-  await setBillingRows(1);await loadRecentBills();await loadPendingPanApplications();
+  setBillingRows(1);await loadRecentBills();
 }
-function isManualJobApplicationWalletService(svc){
-  const code=String(svc?.code||"").toUpperCase(),name=String(svc?.name||"").toUpperCase();
-  return code.includes("JOB")||name.includes("JOB APPLICATION");
-}
-function serviceProcessingCost(amount,svc,row={}){
-  const cfg=svc?.processing_cost_config||{};
-  if(svc?.processing_cost_type==="no_cost")return 0;
-  if(svc?.processing_cost_type==="fixed")return Number(cfg.fixed_amount||0);
-  if(svc?.processing_cost_type==="percentage")return Math.round(amount*Number(cfg.percentage||0))/100;
-  if(svc?.processing_cost_type==="slabs"){
-    const slab=(cfg.slabs||[]).find(x=>amount>=Number(x.min||0)&&(x.max==null||amount<=Number(x.max)));
-    return Number(slab?.cost??slab?.processing_cost??0);
+function automaticWalletDebits(row,svc){
+  if(svc?.code==="UPI_TO_CASH")return [];
+  if(svc?.code==="CASH_TO_UPI"&&row.adjustment_type==="deduct"){
+    const walletId=row.selected_adjustment_wallet_id;
+    const allowed=(billingWalletRules[row.service_id]||[]).some(rule=>rule.wallet_id===walletId);
+    if(!walletId||!allowed)return [];
+    const calc=calculateBillingRow(row),amount=Number(row.base||0),qty=Math.max(1,Number(row.quantity||1));
+    const debit=Math.round((amount-calc.charge)*qty*100)/100;
+    return debit>0?[{wallet_id:walletId,amount:debit}]:[];
   }
-  return Number(row.cost||cfg.fixed_amount||0);
-}
-function automaticWalletDebits(row,svc,allowJobApplication=false){
-  if(svc?.code==="CREDIT_CARD_BANK"||(isManualJobApplicationWalletService(svc)&&!allowJobApplication))return [];
+  if(svc?.code==="CURRENT_BILLS"){const rule=(billingWalletRules[row.service_id]||[]).find(x=>x.wallet_id===row.current_bills_wallet_id);if(!rule)return [];const amount=Number(row.base||row.bill_amounts?.find(v=>Number(v)>0)||0),processing=currentBillsProcessingCost(amount,svc,rule);return amount>0?[{wallet_id:rule.wallet_id,amount:amount+processing}]:[];}
   const rules=billingWalletRules[row.service_id]||[];
   if(!rules.length)return [];
-  const amount=Number(row.base||0),processingCost=serviceProcessingCost(amount,svc,row);
+  const amount=Number(row.base||0),processingCost=Number(row.cost||svc?.processing_cost_config?.fixed_amount||0);
   const modes=rules.map(rule=>rule.debit_config?.mode||(rule.debit_config?.fixed_amount!=null?"fixed_amount":"processing_cost"));
   const hasBaseAmount=modes.includes("base_amount");
   let autoTarget=processingCost;
@@ -1017,92 +862,42 @@ function automaticWalletDebits(row,svc,allowJobApplication=false){
   if(autoIndexes.length)allocations[autoIndexes[autoIndexes.length-1]].amount=autoTarget;
   return allocations.filter(x=>Number(x.amount)>0);
 }
-function isManualProcessingWalletService(svc){
-  return isManualJobApplicationWalletService(svc)||["AEPS_WITHDRAWAL","UPI_TO_CASH","CASH_TO_UPI","CURRENT_BILLS"].includes(svc?.code);
-}
-function walletDebitsForRow(row,svc){
-  if(["AEPS_WITHDRAWAL","CASH_TO_UPI","PAN_CARD"].includes(svc?.code))return [];
-  if(svc?.code==="CURRENT_BILLS"){
-    const selectedId=String(row.processing_wallet_id||"");
-    const rule=(billingWalletRules[row.service_id]||[]).find(x=>String(x.wallet_id)===selectedId);
-    if(!rule)return [];
-    const amount=Number(row.base||0),cfg=svc.billing_config||{},costCfg=svc.processing_cost_config||{},ruleCfg=rule.debit_config||{};
-    const costSlab=(costCfg.slabs||[]).find(x=>amount>=Number(x.min||0)&&(x.max==null||amount<=Number(x.max)));
-    const billSlab=(cfg.slabs||[]).find(x=>amount>=Number(x.min||0)&&amount<=Number(x.max||0));
-    const extra=Number(costSlab?.cost??costSlab?.processing_cost??billSlab?.wallet_extra??cfg.above_1000?.wallet_extra??row.cost??0);
-    const applyCharge=ruleCfg.apply_processing_charge!==false;
-    const debit=amount+(applyCharge?extra:0);
-    return debit>0?[{wallet_id:rule.wallet_id,amount:debit}]:[];
-  }
-  if(!isManualProcessingWalletService(svc))return automaticWalletDebits(row,svc);
-  const rules=billingWalletRules[row.service_id]||[];
-  const selectedIds=svc?.multi_wallet_debit?rules.map(x=>String(x.wallet_id)):(row.processing_wallet_id?[String(row.processing_wallet_id)]:(Array.isArray(row.processing_wallet_ids)?row.processing_wallet_ids.map(String):[]));
-  if(!selectedIds.length)return [];
-  const base=Number(row.base||0),processingCost=serviceProcessingCost(base,svc,row);
-  return selectedIds.map(walletId=>{
-    const rule=rules.find(x=>x.wallet_id===walletId);
-    if(!rule)return null;
-    const cfg=rule.debit_config||{},mode=cfg.mode||(cfg.fixed_amount!=null?"fixed_amount":"processing_cost");
-    let amount=processingCost;
-    if(mode==="base_amount")amount=base;
-    else if(mode==="base_plus_processing_cost")amount=base+processingCost;
-    else if(mode==="fixed_amount")amount=Number(cfg.fixed_amount||0);
-    else if(mode==="percentage")amount=Math.round(base*Number(cfg.percentage||0))/100;
-    return Number.isFinite(amount)&&amount>0?{wallet_id:rule.wallet_id,amount}:null;
-  }).filter(Boolean);
-}
-function manualProcessingWalletHtml(row,svc,index){
-  if(!isManualProcessingWalletService(svc))return null;
-  const rules=billingWalletRules[row.service_id]||[];
-  const multi=svc?.code!=="AEPS_WITHDRAWAL"&&svc?.code!=="CURRENT_BILLS"&&svc?.multi_wallet_debit===true,selectedId=String(row.processing_wallet_id||"");
-  const debits=walletDebitsForRow(row,svc);
-  const selectedIds=(Array.isArray(row.processing_wallet_ids)?row.processing_wallet_ids.map(String):selectedId?[selectedId]:[]);
-  const opts=rules.map(rule=>{
-    const w=walletOptions.find(x=>x.id===rule.wallet_id&&x.is_active),debit=debits.find(x=>x.wallet_id===rule.wallet_id);
-    if(!w)return "";
-    if(["CURRENT_BILLS","AEPS_WITHDRAWAL"].includes(svc.code))return '<label class="wallet-choice"><input type="checkbox" data-field="processing_wallet_ids" data-i="'+index+'" value="'+w.id+'" '+(selectedIds.includes(String(w.id))?'checked':'')+'><span>'+escapeHtml(w.name)+' · Balance '+money(w.current_balance)+'</span></label>';
-    return multi?'<div class="wallet-choice"><span>'+escapeHtml(w.name)+' · Debit '+money(debit?.amount||0)+'</span></div>':'<option value="'+w.id+'" '+(selectedId===String(w.id)?"selected":"")+'>'+escapeHtml(w.name)+' · Balance '+money(w.current_balance)+'</option>';
-  }).join("");
-  const debitTotal=svc.code==="CASH_TO_UPI"?Number(row.base||0):svc.code==="CURRENT_BILLS"?(row.bill_amounts||[]).reduce((sum,amount)=>sum+walletDebitsForRow({...row,base:String(amount||0)},svc).reduce((n,x)=>n+Number(x.amount||0),0),0):debits.reduce((n,x)=>n+Number(x.amount||0),0),aepsCredit=svc.code==="AEPS_WITHDRAWAL"?Number(row.base||0):0;
-  const control=["CURRENT_BILLS","AEPS_WITHDRAWAL"].includes(svc.code)?'<p>Oka wallet ni tick cheyyandi.</p><div class="wallet-choice-grid">'+(opts||"<small>No processing wallets assigned. Configure them in Admin Services.</small>")+'</div>':multi?'<p>Admin-selected wallets are automatically debited using each wallet rule.</p><div class="wallet-choice-grid">'+(opts||"<small>No processing wallets assigned. Configure them in Admin Services.</small>")+'</div>':'<label>'+(svc.code==="AEPS_WITHDRAWAL"?"AEPS credit wallet":"Processing wallet")+' <select data-field="processing_wallet_id" data-i="'+index+'"><option value="">Select one wallet</option>'+opts+'</select></label>';
-  return '<div class="wallet-map-box"><strong>Transaction wallet'+(multi?"s":"")+'</strong>'+control+(svc.code==="AEPS_WITHDRAWAL"?'<small>Selected wallet credit: <span id="manual-wallet-credit-'+index+'">'+money(aepsCredit)+'</span></small>':'<small>Total wallet debit: <span id="manual-wallet-debit-'+index+'">'+money(debitTotal)+'</span></small>')+'</div>';
-}
 async function setBillingRows(n){
   const {data:rules}=await supabase.from("service_wallet_rules").select("service_id,wallet_id,wallet_slot,debit_config").order("wallet_slot");
   billingWalletRules={};(rules||[]).forEach(x=>(billingWalletRules[x.service_id]??=[]).push(x));
-  const {data:profitRules,error:profitRulesError}=await supabase.from("service_credit_wallet_rules").select("service_id,wallet_id").order("wallet_id");
-  if(profitRulesError){console.warn("Credit wallet rules could not be loaded; continuing Quick Billing without optional profit-wallet mappings.",profitRulesError);}
-  billingCreditWalletRules={};(profitRules||[]).forEach(x=>(billingCreditWalletRules[x.service_id]??=[]).push(x.wallet_id));
-  billingRows=Array.from({length:n},(_,i)=>billingRows[i]||({service_id:"",base:"",charge:"",cost:"",bank:"",quantity:1,unit_count:"",print_type:"single_side",sets:1,item_label:"",discount:0,wallet_debits:[],bill_count:1,bill_amounts:[""],aeps_charge_mode:"deduct"}));
+  const {data:profitRules,error:profitRulesError}=await supabase.from("service_profit_wallet_rules").select("service_id,wallet_id").order("wallet_id");
+  if(profitRulesError){console.warn("Optional service profit-wallet rules could not be loaded; continuing Quick Billing.",profitRulesError);}
+  billingProfitWalletRules={};(profitRules||[]).forEach(x=>(billingProfitWalletRules[x.service_id]??=[]).push(x.wallet_id));
+  billingRows=Array.from({length:n},(_,i)=>billingRows[i]||({service_id:"",base:"",charge:"",cost:"",bank:"",quantity:1,unit_count:"",sets:1,item_label:"",discount:0,wallet_debits:[],bill_count:1,bill_amounts:[""]}));
   $("billing-rows").innerHTML=billingRows.map((r,i)=>{
     const serviceOptions=services.filter(s=>s.is_active).map(s=>'<option value="'+s.id+'" '+(s.id===r.service_id?"selected":"")+'>'+escapeHtml(s.name)+'</option>').join("");
-    const svc=services.find(s=>s.id===r.service_id)||{},special=isPaperPageService(svc),alloc=walletDebitsForRow(r,svc);
-    const pages=Number(r.unit_count||0)*Math.max(1,Number(r.sets||1)),count=svc?.code==="PRINTOUT"&&r.print_type==="both_side"?Math.ceil(pages/2):pages,rate=paperPageRate(r,svc,count);
-    const manualWalletHtml=manualProcessingWalletHtml(r,svc,i);
-    const walletOptionsHtml=(billingWalletRules[r.service_id]||[]).map(rule=>{
+    const svc=services.find(s=>s.id===r.service_id)||{},special=isPaperPageService(svc),alloc=automaticWalletDebits(r,svc);
+    const count=Number(r.unit_count||0)*Math.max(1,Number(r.sets||1)),rate=paperPageRate(r,svc,count);
+    const walletOptionsHtml=svc?.code==="CURRENT_BILLS"?"<small>Choose one wallet above. Its ON/OFF setting controls only this service's processing charge.</small>":svc?.code==="UPI_TO_CASH"?"<small>Customer UPI credits the selected destination. Cash payout debits Shop Cash.</small>":((billingWalletRules[r.service_id]||[]).map(rule=>{
       const wallet=walletOptions.find(x=>x.id===rule.wallet_id),debit=alloc.find(x=>x.wallet_id===rule.wallet_id);
       return wallet?'<div class="wallet-choice"><span>'+escapeHtml(wallet.name)+' <small>Balance '+money(wallet.current_balance)+' · Auto debit '+money(debit?.amount||0)+'</small></span></div>':"";
-    }).join("")||"<small>No processing wallet configured for this service.</small>";
+    }).join("")||"<small>No processing wallet configured for this service.</small>");
     const isCreditCard=svc?.code==="CREDIT_CARD_BANK";
-    const isCashSlabService=["AEPS_WITHDRAWAL","UPI_TO_CASH","CASH_TO_UPI"].includes(svc?.code);
-    const ccWalletIds=billingCreditWalletRules[r.service_id]||[];
+    const ccWalletIds=billingProfitWalletRules[r.service_id]||[];
     const isCurrentBills=svc?.code==="CURRENT_BILLS";
     const billAmounts=Array.isArray(r.bill_amounts)?r.bill_amounts:[];
+    const isCashTransfer=["CASH_TO_UPI","UPI_TO_CASH"].includes(svc?.code);
+    const isAeps=isAepsWithdrawalService(svc);
     const serviceFields=isCurrentBills
-      ? '<label>Number of current bills<input data-field="bill_count" data-i="'+i+'" type="number" min="1" max="100" step="1" value="'+Math.max(1,Number(r.bill_count||billAmounts.length||1))+'"></label><div class="current-bills-grid-wrap"><table class="current-bills-grid"><thead><tr><th>#</th><th>Bill amount (₹)</th><th>Service charge (₹)</th><th>Customer total (₹)</th></tr></thead><tbody>'+Array.from({length:Math.max(1,Number(r.bill_count||billAmounts.length||1))},(_,j)=>{const amount=Number(billAmounts[j]||0),calc=calculateBillingRow({...r,base:amount});return '<tr><td>'+(j+1)+'</td><td><input data-field="bill_amount" data-i="'+i+'" data-j="'+j+'" type="number" min="0" step="0.01" value="'+(billAmounts[j]??"")+'" placeholder="Enter bill amount"></td><td><span data-current-charge="'+i+'-'+j+'">'+money(calc.charge)+'</span></td><td><strong data-current-total="'+i+'-'+j+'">'+money(calc.total)+'</strong></td></tr>';}).join("")+'</tbody></table></div>'
+      ? '<label>Processing wallet<select data-field="current_bills_wallet_id" data-i="'+i+'"><option value="">Select one wallet</option>'+(billingWalletRules[r.service_id]||[]).map(rule=>{const w=walletOptions.find(x=>x.id===rule.wallet_id&&x.is_active);return w?'<option value="'+w.id+'" '+(r.current_bills_wallet_id===w.id?"selected":"")+'>'+escapeHtml(w.name)+' · Processing charge '+(rule.debit_config?.apply_processing_charge===false?"OFF":"ON")+'</option>':"";}).join("")+'</select></label><label>Number of current bills<input data-field="bill_count" data-i="'+i+'" type="number" min="1" max="100" step="1" value="'+Math.max(1,Number(r.bill_count||billAmounts.length||1))+'"></label><div class="current-bills-grid-wrap"><table class="current-bills-grid"><thead><tr><th>#</th><th>Bill amount (₹)</th><th>Service charge (₹)</th><th>Customer total (₹)</th></tr></thead><tbody>'+Array.from({length:Math.max(1,Number(r.bill_count||billAmounts.length||1))},(_,j)=>{const amount=Number(billAmounts[j]||0),calc=calculateBillingRow({...r,base:amount});return '<tr><td>'+(j+1)+'</td><td><input data-field="bill_amount" data-i="'+i+'" data-j="'+j+'" type="number" min="0" step="0.01" value="'+(billAmounts[j]??"")+'" placeholder="Enter bill amount"></td><td><span data-current-charge="'+i+'-'+j+'">'+money(calc.charge)+'</span></td><td><strong data-current-total="'+i+'-'+j+'">'+money(calc.total)+'</strong></td></tr>';}).join("")+'</tbody></table></div>'
       : special
-      ? '<label>Book / PDF name (optional)<input data-field="item_label" data-i="'+i+'" value="'+escapeHtml(r.item_label||"")+'" placeholder="Book 1 / PDF 1"></label>'+(svc.code==="PRINTOUT"?'<label>Print type<select data-field="print_type" data-i="'+i+'"><option value="single_side" '+((r.print_type||"single_side")==="single_side"?"selected":"")+'>Single Side</option><option value="both_side" '+(r.print_type==="both_side"?"selected":"")+'>Both Side</option></select></label>':'')+'<label>'+(svc.code==="PRINTOUT"?"PDF pages":"Xerox papers")+'<input data-field="unit_count" data-i="'+i+'" type="number" min="1" step="1" value="'+escapeHtml(r.unit_count||"")+'" placeholder="Enter count"></label><label>Number of sets<input data-field="sets" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.sets||1)+'"></label><label>Admin fixed rate (automatic)<input type="text" readonly value="'+money(rate)+' / '+(svc.code==="PRINTOUT"?"page":"paper")+'"></label><label>Discount (₹)<input data-field="discount" data-i="'+i+'" type="number" min="0" step="0.01" value="'+Number(r.discount||0)+'" placeholder="Optional"></label>'
-      : isCreditCard
-        ? '<label>Transfer amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0.01" step="0.01" value="'+escapeHtml(r.base||"")+'" placeholder="Enter amount"></label><label>Profit percentage (%)<input data-field="charge_percent" data-i="'+i+'" type="number" min="0.01" max="100" step="0.01" value="'+escapeHtml(r.charge_percent??svc.billing_config?.charge_percent??2)+'"></label><label>Profit wallet<select data-field="credit_wallet_id" data-i="'+i+'"><option value="">Select profit wallet</option>'+ccWalletIds.map(id=>{const w=walletOptions.find(x=>x.id===id&&x.is_active);return w?'<option value="'+w.id+'" '+(r.credit_wallet_id===w.id?"selected":"")+'>'+escapeHtml(w.name)+' · '+money(w.current_balance)+'</option>':"";}).join("")+'</select></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label>'
-        : isCashSlabService
-          ? svc.code==="AEPS_WITHDRAWAL"
-            ? '<label>Withdrawal Amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0.01" step="0.01" value="'+escapeHtml(r.base||"")+'" placeholder="Enter AEPS amount"></label><label>Bank (AEPS)<input data-field="bank" data-i="'+i+'" value="'+escapeHtml(r.bank||"")+'" placeholder="Bank name"></label><label>AEPS Charge Collection<select data-field="aeps_charge_mode" data-i="'+i+'"><option value="deduct" '+((r.aeps_charge_mode||"deduct")==="deduct"?"selected":"")+' >Deduct from customer payout</option><option value="extra_upi" '+(r.aeps_charge_mode==="extra_upi"?"selected":"")+' >Extra charge – collect through UPI</option></select></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label><label>AEPS Charge (automatic)<input id="slab-charge-'+i+'" type="text" readonly value="₹0.00"></label>'
-            : '<label>Amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.base)+'" placeholder="Enter amount"></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label>'+(["UPI_TO_CASH","CASH_TO_UPI"].includes(svc.code)?'<label>Adjustment Type<select data-field="adjustment_type" data-i="'+i+'"><option value="">No adjustment</option><option value="deduct" '+(r.adjustment_type==="deduct"?"selected":"")+'>Amount Deduct</option><option value="extra" '+(r.adjustment_type==="extra"?"selected":"")+'>Amount Extra</option></select></label><label>Adjustment Amount (₹)<input data-field="adjustment_amount" data-i="'+i+'" type="number" min="0" step="0.01" value="'+Number(r.adjustment_amount||0)+'" placeholder="0.00"></label>'+(r.adjustment_type==="extra"?'<label>Extra Payment Mode<select data-field="adjustment_mode" data-i="'+i+'"><option value="cash" '+((r.adjustment_mode||"cash")==="cash"?"selected":"")+'>Cash</option><option value="upi" '+(r.adjustment_mode==="upi"?"selected":"")+'>UPI</option></select></label>':""):'')+'<label>Slab customer charge (₹)<input id="slab-charge-'+i+'" type="text" readonly value="₹0.00"></label><label>Slab processing cost (₹)<input id="slab-cost-'+i+'" type="text" readonly value="₹0.00"></label>'
-          : '<label>Bill / Transfer Amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.base)+'"></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label><label>Service charge (₹)<input data-field="charge" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.charge||"")+'"></label><label class="bank-field">Bank (AEPS)<input data-field="bank" data-i="'+i+'" value="'+escapeHtml(r.bank)+'" placeholder="Bank name"></label>';
-    return '<div class="billing-row" data-row="'+i+'"><div class="billing-row-head"><strong>Item '+(i+1)+'</strong><span class="billing-row-total" id="row-total-'+i+'">₹0.00</span></div><div class="billing-row-fields"><label>Service<div class="service-picker" data-service-picker="'+i+'"><input type="search" data-service-search="'+i+'" value="'+escapeHtml(svc?.name||"")+'" placeholder="Type one letter or service name…" autocomplete="off"><div class="service-picker-options hidden" id="service-picker-options-'+i+'"></div></div></label>'+serviceFields+'</div>'+(manualWalletHtml||('<div class="wallet-map-box"><strong>Processing wallet (automatic)</strong><p>Wallet and debit amount are taken from Admin service settings.</p><div class="wallet-choice-grid" id="wallet-auto-'+i+'">'+walletOptionsHtml+'</div></div>'))+'<div class="billing-row-result" id="row-result-'+i+'">Service Charge: ₹0.00</div></div>';
+      ? '<label>Book / PDF name (optional)<input data-field="item_label" data-i="'+i+'" value="'+escapeHtml(r.item_label||"")+'" placeholder="Book 1 / PDF 1"></label><label>'+(svc.code==="PRINTOUT"?"PDF pages":"Xerox papers")+'<input data-field="unit_count" data-i="'+i+'" type="number" min="1" step="1" value="'+escapeHtml(r.unit_count||"")+'" placeholder="Enter count"></label><label>Number of sets<input data-field="sets" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.sets||1)+'"></label><label>Admin fixed rate (automatic)<input type="text" readonly value="'+money(rate)+' / '+(svc.code==="PRINTOUT"?"page":"paper")+'"></label><label>Discount (₹)<input data-field="discount" data-i="'+i+'" type="number" min="0" step="0.01" value="'+Number(r.discount||0)+'" placeholder="Optional"></label>'
+      : isAeps
+        ? '<label>Withdrawal Amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0.01" step="0.01" value="'+escapeHtml(r.base||"")+'" placeholder="Enter AEPS amount"></label><label>Bank (AEPS)<input data-field="bank" data-i="'+i+'" value="'+escapeHtml(r.bank||"")+'" placeholder="Bank name"></label><label>AEPS Credit Wallet<select data-field="aeps_wallet_id" data-i="'+i+'"><option value="">Select wallet to credit</option>'+(billingWalletRules[r.service_id]||[]).map(rule=>{const w=walletOptions.find(x=>x.id===rule.wallet_id&&x.is_active);return w?'<option value="'+w.id+'" '+(r.aeps_wallet_id===w.id?"selected":"")+'>'+escapeHtml(w.name)+' · '+money(w.current_balance)+'</option>':"";}).join("")+'</select></label><label>AEPS Charge Collection<select data-field="aeps_charge_mode" data-i="'+i+'"><option value="deduct" '+((r.aeps_charge_mode||"deduct")==="deduct"?"selected":"")+' >Deduct from customer payout</option><option value="extra_upi" '+(r.aeps_charge_mode==="extra_upi"?"selected":"")+' >Extra charge – collect through UPI</option></select></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label>'
+        : isCreditCard
+        ? '<label>Transfer amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0.01" step="0.01" value="'+escapeHtml(r.base||"")+'" placeholder="Enter amount"></label><label>Service charge (%)<input data-field="charge_percent" data-i="'+i+'" type="number" min="0.01" max="100" step="0.01" value="'+escapeHtml(r.charge_percent??svc.billing_config?.charge_percent??2)+'"></label><label>Profit wallet<select data-field="profit_wallet_id" data-i="'+i+'"><option value="">Select wallet</option>'+ccWalletIds.map(id=>{const w=walletOptions.find(x=>x.id===id&&x.is_active);return w?'<option value="'+w.id+'" '+(r.profit_wallet_id===w.id?"selected":"")+'>'+escapeHtml(w.name)+' · '+money(w.current_balance)+'</option>':"";}).join("")+'</select></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label>'
+        : isCashTransfer
+          ? '<label>'+(svc.code==="CASH_TO_UPI"?"Customer Cash Amount (₹)":"Amount (₹)")+'<input data-field="base" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.base)+'" placeholder="'+(svc.code==="CASH_TO_UPI"?"Enter cash received from customer":"Enter transfer amount")+'"></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label><label>Adjustment Type<select data-field="adjustment_type" data-i="'+i+'"><option value="">No adjustment</option><option value="deduct" '+(r.adjustment_type==="deduct"?"selected":"")+'>Amount Deduct</option><option value="extra" '+(r.adjustment_type==="extra"?"selected":"")+'>Amount Extra</option></select></label>'+(svc.code==="CASH_TO_UPI"&&r.adjustment_type==="deduct"?'<label>Admin Service Charge (₹)<input type="text" readonly value="'+money(calculateBillingRow(r).charge)+'"></label>':'<label>Adjustment Amount (₹)<input data-field="adjustment_amount" data-i="'+i+'" type="number" min="0" step="0.01" value="'+Number(r.adjustment_amount||0)+'" placeholder="0.00"></label>')+''+(svc.code==="UPI_TO_CASH"?'<label>UPI Credit Destination<select data-field="selected_upi_to_cash_wallet_id" data-i="'+i+'"><option value="">Select UPI Collection / Bank Account</option>'+walletOptions.filter(w=>w.is_active&&["upi","bank"].includes(w.wallet_type)).map(w=>'<option value="'+w.id+'" '+(r.selected_upi_to_cash_wallet_id===w.id?"selected":"")+'>'+escapeHtml(w.name)+' · '+money(w.current_balance)+'</option>').join("")+'</select></label>':"")+(svc.code==="CASH_TO_UPI"&&r.adjustment_type==="deduct"?'<label>Deduct from Wallet<select data-field="selected_adjustment_wallet_id" data-i="'+i+'"><option value="">Select wallet</option>'+(billingWalletRules[r.service_id]||[]).map(rule=>{const w=walletOptions.find(x=>x.id===rule.wallet_id&&x.is_active);return w?'<option value="'+w.id+'" '+(r.selected_adjustment_wallet_id===w.id?"selected":"")+'>'+escapeHtml(w.name)+' · '+money(w.current_balance)+'</option>':"";}).join("")+'</select></label>':"")+(r.adjustment_type==="extra"?(svc.code==="UPI_TO_CASH"?'<small>Extra amount will be added to the selected UPI / Bank wallet.</small>':'<label>Extra Payment Mode<select data-field="adjustment_mode" data-i="'+i+'"><option value="cash" '+((r.adjustment_mode||"cash")==="cash"?"selected":"")+'>Cash</option><option value="upi" '+(r.adjustment_mode==="upi"?"selected":"")+'>UPI</option></select></label>'):"")
+          : '<label>Bill / Transfer Amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.base)+'"></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label><label>Service charge (₹)<input data-field="charge" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.charge||"")+'"></label><label class="bank-field">Bank (AEPS)<input data-field="bank" data-i="'+i+'" value="'+escapeHtml(r.bank)+'" placeholder="Bank name"></label><label>Manual processing cost (₹)<input data-field="cost" data-i="'+i+'" type="number" min="0" step="0.01" value="'+escapeHtml(r.cost)+'"></label>';
+    return '<div class="billing-row" data-row="'+i+'"><div class="billing-row-head"><strong>Item '+(i+1)+'</strong><span class="billing-row-total" id="row-total-'+i+'">₹0.00</span></div><div class="billing-row-fields"><label>Service<div class="service-picker" data-service-picker="'+i+'"><input type="search" data-service-search="'+i+'" value="'+escapeHtml(svc?.name||"")+'" placeholder="Type one letter or service name…" autocomplete="off"><div class="service-picker-options hidden" id="service-picker-options-'+i+'"></div></div></label>'+serviceFields+'</div><div class="wallet-map-box"><strong>Processing wallet (automatic)</strong><p>Wallet and debit amount are taken from Admin service settings.</p><div class="wallet-choice-grid" id="wallet-auto-'+i+'">'+walletOptionsHtml+'</div></div><div class="billing-row-result" id="row-result-'+i+'">Service Charge: ₹0.00</div></div>';
   }).join("");
   $("billing-rows").querySelectorAll("[data-field]").forEach(el=>{
-    if(el.dataset.field==="bill_count"||el.type==="checkbox")el.addEventListener("change",onBillingRowChange);
+    if(el.dataset.field==="bill_count")el.addEventListener("change",onBillingRowChange);
     else {el.addEventListener("input",onBillingRowChange);el.addEventListener("change",onBillingRowChange);}
   });
   $("billing-rows").querySelectorAll("[data-service-search]").forEach(input=>{
@@ -1114,7 +909,7 @@ async function setBillingRows(n){
   $("billing-rows").onclick=e=>{
     const btn=e.target.closest("[data-service-option]");if(!btn)return;
     const idx=Number(btn.dataset.rowIndex),svc=services.find(s=>s.id===btn.dataset.serviceOption);if(!svc)return;
-    billingRows[idx].service_id=svc.id;billingRows[idx].base=svc.billing_config?.base_amount??"";billingRows[idx].charge=svc.billing_config?.customer_charge??"";billingRows[idx].cost=svc.processing_cost_config?.fixed_amount??"";billingRows[idx].charge_percent=svc.billing_config?.charge_percent??2;billingRows[idx].credit_wallet_id="";billingRows[idx].processing_wallet_id="";billingRows[idx].quantity=1;billingRows[idx].unit_count="";billingRows[idx].print_type="single_side";billingRows[idx].sets=1;billingRows[idx].item_label="";billingRows[idx].discount=0;billingRows[idx].wallet_debits=[];billingRows[idx].bill_count=1;billingRows[idx].bill_amounts=[""];
+    billingRows[idx].service_id=svc.id;if(svc.code==="UPI_TO_CASH"){$("bill-mode").value="upi";updatePaymentFields();}billingRows[idx].base=svc.billing_config?.base_amount??"";billingRows[idx].charge=svc.billing_config?.customer_charge??"";billingRows[idx].cost=svc.processing_cost_config?.fixed_amount??"";billingRows[idx].charge_percent=svc.billing_config?.charge_percent??2;billingRows[idx].profit_wallet_id="";billingRows[idx].quantity=1;billingRows[idx].unit_count="";billingRows[idx].sets=1;billingRows[idx].item_label="";billingRows[idx].discount=0;billingRows[idx].wallet_debits=[];billingRows[idx].bill_count=1;billingRows[idx].bill_amounts=[""];billingRows[idx].adjustment_type=svc.code==="CASH_TO_UPI"?"deduct":"";billingRows[idx].adjustment_amount=0;billingRows[idx].adjustment_mode="cash";billingRows[idx].selected_adjustment_wallet_id="";billingRows[idx].selected_upi_to_cash_wallet_id="";
     setBillingRows(billingRows.length);
   };
   updateBillingTotals();
@@ -1132,18 +927,6 @@ function onBillingRowChange(e){
     billingRows[i].bill_amounts=Array.from({length:n},(_,j)=>billingRows[i].bill_amounts?.[j]??"");
     setBillingRows(billingRows.length);return;
   }
-  if(field==="processing_wallet_id"){billingRows[i].processing_wallet_id=e.target.value;billingRows[i].processing_wallet_ids=e.target.value?[e.target.value]:[];setBillingRows(billingRows.length);return;}
-  if(field==="processing_wallet_ids"){
-    const walletId=String(e.target.value);
-    if(["CURRENT_BILLS","AEPS_WITHDRAWAL"].includes(services.find(s=>s.id===billingRows[i].service_id)?.code)){
-      billingRows[i].processing_wallet_ids=e.target.checked?[walletId]:[];
-    }else{
-      const ids=Array.isArray(billingRows[i].processing_wallet_ids)?billingRows[i].processing_wallet_ids.map(String):[];
-      billingRows[i].processing_wallet_ids=e.target.checked?[...new Set([...ids,walletId])]:ids.filter(x=>x!==walletId);
-    }
-    billingRows[i].processing_wallet_id=billingRows[i].processing_wallet_ids[0]||"";
-    setBillingRows(billingRows.length);return;
-  }
   billingRows[i][field]=e.target.value;
   if(field==="adjustment_type"){
     if(e.target.value==="extra"&&!billingRows[i].adjustment_mode)billingRows[i].adjustment_mode="cash";
@@ -1153,11 +936,11 @@ function onBillingRowChange(e){
     const svc=services.find(s=>s.id===e.target.value);
     billingRows[i].base=svc?.billing_config?.base_amount??"";
     billingRows[i].charge=svc?.billing_config?.customer_charge??"";
+    billingRows[i].aeps_wallet_id=(billingWalletRules[svc?.id]||[])[0]?.wallet_id||"";billingRows[i].aeps_charge_mode="deduct";
     billingRows[i].cost=svc?.processing_cost_config?.fixed_amount??"";
     billingRows[i].charge_percent=svc?.billing_config?.charge_percent??2;
-    billingRows[i].credit_wallet_id="";
-    billingRows[i].processing_wallet_id="";billingRows[i].processing_wallet_ids=[];billingRows[i].aeps_charge_mode="deduct";
-    billingRows[i].quantity=1;billingRows[i].unit_count="";billingRows[i].print_type="single_side";billingRows[i].sets=1;billingRows[i].item_label="";billingRows[i].discount=0;billingRows[i].wallet_debits=[];billingRows[i].bill_count=1;billingRows[i].bill_amounts=[""];billingRows[i].adjustment_type="";billingRows[i].adjustment_amount=0;billingRows[i].adjustment_mode="cash";
+    billingRows[i].profit_wallet_id="";
+    billingRows[i].quantity=1;billingRows[i].unit_count="";billingRows[i].sets=1;billingRows[i].item_label="";billingRows[i].discount=0;billingRows[i].wallet_debits=[];billingRows[i].bill_count=1;billingRows[i].bill_amounts=[""];billingRows[i].adjustment_type=svc?.code==="CASH_TO_UPI"?"deduct":"";billingRows[i].adjustment_amount=0;billingRows[i].adjustment_mode="cash";billingRows[i].selected_adjustment_wallet_id="";billingRows[i].selected_upi_to_cash_wallet_id="";
     setBillingRows(billingRows.length);return;
   }
   updateBillingTotals();
@@ -1166,89 +949,63 @@ function onBillingWalletChange(){}
 
 function isAepsWithdrawalService(svc){return !!svc&&(svc.code==="AEPS_WITHDRAWAL"||/aeps.*withdrawal|withdrawal.*aeps/i.test(svc.name||""));}
 function updateBillingTotals(){
-  let base=0,charges=0,costs=0,total=0,aepsCashPayout=0,aepsExtraUpiCharge=0,cashToUpiPrincipal=0,hasAepsSettlement=false;
+  let base=0,charges=0,costs=0,total=0,aepsCashPayout=0,aepsExtraUpiCharge=0,hasAepsSettlement=false,cashToUpiDeduct=null;
   billingRows.forEach((r,i)=>{
-    const svc=services.find(s=>s.id===r.service_id),isCurrentBills=svc?.code==="CURRENT_BILLS",special=isPaperPageService(svc),alloc=walletDebitsForRow(r,svc),t=$("row-total-"+i),res=$("row-result-"+i),walletBox=$("wallet-auto-"+i);
-    const currentCalcs=isCurrentBills?(r.bill_amounts||[]).map(amount=>{const billRow={...r,base:String(amount||0)};billRow.wallet_debits=walletDebitsForRow(billRow,svc);return calculateBillingRow(billRow);}):null;
+    const svc=services.find(s=>s.id===r.service_id),isCurrentBills=svc?.code==="CURRENT_BILLS",special=isPaperPageService(svc),alloc=automaticWalletDebits(r,svc),t=$("row-total-"+i),res=$("row-result-"+i),walletBox=$("wallet-auto-"+i);
+    if(isAepsWithdrawalService(svc)){hasAepsSettlement=true;aepsCashPayout+=Number(r.base||0)*Math.max(1,Number(r.quantity||1));if(r.aeps_charge_mode==="extra_upi")aepsExtraUpiCharge+=calculateBillingRow(r).charge*Math.max(1,Number(r.quantity||1));}
+    if(svc?.code==="CASH_TO_UPI"&&r.adjustment_type==="deduct")cashToUpiDeduct={amount:Number(r.base||0)*Math.max(1,Number(r.quantity||1)),charge:calculateBillingRow(r).charge*Math.max(1,Number(r.quantity||1))};
+    const currentCalcs=isCurrentBills?(r.bill_amounts||[]).map(amount=>calculateBillingRow({...r,base:amount})):null;
     if(isCurrentBills)currentCalcs.forEach((x,j)=>{const charge=$("[data-current-charge='"+i+"-"+j+"']"),lineTotal=$("[data-current-total='"+i+"-"+j+"']");if(charge)charge.textContent=money(x.charge);if(lineTotal)lineTotal.textContent=money(x.total);});
     const calc=isCurrentBills?{charge:currentCalcs.reduce((a,x)=>a+x.charge,0),cost:currentCalcs.reduce((a,x)=>a+x.cost,0),profit:currentCalcs.reduce((a,x)=>a+x.profit,0),total:currentCalcs.reduce((a,x)=>a+x.total,0)}:calculateBillingRow(r);
-    if(isAepsWithdrawalService(svc)){hasAepsSettlement=true;aepsCashPayout+=Number(r.base||0)*Math.max(1,Number(r.quantity||1));if(r.aeps_charge_mode==="extra_upi")aepsExtraUpiCharge+=calc.charge*Math.max(1,Number(r.quantity||1));}
-    if(svc?.code==="CASH_TO_UPI"&&billingRows.some(x=>isAepsWithdrawalService(services.find(y=>y.id===x.service_id))))cashToUpiPrincipal+=Number(r.base||0)*Math.max(1,Number(r.quantity||1));
-    const slabCharge=$("slab-charge-"+i),slabCost=$("slab-cost-"+i);if(slabCharge)slabCharge.value=money(calc.charge);if(slabCost)slabCost.value=money(calc.cost);
-    const aepsExtra=["UPI_TO_CASH","CASH_TO_UPI"].includes(svc?.code)&&r.adjustment_type==="extra"?Math.max(0,Number(r.adjustment_amount||0)):0;
-    base+=isCurrentBills?(r.bill_amounts||[]).reduce((a,x)=>a+Number(x||0),0):Number(r.base||0);charges+=calc.charge;costs+=calc.cost;total+=calc.total+aepsExtra;
-    if(t)t.textContent=""+money(calc.total+aepsExtra);
-    if(walletBox)walletBox.innerHTML=(billingWalletRules[r.service_id]||[]).map(rule=>{const wallet=walletOptions.find(x=>x.id===rule.wallet_id),debit=alloc.find(x=>x.wallet_id===rule.wallet_id);return wallet?'<div class="wallet-choice"><span>'+escapeHtml(wallet.name)+' <small>Balance '+money(wallet.current_balance)+' · Auto debit '+money(debit?.amount||0)+'</small></span></div>':"";}).join("")||"<small>No processing wallet configured for this service.</small>";
-    const manualDebit=$("manual-wallet-debit-"+i);if(manualDebit)manualDebit.textContent=money(isCurrentBills?(r.bill_amounts||[]).reduce((sum,amount)=>sum+walletDebitsForRow({...r,base:String(amount||0)},svc).reduce((a,x)=>a+Number(x.amount||0),0),0):alloc.reduce((a,x)=>a+Number(x.amount||0),0));const manualCredit=$("manual-wallet-credit-"+i);if(manualCredit)manualCredit.textContent=money(svc?.code==="AEPS_WITHDRAWAL"?Number(r.base||0):0);
-    if(res)res.textContent=isAepsWithdrawalService(svc)?"AEPS Charge: "+money(calc.charge)+" · "+(r.aeps_charge_mode==="extra_upi"?"Collect via UPI":"Deduct from payout")+(currentProfile?.role==="admin"?" · Profit: "+money(calc.profit):""):isCurrentBills?"Bills: "+(r.bill_amounts||[]).filter(x=>Number(x)>0).length+" · Service charges: "+money(calc.charge)+" · Customer total: "+money(calc.total)+(currentProfile?.role==="admin"?" · Profit: "+money(calc.profit):""):currentProfile?.role==="admin"?"Gross: "+money(calc.gross??calc.charge)+" · Discount: "+money(calc.discount||0)+" · Processing Cost: "+money(calc.cost)+" · Profit: "+money(calc.profit)+" · Wallet debit: "+money(alloc.reduce((a,x)=>a+x.amount,0)):"Amount: "+money(calc.total)+(special?" · "+(svc.code==="PRINTOUT"?Number(r.unit_count||0)*Number(r.sets||1)+" pages · "+calc.count+" papers":calc.count+" papers"):"");
+    const adjustmentExtra=["CASH_TO_UPI","UPI_TO_CASH"].includes(svc?.code)&&r.adjustment_type==="extra"?Math.max(0,Number(r.adjustment_amount||0)):0;
+    base+=isCurrentBills?(r.bill_amounts||[]).reduce((a,x)=>a+Number(x||0),0):Number(r.base||0);charges+=calc.charge;costs+=calc.cost;total+=calc.total+adjustmentExtra;
+    if(t)t.textContent=""+money(calc.total+adjustmentExtra);
+    if(walletBox)walletBox.innerHTML=isCurrentBills?(()=>{const rule=(billingWalletRules[r.service_id]||[]).find(x=>x.wallet_id===r.current_bills_wallet_id),wallet=walletOptions.find(x=>x.id===r.current_bills_wallet_id),debit=alloc[0];return wallet?'<div class="wallet-choice"><span>'+escapeHtml(wallet.name)+' <small>Balance '+money(wallet.current_balance)+' · Processing charge '+(rule?.debit_config?.apply_processing_charge===false?"OFF":"ON")+' · Debit per bill '+money(debit?.amount||0)+'</small></span></div>':"<small>Select one Current Bills processing wallet above.</small>";})():(billingWalletRules[r.service_id]||[]).map(rule=>{const wallet=walletOptions.find(x=>x.id===rule.wallet_id),debit=alloc.find(x=>x.wallet_id===rule.wallet_id);return wallet?'<div class="wallet-choice"><span>'+escapeHtml(wallet.name)+' <small>Balance '+money(wallet.current_balance)+' · Auto debit '+money(debit?.amount||0)+'</small></span></div>':"";}).join("")||"<small>No processing wallet configured for this service.</small>";
+    if(res)res.textContent=isAepsWithdrawalService(svc)?"AEPS Charge: "+money(calc.charge)+" · "+(r.aeps_charge_mode==="extra_upi"?"Collect via UPI":"Deduct from payout")+(currentProfile?.role==="admin"?" · Profit: "+money(calc.profit):""):isCurrentBills?"Bills: "+(r.bill_amounts||[]).filter(x=>Number(x)>0).length+" · Service charges: "+money(calc.charge)+" · Customer total: "+money(calc.total)+(currentProfile?.role==="admin"?" · Profit: "+money(calc.profit):""):currentProfile?.role==="admin"?"Gross: "+money(calc.gross??calc.charge)+" · Discount: "+money(calc.discount||0)+" · Processing Cost: "+money(calc.cost)+" · Profit: "+money(calc.profit)+" · Wallet debit: "+money(alloc.reduce((a,x)=>a+x.amount,0)):"Amount: "+money(calc.total)+(special?" · "+calc.count+" "+(svc.code==="PRINTOUT"?"pages":"papers"):"");
   });
-  $("billing-totals").innerHTML='<div><small>Gross / base</small><strong>'+money(base+charges)+'</strong></div><div><small>Total charges</small><strong>'+money(charges)+'</strong></div><div><small>Customer total</small><strong>'+money(total)+'</strong></div>';
-  const received=Number($("bill-received").value||0),selected=billingRows.map(r=>services.find(s=>s.id===r.service_id)).filter(Boolean),ccOnly=selected.length>0&&selected.length===billingRows.filter(r=>r.service_id).length&&selected.every(s=>s.code==="CREDIT_CARD_BANK");
+  $("billing-totals").innerHTML='<div><small>Gross / base</small><strong>'+money(base)+'</strong></div><div><small>Total charges</small><strong>'+money(charges)+'</strong></div><div><small>Customer total</small><strong>'+money(total)+'</strong></div>';
+  const received=Number($("bill-received").value||0);
   const balance=Math.max(0,total-received),change=Math.max(0,received-total),status=$("bill-change");
   const paymentPanel=document.querySelector(".billing-payment");
   status.classList.remove("payment-short","payment-exact","payment-change");
+  if(cashToUpiDeduct){
+    $("bill-mode").value="cash";
+    $("bill-received").value=total.toFixed(2);
+    $("bill-cash").value=total.toFixed(2);
+    $("bill-upi").value="0";
+    if(paymentPanel)paymentPanel.classList.add("hidden");
+    status.classList.add("payment-exact");
+    status.textContent="CUSTOMER CASH · "+money(cashToUpiDeduct.amount)+"  |  PHONEPE TO SEND · "+money(Math.max(0,cashToUpiDeduct.amount-cashToUpiDeduct.charge));
+    return;
+  }
   if(hasAepsSettlement){
     const cashOffset=Math.max(0,total-aepsExtraUpiCharge),upiCharge=Math.max(0,aepsExtraUpiCharge);
     $("bill-mode").value=cashOffset>0&&upiCharge>0?"split":upiCharge>0?"upi":"cash";
-    $("bill-received").value=total.toFixed(2);$("bill-cash").value=cashOffset.toFixed(2);$("bill-upi").value=upiCharge.toFixed(2);
+    $("bill-received").value=total.toFixed(2);
+    $("bill-cash").value=cashOffset.toFixed(2);
+    $("bill-upi").value=upiCharge.toFixed(2);
     if(paymentPanel)paymentPanel.classList.add("hidden");
-    const net=aepsCashPayout-cashOffset-cashToUpiPrincipal;
+    const net=aepsCashPayout-cashOffset;
     if(net>0.009){status.classList.add("payment-change");status.textContent="CASH TO GIVE CUSTOMER  ·  "+money(net);}
     else if(net< -0.009){status.classList.add("payment-short");status.textContent="CASH TO COLLECT FROM CUSTOMER  ·  "+money(Math.abs(net));}
     else{status.classList.add("payment-exact");status.textContent="SETTLEMENT EXACT  ·  ₹0.00";}
     return;
   }
   if(paymentPanel)paymentPanel.classList.remove("hidden");
-  if(ccOnly){status.classList.add("payment-exact");status.textContent="NO CASH / UPI COLLECTION · Transfer amount is not credited to any wallet; only profit is credited to the selected profit wallet.";}
-  else if(received<total){status.classList.add("payment-short");status.textContent="BALANCE TO COLLECT  ·  "+money(balance);}
+  if(received<total){status.classList.add("payment-short");status.textContent="BALANCE TO COLLECT  ·  "+money(balance);}
   else if(received===total){status.classList.add("payment-exact");status.textContent="PAYMENT SETTLED  ·  "+money(0);}
   else{status.classList.add("payment-change");status.textContent="RETURN TO CUSTOMER  ·  "+money(change);}
 }
 function updatePaymentFields(){
-  const mode=$("bill-mode").value,hasAeps=billingRows.some(r=>isAepsWithdrawalService(services.find(s=>s.id===r.service_id)));
-  const panel=document.querySelector(".billing-payment");if(panel)panel.classList.toggle("hidden",hasAeps);
+  const mode=$("bill-mode").value;
+  const hasAeps=billingRows.some(r=>isAepsWithdrawalService(services.find(s=>s.id===r.service_id)));
+  const panel=document.querySelector(".billing-payment");
+  if(panel)panel.classList.toggle("hidden",hasAeps);
   $("cash-paid-wrap").classList.toggle("hidden",mode==="upi");
   $("upi-paid-wrap").classList.toggle("hidden",mode==="cash");
   if(hasAeps)updateBillingTotals();
 }
-function showBillSavedAnimation(message){
-  let style=document.getElementById("bill-save-animation-style");
-  if(!style){
-    style=document.createElement("style");
-    style.id="bill-save-animation-style";
-    style.textContent=`
-      .bill-save-overlay{position:fixed;inset:0;z-index:100000;display:grid;place-items:center;background:rgba(15,28,24,.34);backdrop-filter:blur(5px);opacity:0;transition:opacity .22s ease;padding:20px}
-      .bill-save-overlay.is-visible{opacity:1}
-      .bill-save-overlay.is-leaving{opacity:0}
-      .bill-save-card{width:min(360px,92vw);padding:30px 24px 26px;border-radius:22px;background:#fff;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,.22);transform:translateY(12px) scale(.96);transition:transform .28s cubic-bezier(.2,.8,.2,1)}
-      .bill-save-overlay.is-visible .bill-save-card{transform:translateY(0) scale(1)}
-      .bill-save-check{width:76px;height:76px;margin:0 auto 16px;border-radius:50%;display:grid;place-items:center;background:#e7f8ef;color:#16834d}
-      .bill-save-check svg{width:42px;height:42px;stroke:currentColor;stroke-width:4;fill:none;stroke-linecap:round;stroke-linejoin:round}
-      .bill-save-check svg path{stroke-dasharray:48;stroke-dashoffset:48;animation:billSaveDraw .48s .12s ease forwards}
-      .bill-save-card h3{margin:0 0 7px;color:#173b2c;font:800 21px/1.25 Manrope, sans-serif}
-      .bill-save-card p{margin:0;color:#64746c;font:500 13px/1.5 'DM Sans',sans-serif}
-      .bill-save-next{margin-top:18px;height:4px;border-radius:8px;background:#e8eee9;overflow:hidden}
-      .bill-save-next span{display:block;width:0;height:100%;background:#16834d;animation:billSaveProgress 1.35s linear forwards}
-      @keyframes billSaveDraw{to{stroke-dashoffset:0}}
-      @keyframes billSaveProgress{to{width:100%}}
-      @media(prefers-reduced-motion:reduce){.bill-save-overlay,.bill-save-card{transition:none}.bill-save-check svg path,.bill-save-next span{animation:none;stroke-dashoffset:0;width:100%}}
-    `;
-    document.head.appendChild(style);
-  }
-  const overlay=document.createElement("div");
-  overlay.className="bill-save-overlay";
-  overlay.setAttribute("role","status");
-  overlay.setAttribute("aria-live","polite");
-  overlay.innerHTML='<div class="bill-save-card"><div class="bill-save-check"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10 25l9 9L38 14"></path></svg></div><h3>'+escapeHtml(message||"Bill Saved Successfully!")+'</h3><p>Opening a fresh billing form…</p><div class="bill-save-next"><span></span></div></div>';
-  document.body.appendChild(overlay);
-  requestAnimationFrame(()=>overlay.classList.add("is-visible"));
-  window.setTimeout(()=>{
-    overlay.classList.add("is-leaving");
-    window.setTimeout(()=>overlay.remove(),240);
-    const first= document.querySelector("#billing-rows [data-service-search]");
-    first?.focus();
-  },1400);
-}
+let editingBillId=null;
 async function saveQuickBilling(){
   const msg=$("billing-message"),btn=$("save-billing");btn.disabled=true;msg.textContent="";
   try{
@@ -1262,37 +1019,14 @@ async function saveQuickBilling(){
       if(!r.service_id&&!Number(r.base||0)&&!Number(r.unit_count||0))continue;
       if(!r.service_id||Number(r.base||0)<0)throw new Error("Every entered row needs a service and valid count or bill amount.");
       const svc=services.find(s=>s.id===r.service_id),special=isPaperPageService(svc);
-      const wallet_debits=walletDebitsForRow(r,svc);
-      if(isManualProcessingWalletService(svc)&&svc.code==="CASH_TO_UPI"){
-        const selectedWalletId=String(r.processing_wallet_id||"");
-        if(!selectedWalletId)throw new Error("Select the wallet from which the Cash to UPI amount should be debited.");
-        if(!(billingWalletRules[r.service_id]||[]).some(x=>String(x.wallet_id)===selectedWalletId))throw new Error("Selected Cash to UPI wallet is not assigned by Admin.");
-      }else if(isManualProcessingWalletService(svc)){
-        const assignedRules=billingWalletRules[r.service_id]||[];
-        if(svc.code==="AEPS_WITHDRAWAL"){
-          const selectedWalletId=String(r.processing_wallet_id||"");
-          if(!selectedWalletId)throw new Error("Select the wallet that should receive the AEPS amount.");
-          if(!assignedRules.some(x=>String(x.wallet_id)===selectedWalletId))throw new Error("Selected AEPS credit wallet is not assigned by Admin.");
-        }else{
-          const selectedWalletIds=Array.isArray(r.processing_wallet_ids)?r.processing_wallet_ids.map(String):(r.processing_wallet_id?[String(r.processing_wallet_id)]:[]);
-          if(!assignedRules.length)throw new Error("Admin must assign one or more processing wallets in Admin Services for "+svc.name+".");
-          if(!selectedWalletIds.length)throw new Error("Select at least one transaction wallet for "+svc.name+".");
-          if(selectedWalletIds.some(id=>!assignedRules.some(x=>String(x.wallet_id)===id)))throw new Error("One or more selected wallets are not assigned to "+svc.name+".");
-          if(!wallet_debits.length||wallet_debits.length!==selectedWalletIds.length)throw new Error("Check the debit amount configured for every selected wallet in Admin Services.");
-        }
-      }
-      if(svc.code==="CURRENT_BILLS"){
-        const assignedRules=billingWalletRules[r.service_id]||[];
-        if(!assignedRules.length)throw new Error("Admin must assign at least one processing wallet to Current Bills.");
-        if(!r.processing_wallet_id)throw new Error("Select one processing wallet for Current Bills.");
-        if(!assignedRules.some(x=>String(x.wallet_id)===String(r.processing_wallet_id)))throw new Error("Selected Current Bills wallet is not assigned by Admin.");
-        if(Number(r.base)>0&&(!wallet_debits.length||wallet_debits.length!==1))throw new Error("Select exactly one Current Bills processing wallet.");
-      }
+      const wallet_debits=automaticWalletDebits(r,svc);
+      if(svc.code==="CURRENT_BILLS"&&Number(r.base)>=10&&!(billingWalletRules[r.service_id]||[]).some(x=>x.wallet_id===r.current_bills_wallet_id))throw new Error("Select one Current Bills processing wallet assigned by Admin.");
+      if(isAepsWithdrawalService(svc)&&!(billingWalletRules[r.service_id]||[]).some(x=>x.wallet_id===r.aeps_wallet_id))throw new Error("Select an AEPS credit wallet assigned by Admin.");
       if(svc.code==="CREDIT_CARD_BANK"){
-        if(!(billingCreditWalletRules[r.service_id]||[]).includes(r.credit_wallet_id))throw new Error("Select a profit wallet assigned by Admin for Credit Card service.");
+        if(!(billingProfitWalletRules[r.service_id]||[]).includes(r.profit_wallet_id))throw new Error("Select a profit wallet assigned by Admin for Credit Card service.");
         if(!(Number(r.base)>0)||!(Number(r.charge_percent)>0)||Number(r.charge_percent)>100)throw new Error("Enter a valid transfer amount and percentage (0.01–100).");
       }
-      if(!["CREDIT_CARD_BANK","PAN_CARD"].includes(svc.code)&&!isManualProcessingWalletService(svc)&&(billingWalletRules[r.service_id]||[]).length&&!wallet_debits.length)throw new Error("Set processing wallet debit amounts in Admin Services for "+svc.name);
+      if(svc.code!=="UPI_TO_CASH"&&!isAepsWithdrawalService(svc)&&(billingWalletRules[r.service_id]||[]).length&&!wallet_debits.length)throw new Error("Set processing wallet debit amounts in Admin Services for "+svc.name);
       if(wallet_debits.some(x=>!Number.isFinite(Number(x.amount))||Number(x.amount)<=0))throw new Error("Invalid automatic wallet debit amount.");
       r.wallet_debits=wallet_debits;
       const calc=calculateBillingRow(r);
@@ -1300,128 +1034,47 @@ async function saveQuickBilling(){
       if(special&&Number(r.discount||0)>calc.gross)throw new Error("Discount cannot exceed the fixed-price amount.");
       const quantity=special?1:Math.max(1,Number(r.quantity||1)),price=calc.unitTotal;
       const snapshot=special
-        ? {base_amount:0,service_charge:calc.gross,count_unit:"papers",print_type:svc.code==="PRINTOUT"?(r.print_type||"single_side"):"single_side",page_count:Number(r.unit_count),unit_count:Number(r.unit_count),sets:Number(r.sets),total_count:calc.count,item_label:r.item_label||null,unit_rate:calc.rate,discount_amount:calc.discount,wallet_debits}
-        : svc.code==="CREDIT_CARD_BANK" ? {base_amount:Number(r.base),service_charge:calc.charge,charge_percent:Number(r.charge_percent),credit_wallet_id:r.credit_wallet_id,wallet_debits}
-        : isAepsWithdrawalService(svc) ? {base_amount:Number(r.base),service_charge:calc.charge,bank:r.bank||null,aeps_wallet_id:r.processing_wallet_id||null,aeps_charge_mode:r.aeps_charge_mode||"deduct",wallet_debits}
-        : svc.code==="CASH_TO_UPI" ? {base_amount:Number(r.base),service_charge:calc.charge,cash_to_upi_wallet_id:r.processing_wallet_id||null,wallet_debits}
-        : svc.code==="CURRENT_BILLS" ? {base_amount:Number(r.base),service_charge:calc.charge,current_bills_wallet_id:r.processing_wallet_id,wallet_debits}
-        : svc.code==="PAN_CARD" ? {base_amount:Number(r.base),service_charge:calc.charge,pan_processing_pending:true,pan_processing_cost:Number(svc.billing_config?.base_amount||r.base||0),wallet_debits:[]}
-        : {base_amount:Number(r.base),service_charge:calc.charge,bank:r.bank||null,wallet_debits};
+        ? {base_amount:0,service_charge:calc.gross,count_unit:svc.code==="PRINTOUT"?"pages":"papers",unit_count:Number(r.unit_count),sets:Number(r.sets),total_count:calc.count,item_label:r.item_label||null,unit_rate:calc.rate,discount_amount:calc.discount,wallet_debits}
+        : svc.code==="CREDIT_CARD_BANK" ? {base_amount:Number(r.base),service_charge:calc.charge,charge_percent:Number(r.charge_percent),profit_wallet_id:r.profit_wallet_id,wallet_debits}
+        : isAepsWithdrawalService(svc) ? {base_amount:Number(r.base),service_charge:calc.charge,bank:r.bank||null,aeps_wallet_id:r.aeps_wallet_id||null,aeps_charge_mode:r.aeps_charge_mode||"deduct",wallet_debits}
+        : {base_amount:Number(r.base),service_charge:calc.charge,bank:r.bank||null,cash_to_upi_mode:svc.code==="CASH_TO_UPI"&&r.adjustment_type==="deduct"?"deduct":null,cash_to_upi_wallet_id:svc.code==="CASH_TO_UPI"&&r.adjustment_type==="deduct"?r.selected_adjustment_wallet_id:null,upi_to_cash_wallet_id:svc.code==="UPI_TO_CASH"?r.selected_upi_to_cash_wallet_id||null:null,current_bills_wallet_id:svc.code==="CURRENT_BILLS"?r.current_bills_wallet_id||null:null,wallet_debits};
       const itemPayload={service_id:r.service_id,quantity,customer_unit_price:price,processing_unit_cost:calc.cost,pricing_snapshot:snapshot,wallet_debits};
-      if(currentProfile?.role==="admin"&&svc.code!=="PAN_CARD")itemPayload.profit_amount=calc.profit;
+      if(currentProfile?.role==="admin")itemPayload.profit_amount=calc.profit;
       items.push(itemPayload);
       customerTotal+=price*quantity;processingTotal+=calc.cost*quantity;profitTotal+=calc.profit*quantity;
     }
     if(!items.length)throw new Error("Enter at least one bill.");
     const adjustmentRows=expandedBillingRows.filter(r=>["UPI_TO_CASH","CASH_TO_UPI"].includes(services.find(s=>s.id===r.service_id)?.code));
-    if(adjustmentRows.length>1)throw new Error("Please bill one cash/UPI transfer service row at a time when using an adjustment.");
-    const adjustmentRow=adjustmentRows[0]||null,adjustmentServiceCode=services.find(s=>s.id===adjustmentRow?.service_id)?.code||null;
-    const hasAepsAndCashToUpi=expandedBillingRows.some(r=>services.find(s=>s.id===r.service_id)?.code==="AEPS_WITHDRAWAL")&&expandedBillingRows.some(r=>services.find(s=>s.id===r.service_id)?.code==="CASH_TO_UPI");
-    const adjustmentType=adjustmentServiceCode==="CASH_TO_UPI"?"deduct":adjustmentRow?.adjustment_type||null;
-    const adjustmentAmount=adjustmentServiceCode==="CASH_TO_UPI"?Math.max(0,Number(adjustmentRow?.base||0)):Math.max(0,Number(adjustmentRow?.adjustment_amount||0));
-    const adjustmentMode=adjustmentRow?.adjustment_mode||null;
+    if(adjustmentRows.length>1)throw new Error("Please bill one Cash to UPI / UPI to Cash service row at a time when using an adjustment.");
+    const adjustmentRow=adjustmentRows[0]||null,adjustmentServiceCode=services.find(s=>s.id===adjustmentRow?.service_id)?.code||null,adjustmentType=adjustmentRow?.adjustment_type||null,adjustmentAmount=Math.max(0,Number(adjustmentRow?.adjustment_amount||0)),adjustmentMode=adjustmentRow?.adjustment_mode||null;
     if(adjustmentAmount>0&&!adjustmentType)throw new Error("Select Amount Deduct or Amount Extra.");
-    if(adjustmentServiceCode==="CASH_TO_UPI"&&adjustmentAmount>0&&!adjustmentRow?.processing_wallet_id)throw new Error("Select the Cash to UPI debit wallet.");
-    if(["AEPS_WITHDRAWAL","UPI_TO_CASH","CASH_TO_UPI"].includes(adjustmentServiceCode)&&adjustmentType==="extra")throw new Error("This service allows customer charge only; Amount Extra is not allowed.");
-    if(adjustmentType==="extra"&&adjustmentAmount>0&&adjustmentServiceCode!=="UPI_TO_CASH"&&!["cash","upi"].includes(adjustmentMode))throw new Error("Select Cash or UPI for Amount Extra.");
-    const mode=$("bill-mode").value,ccOnly=items.length>0&&items.every(x=>services.find(s=>s.id===x.service_id)?.code==="CREDIT_CARD_BANK");
-    const enteredReceived=ccOnly?0:Number($("bill-received").value||0);
-    let cash=ccOnly?0:mode==="upi"?0:mode==="cash"?enteredReceived:Number($("bill-cash").value||0),upi=ccOnly?0:mode==="cash"?0:mode==="upi"?enteredReceived:Number($("bill-upi").value||0),finalMode=mode;
-    const rawReceived=ccOnly?0:mode==="split"?cash+upi:enteredReceived;
-    let received=rawReceived;
-    const aepsRows=expandedBillingRows.filter(r=>isAepsWithdrawalService(services.find(s=>s.id===r.service_id)));
-    if(aepsRows.length){const aepsExtraUpi=aepsRows.filter(r=>r.aeps_charge_mode==="extra_upi").reduce((n,r)=>n+calculateBillingRow(r).charge*Math.max(1,Number(r.quantity||1)),0);cash=Math.max(0,customerTotal-aepsExtraUpi);upi=aepsExtraUpi;received=customerTotal;finalMode=cash>0&&upi>0?"split":upi>0?"upi":"cash";}
-    if(adjustmentType==="extra"&&adjustmentAmount>0&&!["AEPS_WITHDRAWAL","UPI_TO_CASH","CASH_TO_UPI"].includes(adjustmentServiceCode)){received+=adjustmentAmount;if(adjustmentMode==="cash")cash+=adjustmentAmount;else upi+=adjustmentAmount;if(cash>0&&upi>0)finalMode="split";else finalMode=cash>0?"cash":"upi";}
-    const customerTotalWithAdjustment=customerTotal+(adjustmentType==="extra"&&!["AEPS_WITHDRAWAL","UPI_TO_CASH","CASH_TO_UPI"].includes(adjustmentServiceCode)?adjustmentAmount:0);
-    if(items.some(x=>services.find(s=>s.id===x.service_id)?.code==="CREDIT_CARD_BANK")&&!ccOnly)throw new Error("Credit Card to Bank Transfer must be billed separately from other services.");
-    if(!ccOnly&&received<customerTotalWithAdjustment)throw new Error("Amount received must be equal to or greater than customer total including AEPS extra amount.");
-    if(!ccOnly&&finalMode==="split"&&Math.abs(cash+upi-received)>0.009)throw new Error("Cash + UPI must equal amount received.");
+    if(adjustmentServiceCode==="UPI_TO_CASH"&&adjustmentType==="deduct"&&adjustmentAmount>Number(adjustmentRow?.base||0)*Math.max(1,Number(adjustmentRow?.quantity||1)))throw new Error("Deduct charge cannot be greater than the UPI to Cash amount.");
+    if(adjustmentAmount>0&&adjustmentType==="deduct"&&adjustmentServiceCode==="CASH_TO_UPI"&&!adjustmentRow?.selected_adjustment_wallet_id)throw new Error("Select the wallet for Cash to UPI deduction.");
+    if(adjustmentServiceCode==="UPI_TO_CASH"&&!adjustmentRow?.selected_upi_to_cash_wallet_id)throw new Error("Select where the customer UPI amount should be credited.");
+    if(adjustmentType==="extra"&&adjustmentAmount>0&&adjustmentServiceCode==="CASH_TO_UPI"&&!["cash","upi"].includes(adjustmentMode))throw new Error("Select Cash or UPI for Amount Extra.");
+    const mode=$("bill-mode").value,enteredReceived=Number($("bill-received").value||0);
+    if(adjustmentServiceCode==="UPI_TO_CASH"&&mode!=="upi")throw new Error("UPI to Cash must be collected through UPI. Select UPI payment mode.");
+    let cash=mode==="upi"?0:mode==="cash"?enteredReceived:Number($("bill-cash").value||0),upi=mode==="cash"?0:mode==="upi"?enteredReceived:Number($("bill-upi").value||0),finalMode=mode,received=mode==="split"?cash+upi:enteredReceived;
+    if(adjustmentType==="extra"&&adjustmentAmount>0){if(adjustmentServiceCode==="UPI_TO_CASH")upi+=adjustmentAmount;else if(adjustmentMode==="cash")cash+=adjustmentAmount;else upi+=adjustmentAmount;received+=adjustmentAmount;if(cash>0&&upi>0)finalMode="split";else finalMode=cash>0?"cash":"upi";}
+    const customerTotalWithAdjustment=customerTotal+(adjustmentType==="extra"?adjustmentAmount:0);
+    if(received<customerTotalWithAdjustment)throw new Error("Amount received must be equal to or greater than customer total including extra amount.");
+    if(finalMode==="split"&&Math.abs(cash+upi-received)>0.009)throw new Error("Cash + UPI must equal amount received.");
     let activeDrawerId=null;if(currentProfile?.role==="employee"&&currentEmployee){const activeSession=await supabase.from("drawer_sessions").select("drawer_id").eq("employee_id",currentEmployee.id).eq("status","open").order("opened_at",{ascending:false}).limit(1).maybeSingle();if(activeSession.error)throw activeSession.error;activeDrawerId=activeSession.data?.drawer_id||null;}
     const payload={drawer_id:activeDrawerId,customer_name:$("bill-customer").value.trim()||null,customer_phone:$("bill-phone").value.trim()||null,payment_mode:finalMode,customer_total:customerTotalWithAdjustment,amount_received:received,cash_received:cash,upi_received:upi,items};
-    const result=editingBillingTransactionId
-      ? await supabase.rpc("update_bill_with_approval",{p_transaction_id:editingBillingTransactionId,p_payload:payload,p_edit_request_id:null})
-      : await supabase.rpc("create_bill",{payload});
-    if(result.error)throw result.error;
-    if(adjustmentRows.length){const adjustmentResult=await supabase.rpc("set_aeps_cash_adjustment",{p_transaction_id:result.data,p_adjustment_type:adjustmentType,p_amount:adjustmentAmount,p_mode:adjustmentMode,p_wallet_id:adjustmentServiceCode==="CASH_TO_UPI"?(adjustmentRow?.processing_wallet_id||null):null});if(adjustmentResult.error)throw adjustmentResult.error;}
-    const wasEditing=Boolean(editingBillingTransactionId);
-    const successText=wasEditing
-      ?"Bill #"+(editingBillingBillNumber||"")+" updated successfully."
-      :"Bill saved successfully.";
-    msg.textContent=successText;
-    editingBillingTransactionId=null;editingBillingBillNumber=null;
-    const heading=$("other-view")?.querySelector(".admin-module-head h2");if(heading)heading.textContent="Single Customer · Multiple Services";
-    const saveBtn=$("save-billing");if(saveBtn)saveBtn.textContent="Save one bill with all services";
+    const {data,error}=editingBillId?await supabase.rpc("update_bill_with_approval",{p_transaction_id:editingBillId,p_payload:{...payload,notes:null},p_edit_request_id:null}):await supabase.rpc("create_bill",{payload});
+    if(error)throw error;
+    if(adjustmentRows.length&&adjustmentServiceCode==="UPI_TO_CASH"){const adjustmentResult=await supabase.rpc("settle_upi_to_cash",{p_transaction_id:data||editingBillId,p_adjustment_type:adjustmentType,p_adjustment_amount:adjustmentAmount,p_destination_wallet_id:adjustmentRow?.selected_upi_to_cash_wallet_id});if(adjustmentResult.error)throw adjustmentResult.error;}
+    if(adjustmentRows.length&&adjustmentServiceCode==="CASH_TO_UPI"&&adjustmentType==="extra"&&adjustmentAmount>0){const adjustmentResult=await supabase.rpc("set_aeps_cash_adjustment",{p_transaction_id:data||editingBillId,p_adjustment_type:adjustmentType,p_amount:adjustmentAmount,p_mode:adjustmentMode,p_wallet_id:null});if(adjustmentResult.error)throw adjustmentResult.error;}
+    msg.textContent=(editingBillId?"Bill updated successfully.":"Bills saved successfully.")+" Transaction ID: "+(data||editingBillId);editingBillId=null;$("save-billing").textContent="Save one bill with all services";
     $("bill-received").value="0";$("bill-cash").value="0";$("bill-upi").value="0";
     $("bill-customer").value="";$("bill-phone").value="";
-    $("bill-mode").value="cash";
     billingRows=[];
-    $("bill-count").value="1";
-    await setBillingRows(1);
-    updatePaymentFields();updateBillingTotals();
-    showBillSavedAnimation(wasEditing?"Bill Updated Successfully!":"Bill Saved Successfully!");
-    await loadRecentBills();await loadPendingPanApplications();await refreshWalletBalances();
+    const freshCount=Math.max(1,Math.min(100,Number($("bill-count").value)||1));
+    $("bill-count").value=freshCount;
+    await setBillingRows(freshCount);
+    updatePaymentFields();await loadRecentBills();
   }catch(e){msg.textContent=e.message||"Unable to save bills.";console.error(e);}
   finally{btn.disabled=false;}
-}
-async function loadPendingPanApplications(){
-  const host=$("pan-pending-list");if(!host)return;
-  const {data,error}=await supabase.from("pan_application_processing")
-    .select("id,billing_item_id,transaction_id,expected_cost,status,created_at,acknowledgement_number,applicant_name,date_of_birth,pan_type,billing_items(customer_unit_price,billing_transactions(bill_number,customer_name,customer_phone))")
-    .eq("status","pending").order("created_at",{ascending:true});
-  if(error){host.textContent="Unable to load PAN pending list: "+error.message;return;}
-  const panService=services.find(x=>x.code==="PAN_CARD");
-  const rules=panService?(billingWalletRules[panService.id]||[]):[];
-  const options=rules.map(rule=>{
-    const wallet=walletOptions.find(w=>w.id===rule.wallet_id&&w.is_active);
-    return wallet?'<option value="'+wallet.id+'">'+escapeHtml(wallet.name)+' · Balance '+money(wallet.current_balance)+'</option>':"";
-  }).join("");
-  const renderPending=(rows)=>{
-    host.innerHTML=(rows||[]).map(q=>{
-      const item=Array.isArray(q.billing_items)?q.billing_items[0]:q.billing_items;
-      const bill=Array.isArray(item?.billing_transactions)?item.billing_transactions[0]:item?.billing_transactions;
-      const applicantName=q.applicant_name||bill?.customer_name||"";
-      return '<div class="admin-service-row pan-pending-card"><div class="admin-service-main"><strong>PAN · Bill #'+escapeHtml(bill?.bill_number||"")+'</strong><small>'+escapeHtml(bill?.customer_name||"Customer")+' · '+escapeHtml(bill?.customer_phone||"")+' · Received '+new Date(q.created_at).toLocaleString("en-IN")+'</small></div><div class="admin-service-meta"><strong>Internal cost '+money(q.expected_cost)+'</strong><span>Pending submission</span></div><div class="admin-form-grid pan-pending-fields"><label>Applicant Name<input data-pan-name="'+q.billing_item_id+'" value="'+escapeHtml(applicantName)+'" placeholder="Applicant full name" required></label><label>Date of Birth<input data-pan-dob="'+q.billing_item_id+'" type="date" value="'+escapeHtml(q.date_of_birth||"")+'" required></label><label>PAN Type<select data-pan-type="'+q.billing_item_id+'" required><option value="">Select PAN type</option><option value="new_pan" '+(q.pan_type==="new_pan"?"selected":"")+'>New PAN</option><option value="correction" '+(q.pan_type==="correction"?"selected":"")+'>PAN Correction</option><option value="reprint" '+(q.pan_type==="reprint"?"selected":"")+'>PAN Reprint</option></select></label><label>ACK Number<input data-pan-ack="'+q.billing_item_id+'" value="'+escapeHtml(q.acknowledgement_number||"")+'" placeholder="Acknowledgement number (required)" required></label><label>Processing Wallet<select data-pan-wallet="'+q.billing_item_id+'" required><option value="">Select debit wallet</option>'+options+'</select></label><button data-pan-submit="'+q.billing_item_id+'">Save Details, ACK & Debit</button></div></div>';
-    }).join("")||'<div class="empty-state">No PAN applications pending submission.</div>';
-  };
-  renderPending(data||[]);
-  const searchHost=$("pan-application-search");
-  if(searchHost){
-    const {data:allRows,error:searchError}=await supabase.from("pan_application_processing")
-      .select("id,billing_item_id,transaction_id,expected_cost,status,created_at,acknowledgement_number,applicant_name,date_of_birth,pan_type,billing_items(customer_unit_price,billing_transactions(bill_number,customer_name,customer_phone))")
-      .order("created_at",{ascending:false}).limit(1000);
-    if(searchError){searchHost.innerHTML='<p class="muted">PAN search unavailable: '+escapeHtml(searchError.message)+'</p>';}
-    else{
-      const records=(allRows||[]).map(q=>{
-        const item=Array.isArray(q.billing_items)?q.billing_items[0]:q.billing_items;
-        const bill=Array.isArray(item?.billing_transactions)?item.billing_transactions[0]:item?.billing_transactions;
-        return {q,bill,name:q.applicant_name||bill?.customer_name||"",phone:bill?.customer_phone||"",billNo:String(bill?.bill_number||"")};
-      });
-      searchHost.innerHTML='<div class="admin-form-grid pan-search-fields"><label>Applicant Name<input id="pan-search-name" placeholder="Search applicant name"></label><label>Date of Birth<input id="pan-search-dob" type="date"></label><label>PAN Type<select id="pan-search-type"><option value="">All PAN types</option><option value="new_pan">New PAN</option><option value="correction">PAN Correction</option><option value="reprint">PAN Reprint</option></select></label><label>ACK Number<input id="pan-search-ack" placeholder="Search ACK number"></label><label>Mobile / Bill No.<input id="pan-search-reference" placeholder="Mobile number or bill number"></label></div><div id="pan-search-results" class="admin-table-wrap"><p class="muted">Enter any detail above to search PAN applications.</p></div>';
-      const runSearch=()=>{
-        const name=$("pan-search-name").value.trim().toLowerCase(),dob=$("pan-search-dob").value,type=$("pan-search-type").value,ack=$("pan-search-ack").value.trim().toLowerCase(),ref=$("pan-search-reference").value.trim().toLowerCase();
-        const filtered=records.filter(({q,bill,name:appName,phone,billNo})=>
-          (!name||appName.toLowerCase().includes(name))&&(!dob||q.date_of_birth===dob)&&(!type||q.pan_type===type)&&(!ack||String(q.acknowledgement_number||"").toLowerCase().includes(ack))&&(!ref||phone.toLowerCase().includes(ref)||billNo.includes(ref))
-        );
-        $("pan-search-results").innerHTML=filtered.length?'<div class="admin-table-wrap"><table><thead><tr><th>Applicant</th><th>DOB</th><th>PAN Type</th><th>ACK Number</th><th>Mobile</th><th>Bill</th><th>Status</th></tr></thead><tbody>'+filtered.map(({q,bill,name:appName,phone,billNo})=>'<tr><td>'+escapeHtml(appName||"—")+'</td><td>'+escapeHtml(q.date_of_birth||"—")+'</td><td>'+escapeHtml(({new_pan:"New PAN",correction:"PAN Correction",reprint:"PAN Reprint"})[q.pan_type]||"—")+'</td><td>'+escapeHtml(q.acknowledgement_number||"—")+'</td><td>'+escapeHtml(phone||"—")+'</td><td>'+escapeHtml(billNo||"—")+'</td><td>'+escapeHtml(q.status==="submitted"?"Submitted":"Pending")+'</td></tr>').join("")+'</tbody></table></div>':'<div class="empty-state">No matching PAN applications found.</div>';
-      };
-      ["pan-search-name","pan-search-dob","pan-search-type","pan-search-ack","pan-search-reference"].forEach(id=>$(id).addEventListener(id==="pan-search-type"?"change":"input",runSearch));
-    }
-  }
-  host.querySelectorAll("[data-pan-submit]").forEach(btn=>btn.addEventListener("click",async()=>{
-    const id=btn.dataset.panSubmit,wallet=host.querySelector('[data-pan-wallet="'+id+'"]')?.value||"",ack=host.querySelector('[data-pan-ack="'+id+'"]')?.value||"",applicantName=host.querySelector('[data-pan-name="'+id+'"]')?.value||"",dob=host.querySelector('[data-pan-dob="'+id+'"]')?.value||"",panType=host.querySelector('[data-pan-type="'+id+'"]')?.value||"";
-    if(!applicantName.trim()){alert("Enter applicant name.");return;}
-    if(!dob){alert("Enter applicant date of birth.");return;}
-    if(!panType){alert("Select PAN type.");return;}
-    if(!ack.trim()){alert("Enter the PAN acknowledgement number first.");return;}
-    if(!wallet){alert("Select the PAN processing wallet first.");return;}
-    btn.disabled=true;
-    try{
-      const {error:rpcError}=await supabase.rpc("mark_pan_application_submitted",{p_billing_item_id:id,p_wallet_id:wallet,p_acknowledgement_number:ack,p_applicant_name:applicantName,p_date_of_birth:dob,p_pan_type:panType});
-      if(rpcError)throw rpcError;
-      await loadPendingPanApplications();await refreshWalletBalances();await loadRecentBills();
-      alert("PAN marked as submitted. Processing cost debited from selected wallet.");
-    }catch(err){alert(err.message||"Unable to mark PAN as submitted.");btn.disabled=false;}
-  }));
 }
 async function loadRecentBills(){
   const {data:userData}=await supabase.auth.getUser();awaitUserId=userData?.user?.id||null;
@@ -1441,100 +1094,36 @@ async function loadRecentBills(){
   if(currentProfile?.role==="admin") await renderEditApprovals(reqs||[]);
 }
 let awaitUserId=null;
-async function loadBillIntoQuickBilling(id){
-  try{
-    const [{data:bill,error:bErr},{data:items,error:iErr}]=await Promise.all([
-      supabase.from("billing_transactions").select("id,bill_number,customer_name,customer_phone,payment_mode,customer_total,amount_received,cash_received,upi_received,notes,cash_adjustment_type,cash_adjustment_amount,cash_adjustment_mode").eq("id",id).single(),
-      supabase.from("billing_items").select("service_id,quantity,customer_unit_price,processing_unit_cost,pricing_snapshot").eq("transaction_id",id).order("created_at",{ascending:true})
-    ]);
-    if(bErr||iErr)throw bErr||iErr;
-    if(!items?.length)throw new Error("No bill items found to edit.");
-    const loadedRows=items.map(it=>{
-      const snap=it.pricing_snapshot||{},svc=services.find(x=>x.id===it.service_id);
-      const walletDebits=Array.isArray(snap.wallet_debits)?snap.wallet_debits:[];
-      const isSpecial=isPaperPageService(svc);
-      const isCurrent=svc?.code==="CURRENT_BILLS";
-      return {
-        service_id:it.service_id,
-        base:String(snap.base_amount??0),
-        charge:String(snap.service_charge??""),
-        cost:String(it.processing_unit_cost??0),
-        bank:String(snap.bank||""),
-        quantity:Number(it.quantity||1),
-        unit_count:isSpecial?String(snap.unit_count??snap.page_count??""):"",
-        print_type:snap.print_type||"single_side",
-        sets:Number(snap.sets||1),
-        item_label:snap.item_label||"",
-        discount:Number(snap.discount_amount||0),
-        wallet_debits:walletDebits,
-        bill_count:isCurrent?1:1,
-        bill_amounts:isCurrent?[String(snap.base_amount??"")]:[""],
-        credit_wallet_id:snap.credit_wallet_id||"",
-        charge_percent:snap.charge_percent??svc?.billing_config?.charge_percent??2,
-        processing_wallet_id:snap.aeps_wallet_id||snap.cash_to_upi_wallet_id||walletDebits[0]?.wallet_id||"",
-        processing_wallet_ids:walletDebits.map(x=>String(x.wallet_id)),
-        adjustment_type:["AEPS_WITHDRAWAL","UPI_TO_CASH","CASH_TO_UPI"].includes(svc?.code)?(["AEPS_WITHDRAWAL","UPI_TO_CASH","CASH_TO_UPI"].includes(svc?.code)&&bill.cash_adjustment_type==="extra"?"":(bill.cash_adjustment_type||"")):"",
-        adjustment_amount:["AEPS_WITHDRAWAL","UPI_TO_CASH","CASH_TO_UPI"].includes(svc?.code)?(bill.cash_adjustment_type==="extra"?0:Number(bill.cash_adjustment_amount||0)):0,
-        adjustment_mode:["AEPS_WITHDRAWAL","UPI_TO_CASH","CASH_TO_UPI"].includes(svc?.code)?(bill.cash_adjustment_mode||"cash"):"cash"
-      };
-    });
-    const host=$("other-view");
-    if(!host.querySelector("#billing-rows"))await renderQuickBilling();
-    editingBillingTransactionId=id;editingBillingBillNumber=bill.bill_number||id.slice(0,8);
-    billingRows=loadedRows;
-    $("bill-count").value=String(loadedRows.length);
-    $("bill-customer").value=bill.customer_name||"";
-    $("bill-phone").value=bill.customer_phone||"";
-    $("bill-mode").value=bill.payment_mode||"cash";
-    const oldExtra=bill.cash_adjustment_type==="extra"&&(bill.items||[]).some(x=>["AEPS_WITHDRAWAL","UPI_TO_CASH","CASH_TO_UPI"].includes(services.find(s=>s.id===x.service_id)?.code))?0:(bill.cash_adjustment_type==="extra"?Number(bill.cash_adjustment_amount||0):0);
-    $("bill-received").value=String(Math.max(0,Number(bill.amount_received||0)-oldExtra));
-    $("bill-cash").value=String(Math.max(0,Number(bill.cash_received||0)-(bill.cash_adjustment_type==="extra"&&bill.cash_adjustment_mode==="cash"?oldExtra:0)));
-    $("bill-upi").value=String(Math.max(0,Number(bill.upi_received||0)-(bill.cash_adjustment_type==="extra"&&bill.cash_adjustment_mode==="upi"?oldExtra:0)));
-    await setBillingRows(loadedRows.length);
-    $("billing-message").textContent="Editing Bill #"+(bill.bill_number||"")+" · Change the details below and click Update Bill.";
-    $("save-billing").textContent="Update Bill #"+(bill.bill_number||"");
-    const heading=host.querySelector(".admin-module-head h2");if(heading)heading.textContent="Edit Bill #"+(bill.bill_number||"")+" · Quick Billing";
-    updatePaymentFields();updateBillingTotals();
-    host.querySelector(".billing-editor")?.scrollIntoView({behavior:"smooth",block:"start"});
-  }catch(e){alert("Unable to load bill into billing form: "+(e.message||e));console.error(e);}
-}
 async function openBillEditor(id,requestOnly){
-  if(!requestOnly){await loadBillIntoQuickBilling(id);return;}
   const {data:userData}=await supabase.auth.getUser();awaitUserId=userData.user.id;
   const itemFields=currentProfile?.role==="admin"?"service_id,quantity,customer_unit_price,processing_unit_cost,profit_amount,pricing_snapshot":"service_id,quantity,customer_unit_price,pricing_snapshot";
   const [{data:bill,error:bErr},{data:items,error:iErr}]=await Promise.all([
-    supabase.from("billing_transactions").select("id,customer_name,customer_phone,payment_mode,customer_total,amount_received,cash_received,upi_received,notes,created_at,created_by").eq("id",id).single(),
+    supabase.from("billing_transactions").select("id,customer_name,customer_phone,payment_mode,customer_total,amount_received,cash_received,upi_received,cash_adjustment_type,cash_adjustment_amount,cash_adjustment_mode,notes,created_at,created_by").eq("id",id).single(),
     supabase.from("billing_items").select(itemFields).eq("transaction_id",id)
   ]);
   if(bErr||iErr){alert((bErr||iErr).message);return;}
-  const payload={customer_name:bill.customer_name,customer_phone:bill.customer_phone,payment_mode:bill.payment_mode,customer_total:Number(bill.customer_total),amount_received:Number(bill.amount_received),cash_received:Number(bill.cash_received),upi_received:Number(bill.upi_received),notes:bill.notes,items:(items||[]).map(it=>({...it,wallet_debits:it.pricing_snapshot?.wallet_debits||[]}))};
-  const host=$("recent-bills");
-  const editor=document.createElement("div");editor.className="admin-editor";editor.id="bill-edit-editor";
-  editor.innerHTML=`<div class="admin-editor-head"><div><h3>${requestOnly?"Request bill edit":"Edit bill"} </h3><p>Review the bill data before saving. Wallet debits and profit are recalculated by the database function.</p></div><button type="button" class="text-btn" id="close-bill-editor">Close</button></div>
-  <label class="service-form">Bill data (JSON)<textarea id="bill-edit-json" rows="14" spellcheck="false"></textarea></label>
-  ${requestOnly?'<label class="service-form">Reason for edit<input id="bill-edit-reason" placeholder="Explain why this bill needs correction" required></label>':""}
-  <div id="bill-edit-message" class="message"></div><div class="admin-form-actions"><button class="primary-btn" id="submit-bill-edit">${requestOnly?"Send edit request":"Save bill changes"}</button></div>`;
-  host.prepend(editor);$("bill-edit-json").value=JSON.stringify(payload,null,2);
-  $("close-bill-editor").onclick=()=>editor.remove();
-  $("submit-bill-edit").onclick=async()=>{
-    const btn=$("submit-bill-edit"),msg=$("bill-edit-message");btn.disabled=true;
-    try{
-      const proposed=JSON.parse($("bill-edit-json").value);
-      if(!Array.isArray(proposed.items)||!proposed.items.length)throw new Error("Items array is required.");
-      let result;
-      if(requestOnly){
-        const reason=$("bill-edit-reason").value.trim();if(reason.length<3)throw new Error("Please enter an edit reason.");
-        result=await supabase.rpc("request_billing_edit",{p_transaction_id:id,p_reason:reason,p_proposed_payload:proposed});
-      }else{
-        result=await supabase.rpc("update_bill_with_approval",{p_transaction_id:id,p_payload:proposed,p_edit_request_id:null});
-      }
-      if(result.error)throw result.error;
-      msg.textContent=requestOnly?"Edit request sent to Admin.":"Bill updated successfully.";
-      await loadRecentBills();
-    }catch(e){msg.textContent=e.message||"Unable to process edit.";console.error(e);}
-    finally{btn.disabled=false;}
-  };
+  const payload={customer_name:bill.customer_name,customer_phone:bill.customer_phone,payment_mode:bill.payment_mode,customer_total:Number(bill.customer_total),amount_received:Number(bill.amount_received),cash_received:Number(bill.cash_received),upi_received:Number(bill.upi_received),cash_adjustment_type:bill.cash_adjustment_type,cash_adjustment_amount:Number(bill.cash_adjustment_amount||0),cash_adjustment_mode:bill.cash_adjustment_mode,notes:bill.notes,items:(items||[]).map(it=>({...it,wallet_debits:it.pricing_snapshot?.wallet_debits||[]}))};
+  if(requestOnly){
+    const host=$("recent-bills"),editor=document.createElement("div");editor.className="admin-editor";editor.id="bill-edit-editor";
+    editor.innerHTML=`<div class="admin-editor-head"><div><h3>Request bill edit</h3><p>Send the proposed changes to Admin for approval.</p></div><button type="button" class="text-btn" id="close-bill-editor">Close</button></div><label class="service-form">Bill data (JSON)<textarea id="bill-edit-json" rows="14" spellcheck="false"></textarea></label><label class="service-form">Reason for edit<input id="bill-edit-reason" placeholder="Explain why this bill needs correction" required></label><div id="bill-edit-message" class="message"></div><div class="admin-form-actions"><button class="primary-btn" id="submit-bill-edit">Send edit request</button></div>`;
+    host.prepend(editor);$("bill-edit-json").value=JSON.stringify(payload,null,2);$("close-bill-editor").onclick=()=>editor.remove();
+    $("submit-bill-edit").onclick=async()=>{const btn=$("submit-bill-edit"),msg=$("bill-edit-message");btn.disabled=true;try{const proposed=JSON.parse($("bill-edit-json").value);if(!Array.isArray(proposed.items)||!proposed.items.length)throw new Error("Items array is required.");const reason=$("bill-edit-reason").value.trim();if(reason.length<3)throw new Error("Please enter an edit reason.");const result=await supabase.rpc("request_billing_edit",{p_transaction_id:id,p_reason:reason,p_proposed_payload:proposed});if(result.error)throw result.error;msg.textContent="Edit request sent to Admin.";await loadRecentBills();}catch(e){msg.textContent=e.message||"Unable to process edit.";}finally{btn.disabled=false;}};
+    return;
+  }
+  editingBillId=id;
+  billingRows=(items||[]).map(it=>{
+    const snap=it.pricing_snapshot||{},svc=services.find(x=>x.id===it.service_id),special=isPaperPageService(svc);
+    return {service_id:it.service_id,base:String(snap.base_amount??0),charge:String(snap.service_charge??""),cost:String(it.processing_unit_cost??0),bank:snap.bank||"",aeps_wallet_id:snap.aeps_wallet_id||"",aeps_charge_mode:snap.aeps_charge_mode||"deduct",selected_upi_to_cash_wallet_id:snap.upi_to_cash_wallet_id||"",adjustment_type:snap.cash_to_upi_mode||bill.cash_adjustment_type||"",adjustment_amount:snap.cash_to_upi_mode==="deduct"?Number(snap.service_charge||0):Number(bill.cash_adjustment_amount||0),adjustment_mode:bill.cash_adjustment_mode||"upi",selected_adjustment_wallet_id:snap.cash_to_upi_wallet_id||"",quantity:Number(it.quantity||1),unit_count:special?String(snap.unit_count||""):"",sets:special?Number(snap.sets||1):1,item_label:snap.item_label||"",discount:Number(snap.discount_amount||0),wallet_debits:snap.wallet_debits||[],current_bills_wallet_id:snap.current_bills_wallet_id||snap.wallet_debits?.[0]?.wallet_id||"",charge_percent:snap.charge_percent??svc?.billing_config?.charge_percent??2,profit_wallet_id:snap.profit_wallet_id||"",bill_count:1,bill_amounts:[""]};
+  });
+  $("bill-count").value=Math.max(1,billingRows.length);await setBillingRows(billingRows.length);
+  $("bill-customer").value=payload.customer_name||"";$("bill-phone").value=payload.customer_phone||"";
+  $("bill-mode").value=payload.payment_mode||"cash";$("bill-received").value=payload.amount_received;
+  $("bill-cash").value=payload.cash_received;$("bill-upi").value=payload.upi_received;
+  updatePaymentFields();updateBillingTotals();
+  $("save-billing").textContent="Save changes to Bill";$("billing-message").textContent="Editing existing bill. Review the details and save changes.";
+  $("other-view").scrollIntoView({behavior:"smooth",block:"start"});
 }
+
 async function renderEditApprovals(reqs){
   const host=$("recent-bills");if(!host)return;
   const pending=(reqs||[]).filter(r=>r.status==="pending");
@@ -1584,10 +1173,8 @@ async function renderQuickLinks() {
     </div>`:''}
     <div class="quick-link-grid">
       ${visible.length?visible.map(link=>`<article class="quick-link-card">
-        <a class="quick-link-launch" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" aria-label="Open ${escapeHtml(link.name)} in a new tab">
-          <span class="quick-link-mark">${link.logo_url?`<img src="${escapeHtml(link.logo_url)}" alt="${escapeHtml(link.name)} logo">`:"↗"}</span>
-          <strong class="quick-link-name">${escapeHtml(link.name)}</strong>
-        </a>
+        <div class="quick-link-mark">${link.logo_url?`<img src="${escapeHtml(link.logo_url)}" alt="" style="width:42px;height:42px;object-fit:contain">`:"↗"}</div><div class="quick-link-info"><strong>${escapeHtml(link.name)}</strong><small>${escapeHtml(link.category||"General")}</small></div>
+        <a class="primary-btn quick-link-open" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">Open Website ↗</a>
         ${admin?`<div class="quick-link-admin"><span>${link.is_active?"Active":"Hidden for employees"}</span><label class="secondary-btn">Upload logo<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" data-link-logo="${link.id}" style="display:none"></label><button type="button" class="secondary-btn" data-link-toggle="${link.id}" data-active="${link.is_active}">${link.is_active?"Hide":"Show"}</button><button type="button" class="danger-btn" data-link-delete="${link.id}">Delete</button></div>`:''}
       </article>`).join(""):'<div class="empty-state">No websites are available yet. Ask Admin to add a website.</div>'}
     </div>
@@ -1678,10 +1265,11 @@ async function showForm93HtmlPreview(r){
   await loadApplicantLayoutSettings(r);
   const previous=$("pan-preview-overlay");if(previous)previous.remove();
   const overlay=document.createElement("div");overlay.id="pan-preview-overlay";overlay.className="pan-preview-overlay";
-  overlay.innerHTML='<section class="pan-preview-modal" role="dialog" aria-modal="true" aria-label="PAN Form 93 preview"><header class="pan-preview-header"><div><strong>Form 93 Preview · HTML overlay</strong><small>'+esc(r.name||"Applicant")+' · '+esc(r.temp_ack||"")+'</small></div><div class="pan-preview-actions"><button type="button" class="secondary-btn" id="pan-preview-print" disabled>Print</button><button type="button" class="danger-btn" id="pan-preview-close">Close</button></div></header><div class="pan-preview-pages" id="pan-preview-pages"><p class="pan-preview-loading">Loading official Form 93 background…</p></div></section>';
+  overlay.innerHTML='<section class="pan-preview-modal" role="dialog" aria-modal="true" aria-label="PAN Form 93 preview"><header class="pan-preview-header"><div><strong>Form 93 Preview · HTML overlay</strong><small>'+esc(r.name||"Applicant")+' · '+esc(r.temp_ack||"")+'</small></div><div class="pan-preview-actions"><button type="button" class="secondary-btn" id="pan-preview-back">← Back</button><button type="button" class="secondary-btn" id="pan-preview-zoom-out" aria-label="Zoom out">−</button><span id="pan-preview-zoom-label" style="min-width:42px;text-align:center;font-size:12px">100%</span><button type="button" class="secondary-btn" id="pan-preview-zoom-in" aria-label="Zoom in">+</button><button type="button" class="secondary-btn" id="pan-preview-zoom-reset">100%</button><button type="button" class="secondary-btn" id="pan-preview-print" disabled>Print</button></div></header><div class="pan-preview-pages" id="pan-preview-pages"><p class="pan-preview-loading">Loading official Form 93 background…</p></div></section>';
   if(!document.getElementById("pan-form-roboto-font")){const fontLink=document.createElement("link");fontLink.id="pan-form-roboto-font";fontLink.rel="stylesheet";fontLink.href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600&display=swap";document.head.appendChild(fontLink)}
   document.body.appendChild(overlay);
-  const close=()=>overlay.remove();overlay.querySelector("#pan-preview-close").onclick=close;overlay.addEventListener("click",e=>{if(e.target===overlay)close()});
+  const close=()=>overlay.remove();overlay.querySelector("#pan-preview-back").onclick=close;overlay.addEventListener("click",e=>{if(e.target===overlay)close()});
+  let previewZoom=100;const applyPreviewZoom=()=>{const pages=overlay.querySelector("#pan-preview-pages");if(pages)pages.style.zoom=String(previewZoom/100);overlay.querySelector("#pan-preview-zoom-label").textContent=previewZoom+"%"};overlay.querySelector("#pan-preview-zoom-out").onclick=()=>{previewZoom=Math.max(50,previewZoom-10);applyPreviewZoom()};overlay.querySelector("#pan-preview-zoom-in").onclick=()=>{previewZoom=Math.min(160,previewZoom+10);applyPreviewZoom()};overlay.querySelector("#pan-preview-zoom-reset").onclick=()=>{previewZoom=100;applyPreviewZoom()};
   const key=e=>{if(e.key==="Escape"&&$("pan-preview-overlay")){close();document.removeEventListener("keydown",key)}};document.addEventListener("keydown",key);
   try{
    if(!window.pdfjsLib)await new Promise((resolve,reject)=>{const sc=document.createElement("script");sc.src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js";sc.onload=resolve;sc.onerror=()=>reject(new Error("Preview engine could not load"));document.head.appendChild(sc)});
@@ -1698,7 +1286,7 @@ async function showForm93HtmlPreview(r){
    }
    const correction=13.5,cellW=10.62,cellH=13.7;let activeLayoutKey="",activeWordKey="",activeLetterKey="",activeLetterNumber=0;
    const put=(pi,x,top,w,h,content,cls="pan-html-text")=>{
-    const m=pageModels[pi];if(!m||content===null||content===undefined||(String(content)===""&&cls!=="pan-html-photo"))return null;
+    const m=pageModels[pi];if(!m||content===null||content===undefined||(String(content)===""&&cls!=="pan-html-photo"&&cls!=="pan-html-space-marker"))return null;
     const el=document.createElement("div");el.className=cls;el.dataset.layoutKey=activeLayoutKey||("p"+pi+"-"+Math.round(x*10)+"-"+Math.round(top*10));
     if(activeWordKey)el.dataset.layoutWord=activeWordKey;if(activeLetterKey){el.dataset.layoutLetter=activeLetterKey;el.dataset.letterNumber=String(activeLetterNumber??1)}
     const fieldOff=form93LayoutSettings[el.dataset.layoutKey]||{},wordOff=activeWordKey?(form93LayoutSettings[activeWordKey]||{}):{},letterOff=activeLetterKey?(form93LayoutSettings[activeLetterKey]||{}):{};
@@ -1707,13 +1295,13 @@ async function showForm93HtmlPreview(r){
    const setBaseFont=(el,pi,size)=>{if(!el)return;el.dataset.baseFont=String(size);el.dataset.pageIndex=String(pi);const f=form93LayoutSettings[el.dataset.layoutKey]||{},w=form93LayoutSettings[el.dataset.layoutWord]||{},c=form93LayoutSettings[el.dataset.layoutLetter]||{};el.style.fontSize=(Number(c.size??w.size??f.size??size)*mScale(pageModels[pi]))+"px"};
    const text=(pi,x,top,value,w=120,size=6)=>{const prior=activeLayoutKey;activeLayoutKey="p"+pi+"-"+Math.round(x*10)+"-"+Math.round(top*10);const el=put(pi,x,top,w,12,value);activeLayoutKey=prior;if(el)setBaseFont(el,pi,size*1.12)};
    const mScale=m=>m.width/(m.page.view[2]-m.page.view[0]);
-   const aadhaarNameGrid=(value)=>{const prior=activeLayoutKey,priorWord=activeWordKey,priorLetter=activeLetterKey,priorNumber=activeLetterNumber,base="p0-1800-2383";activeLayoutKey=base;const chars=[...String(value??"").toUpperCase()].slice(0,25);const step=Math.min(nameSpacing(),375/Math.max(chars.length,1));let wordIndex=0,letterNo=0;chars.forEach((ch,i)=>{const isSpace=/\s/.test(ch);activeLetterNumber=isSpace?0:++letterNo;activeWordKey=base+"-w"+wordIndex;activeLetterKey=base+"-c"+i;if(isSpace){const gap=put(0,180+i*step,238.3,nameCellW,cellH," ","pan-html-space-marker");if(gap){gap.style.color="transparent";gap.style.opacity="0";gap.setAttribute("aria-label","Space position 0")}wordIndex++;return}const el=put(0,180+i*step,238.3,nameCellW,cellH,ch,"pan-html-char");if(el)setBaseFont(el,0,5.9)});activeLayoutKey=prior;activeWordKey=priorWord;activeLetterKey=priorLetter;activeLetterNumber=priorNumber};
+   const aadhaarNameGrid=(value)=>{const prior=activeLayoutKey,priorWord=activeWordKey,priorLetter=activeLetterKey,priorNumber=activeLetterNumber,base="p0-1800-2383";activeLayoutKey=base;const chars=Array.from({length:25},(_,i)=>[...String(value??"").toUpperCase()].slice(0,25)[i]||"");const step=Math.min(nameSpacing(),375/Math.max(chars.length,1));let wordIndex=0;chars.forEach((ch,i)=>{const isSpace=!ch||/\s/.test(ch);activeLetterNumber=i+1;activeWordKey=base+"-w"+wordIndex;activeLetterKey=base+"-c"+i;if(isSpace){const gap=put(0,180+i*step,238.3,nameCellW,cellH," ","pan-html-space-marker");if(gap){gap.style.color="transparent";gap.style.opacity="0";gap.setAttribute("aria-label","Space position "+(i+1))}wordIndex++;return}const el=put(0,180+i*step,238.3,nameCellW,cellH,ch,"pan-html-char");if(el)setBaseFont(el,0,5.9)});activeLayoutKey=prior;activeWordKey=priorWord;activeLetterKey=priorLetter;activeLetterNumber=priorNumber};
    const grid=(pi,x,top,value,cols=36,cw=cellW,size=5.4,letterStep=cw)=>{
     const prior=activeLayoutKey,priorWord=activeWordKey,priorLetter=activeLetterKey,priorNumber=activeLetterNumber,base="p"+pi+"-"+Math.round(x*10)+"-"+Math.round(top*10);activeLayoutKey=base;
-    let wordIndex=0,letterNo=0;[...String(value??"").toUpperCase()].slice(0,cols).forEach((ch,i)=>{const isSpace=/\s/.test(ch);activeLetterNumber=isSpace?0:++letterNo;activeWordKey=base+"-w"+wordIndex;activeLetterKey=base+"-c"+i;if(isSpace){const spacer=put(pi,x+i*letterStep,top,cw,cellH," ","pan-html-space-marker");if(spacer){spacer.style.color="transparent";spacer.style.opacity="0";spacer.setAttribute("aria-label","Space position 0")}wordIndex++;return}const el=put(pi,x+i*letterStep,top,cw,cellH,ch,"pan-html-char");if(el)setBaseFont(el,pi,size)});
+    let wordIndex=0;Array.from({length:cols},(_,i)=>[...String(value??"").toUpperCase()][i]||"").forEach((ch,i)=>{const isSpace=!ch||/\s/.test(ch);activeLetterNumber=i+1;activeWordKey=base+"-w"+wordIndex;activeLetterKey=base+"-c"+i;if(isSpace){const spacer=put(pi,x+i*letterStep,top,cw,cellH," ","pan-html-space-marker");if(spacer){spacer.style.color="transparent";spacer.style.opacity="0";spacer.setAttribute("aria-label","Space position "+(i+1))}wordIndex++;return}const el=put(pi,x+i*letterStep,top,cw,cellH,ch,"pan-html-char");if(el)setBaseFont(el,pi,size)});
     activeLayoutKey=prior;activeWordKey=priorWord;activeLetterKey=priorLetter;activeLetterNumber=priorNumber;
    };
-   const nameCellW=15;const nameSpacing=()=>({compact:12,normal:15,expand:18}[form93LayoutSettings.__nameSpacing||"normal"]||15);const nameGrid=(pi,x,top,value,cols=25,size=5.2)=>{const chars=[...String(value??"").toUpperCase()].slice(0,cols);const step=Math.min(nameSpacing(),375/Math.max(chars.length,1));grid(pi,x,top,value,cols,nameCellW,size,step)};const name=(pi,top,value)=>{const words=String(value||"").trim().replace(/\s+/g," ").split(" ").filter(Boolean);[words[0]||"",words[1]||"",words.slice(2).join(" ")].forEach((v,i)=>nameGrid(pi,180,top+i*13.7-1.2,v,25,i===0?5.0:5.2))};
+   const nameCellW=15;const nameSpacing=()=>({compact:12,normal:15,expand:18}[form93LayoutSettings.__nameSpacing||"normal"]||15);const nameGrid=(pi,x,top,value,cols=25,size=5.2)=>{const chars=[...String(value??"").toUpperCase()].slice(0,cols);const step=Math.min(nameSpacing(),375/Math.max(cols,1));grid(pi,x,top,value,cols,nameCellW,size,step)};const name=(pi,top,value)=>{const words=String(value||"").trim().replace(/\s+/g," ").split(" ").filter(Boolean);[words[0]||"",words[1]||"",words.slice(2).join(" ")].forEach((v,i)=>nameGrid(pi,180,top+i*13.7-1.2,v,25,i===0?5.0:5.2))};
    const addr=(pi,p,top)=>{["flat","road","post","area","district"].forEach((k,i)=>grid(pi,180,top+i*13.7-2.5,r[p+"_"+k],25,15,5.4));grid(pi,132,top+5*13.7-2.5,r[p+"_state"],8,cellW,5.2);grid(pi,285,top+5*13.7-2.5,r[p+"_country"]||"India",12,cellW,5.2);grid(pi,455,top+5*13.7-2.5,r[p+"_pin"],10,cellW,5.2)};
    const mark=(pi,x,top)=>{const el=put(pi,x,top,10,12,"✓","pan-html-mark");if(el)setBaseFont(el,pi,8);return el};
    // Page 1: applicant identity and contact.
@@ -1739,8 +1327,8 @@ async function showForm93HtmlPreview(r){
    const addImage=(pi,x,top,w,h,data)=>{if(!data)return;const el=put(pi,x,top-correction,w,h,"","pan-html-photo");el.style.backgroundImage="url("+data+")"};
    addImage(0,46,23,100,128,r.photo);addImage(0,443,23,100,128,r.photo);addImage(0,49,108,94,30,r.signature);addImage(1,329,620,200,65,r.signature);
    if(currentProfile?.role==="admin"){
-    const tools=document.createElement("div");tools.className="pan-calibration-toolbar";tools.innerHTML='<button type="button" class="secondary-btn" id="pan-calibrate-toggle">Adjust field positions</button><select id="pan-calibrate-mode" class="secondary-btn" aria-label="Adjustment mode"><option value="field">Whole field</option><option value="word">Each word</option><option value="letter">Each letter / space</option></select><select id="pan-name-spacing" class="secondary-btn" aria-label="Name letter spacing"><option value="normal">Normal spacing</option><option value="compact">Compress letters</option><option value="expand">Expand letters</option></select><select id="pan-calibrate-size" class="secondary-btn" aria-label="Lettering size"><option value="4">Size 4</option><option value="5">Size 5</option><option value="6" selected>Size 6</option><option value="7">Size 7</option><option value="8">Size 8</option></select><button type="button" class="secondary-btn" id="pan-calibrate-apply-size" disabled>Apply size to selected</button><button type="button" class="secondary-btn" id="pan-calibrate-save" hidden>Save layout</button><button type="button" class="secondary-btn" id="pan-calibrate-reset" hidden>Reset positions</button><small id="pan-calibrate-help">Admin only: choose Each letter / space. Example: RA MA = 1, 2, 0, 3, 4. Spaces stay blank and are marked 0.</small>';overlay.querySelector(".pan-preview-header").after(tools);
-    let calibration=false,drag=null;
+    const tools=document.createElement("div");tools.className="pan-calibration-toolbar";tools.innerHTML='<button type="button" class="secondary-btn" id="pan-calibrate-toggle">Adjust field positions</button><select id="pan-calibrate-mode" class="secondary-btn" aria-label="Adjustment mode"><option value="field">Whole field</option><option value="word">Each word</option><option value="letter" selected>Each letter / space</option></select><select id="pan-name-spacing" class="secondary-btn" aria-label="Name letter spacing"><option value="normal">Normal spacing</option><option value="compact">Compress letters</option><option value="expand">Expand letters</option></select><select id="pan-calibrate-size" class="secondary-btn" aria-label="Lettering size"><option value="4">Size 4</option><option value="5">Size 5</option><option value="6" selected>Size 6</option><option value="7">Size 7</option><option value="8">Size 8</option></select><button type="button" class="secondary-btn" id="pan-calibrate-apply-size" disabled>Apply size to selected</button><button type="button" class="secondary-btn" id="pan-calibrate-save" hidden>Save layout</button><button type="button" class="secondary-btn" id="pan-calibrate-reset" hidden>Reset positions</button><small id="pan-calibrate-help">Admin only: choose Each letter / space. Example: RA MA = 1, 2, 3, 4, 5. Space stays blank but keeps its own number.</small>';overlay.querySelector(".pan-preview-header").after(tools);
+    let calibration=true,drag=null;
     const toggle=tools.querySelector("#pan-calibrate-toggle"),save=tools.querySelector("#pan-calibrate-save"),reset=tools.querySelector("#pan-calibrate-reset");
     const handles=[],modeSelect=tools.querySelector("#pan-calibrate-mode"),sizeSelect=tools.querySelector("#pan-calibrate-size"),applySize=tools.querySelector("#pan-calibrate-apply-size"),spacingSelect=tools.querySelector("#pan-name-spacing");spacingSelect.value=form93LayoutSettings.__nameSpacing||"normal";spacingSelect.addEventListener("change",()=>{form93LayoutSettings.__nameSpacing=spacingSelect.value;overlay.remove();showForm93HtmlPreview(r)});let selectedCalibration=null;
     const makeHandles=()=>{
@@ -1754,7 +1342,7 @@ async function showForm93HtmlPreview(r){
           const h=document.createElement("div");h.className="pan-calibration-handle";h.dataset.key=key;
           h.style.left=((left-m.wrap.getBoundingClientRect().left)/m.wrap.clientWidth*100)+"%";h.style.top=((top-m.wrap.getBoundingClientRect().top)/m.wrap.clientHeight*100)+"%";
           h.style.width=Math.max(mode==="letter"?1:2,(right-left)/m.wrap.clientWidth*100)+"%";h.style.height=Math.max(mode==="letter"?0.8:1.5,(bottom-top)/m.wrap.clientHeight*100)+"%";
-          const ordinal=Number(els[0]?.dataset.letterNumber||0),ordinalLabel=ordinal?ordinal+(ordinal%100>=11&&ordinal%100<=13?"th":({1:"st",2:"nd",3:"rd"}[ordinal%10]||"th"))+" letter":"";const isSpace=els[0]?.classList.contains("pan-html-space-marker");if(mode==="letter"){h.dataset.number=String(ordinal);if(isSpace)h.dataset.kind="space";}h.title=mode==="letter"?(isSpace?"Position 0 · SPACE (blank box) · drag to move":"Position "+ordinal+" · "+ordinalLabel+" · drag to move"):mode==="word"?"Tap to select this word, drag to move":"Tap to select this field, drag to move";h.addEventListener("click",()=>{selectedCalibration={key,els,mode};handles.forEach(x=>x.classList.toggle("selected",x===h));applySize.disabled=false});
+          const ordinal=Number(els[0]?.dataset.letterNumber||0),ordinalLabel=ordinal?ordinal+(ordinal%100>=11&&ordinal%100<=13?"th":({1:"st",2:"nd",3:"rd"}[ordinal%10]||"th"))+" letter":"";const isSpace=els[0]?.classList.contains("pan-html-space-marker");if(mode==="letter"){h.dataset.number=String(ordinal);if(isSpace)h.dataset.kind="space";h.textContent=String(ordinal);h.style.cssText+=";display:flex;align-items:center;justify-content:center;box-sizing:border-box;border:2px solid #d97706;background:rgba(255,247,237,.96);color:#111827;font-size:11px;font-weight:800;line-height:1;border-radius:3px;min-width:18px;min-height:18px;z-index:50;cursor:grab;box-shadow:0 1px 4px rgba(0,0,0,.25);"}h.title=mode==="letter"?(isSpace?"Position "+ordinal+" · SPACE (blank cell) · drag to move":"Position "+ordinal+" · "+ordinalLabel+" · drag to move"):mode==="word"?"Tap to select this word, drag to move":"Tap to select this field, drag to move";h.addEventListener("click",()=>{selectedCalibration={key,els,mode};handles.forEach(x=>x.classList.toggle("selected",x===h));applySize.disabled=false});
           h.addEventListener("pointerdown",e=>{if(!calibration)return;e.preventDefault();h.setPointerCapture(e.pointerId);drag={key,els,startX:e.clientX,startY:e.clientY,dx:0,dy:0}});
           h.addEventListener("pointermove",e=>{if(!drag||drag.key!==key)return;const dx=e.clientX-drag.startX,dy=e.clientY-drag.startY;drag.dx=dx;drag.dy=dy;els.forEach(el=>el.style.transform="translate("+dx+"px,"+dy+"px)")});
           h.addEventListener("pointerup",()=>{if(!drag||drag.key!==key)return;const scale=m.scale,prev=form93LayoutSettings[key]||{};form93LayoutSettings[key]={...prev,dx:Number(prev.dx||0)+drag.dx/scale,dy:Number(prev.dy||0)+drag.dy/scale};
@@ -1765,14 +1353,16 @@ async function showForm93HtmlPreview(r){
     };
     modeSelect.addEventListener("change",()=>{selectedCalibration=null;applySize.disabled=true;if(calibration)makeHandles()});
     applySize.addEventListener("click",()=>{if(!selectedCalibration)return;const {key,els}=selectedCalibration,prev=form93LayoutSettings[key]||{},size=Number(sizeSelect.value);form93LayoutSettings[key]={...prev,size};els.forEach(el=>{const pi=Number(el.dataset.pageIndex||0);el.style.fontSize=(size*mScale(pageModels[pi]))+"px"});});
-    toggle.onclick=()=>{calibration=!calibration;overlay.classList.toggle("pan-calibrating",calibration);toggle.textContent=calibration?"Finish adjusting":"Adjust field positions";save.hidden=!calibration;reset.hidden=!calibration;tools.querySelector("#pan-calibrate-help").textContent=calibration?"Mode: "+modeSelect.options[modeSelect.selectedIndex].text+". Letters are numbered 1, 2, 3…; every space is marked 0 and stays blank. Drag each number to its box, then save.":"Admin only: choose Each letter / space to see position numbers. Spaces keep a blank box but consume a number.";if(calibration)makeHandles();else{handles.forEach(h=>h.remove());handles.length=0}};
+    toggle.onclick=()=>{calibration=!calibration;overlay.classList.toggle("pan-calibrating",calibration);toggle.textContent=calibration?"Finish adjusting":"Adjust field positions";save.hidden=!calibration;reset.hidden=!calibration;tools.querySelector("#pan-calibrate-help").textContent=calibration?"Mode: "+modeSelect.options[modeSelect.selectedIndex].text+". Letters and spaces are numbered in order (RA MA = 1, 2, 3, 4, 5). Space stays blank. Drag each numbered box to its matching printed box, then save.":"Admin only: choose Each letter / space to see position numbers. Spaces stay blank but receive their own position number.";if(calibration)makeHandles();else{handles.forEach(h=>h.remove());handles.length=0}};
     save.onclick=async()=>{save.disabled=true;try{await saveForm93LayoutSettings();save.textContent="Saved for all applicants";setTimeout(()=>save.textContent="Save layout",1600)}catch(e){alert("Could not save applicant layout to cloud: "+e.message)}finally{save.disabled=false}};
     reset.onclick=async()=>{if(!confirm("Reset the shared Form 93 layout adjustments for all applicants?"))return;form93LayoutSettings={};try{await saveForm93LayoutSettings();overlay.remove();await print(r)}catch(e){alert("Could not reset applicant layout: "+e.message)}};
+    overlay.classList.add("pan-calibrating");toggle.textContent="Finish adjusting";save.hidden=false;reset.hidden=false;tools.querySelector("#pan-calibrate-help").textContent="Admin numbering is ON. Each letter / space has its own number. Drag each numbered box to the matching printed box, then save.";
+    makeHandles();
    }
    const printBtn=overlay.querySelector("#pan-preview-print");printBtn.disabled=false;printBtn.onclick=()=>{
     const frame=document.createElement("iframe");frame.style.cssText="position:fixed;width:1px;height:1px;right:0;bottom:0;border:0";document.body.appendChild(frame);
     const d=frame.contentDocument;d.open();d.write('<!doctype html><html><head><title>Form 93</title><style>@page{size:A4;margin:0}body{margin:0}.pan-html-page{position:relative;width:210mm;height:297mm;page-break-after:always;overflow:hidden}.pan-html-page:last-child{page-break-after:auto}.pan-html-page-bg{position:absolute;inset:0;width:100%;height:100%}.pan-html-overlay{position:absolute;inset:0}.pan-html-char,.pan-html-mark,.pan-html-text{position:absolute;display:flex;align-items:center;justify-content:center;box-sizing:border-box;font-family:Roboto,Arial,sans-serif;font-weight:500;line-height:1;color:#111;white-space:nowrap}.pan-html-photo{position:absolute;background-size:100% 100%;background-repeat:no-repeat}</style></head><body>');
-    pageModels.forEach(m=>{const wrap=m.wrap.cloneNode(true),can=wrap.querySelector("canvas");if(can){const img=d.createElement("img");img.src=can.toDataURL("image/png");img.className="pan-html-page-bg";can.replaceWith(img)}d.body.appendChild(wrap)});d.close();setTimeout(()=>{frame.contentWindow.focus();frame.contentWindow.print();setTimeout(()=>frame.remove(),1500)},500);
+    pageModels.forEach(m=>{const wrap=m.wrap.cloneNode(true);wrap.querySelectorAll(".pan-calibration-handle").forEach(el=>el.remove());const can=wrap.querySelector("canvas");if(can){const img=d.createElement("img");img.src=can.toDataURL("image/png");img.className="pan-html-page-bg";can.replaceWith(img)}d.body.appendChild(wrap)});d.close();setTimeout(()=>{frame.contentWindow.focus();frame.contentWindow.print();setTimeout(()=>frame.remove(),1500)},500);
    };
   }catch(err){console.error(err);overlay.querySelector("#pan-preview-pages").innerHTML='<p class="pan-preview-loading">Preview failed: '+esc(err.message||"Try again")+'</p>'}
  }
@@ -1995,6 +1585,9 @@ async function showForm93HtmlPreview(r){
   $("pan-find").onclick=run;run();
  }
  $("pan-new").onclick=()=>form("new");$("pan-corr").onclick=()=>form("correction");$("pan-search").onclick=search;form("new");
+ // Blank Form 93 preview: opens the official blank background without requiring applicant data or saving a record.
+ const blankPreviewButton=document.createElement("button");blankPreviewButton.type="button";blankPreviewButton.className="secondary-btn pan-blank-preview";blankPreviewButton.textContent="Preview blank Form 93";blankPreviewButton.title="Open a blank Form 93 preview without filling or saving applicant details.";$("pan-new").after(blankPreviewButton);
+ blankPreviewButton.addEventListener("click",async()=>{blankPreviewButton.disabled=true;const old=blankPreviewButton.textContent;blankPreviewButton.textContent="Opening blank preview…";try{await print({name:"Blank Form 93",temp_ack:"BLANK PREVIEW",income_sources:[],residential_status:"",gender:"",single_parent:"",parent:"",communication_address:"",photo:"",signature:""});}catch(error){console.error(error);alert("Could not open blank Form 93 preview: "+(error.message||"Please try again."));}finally{blankPreviewButton.disabled=false;blankPreviewButton.textContent=old;}});
  // A one-click dummy-data preview lets staff verify PDF alignment without retyping a full application.
  const sampleButton=document.createElement("button");sampleButton.type="button";sampleButton.className="secondary-btn pan-sample-preview";
  sampleButton.textContent="Preview sample alignment (test only)";
