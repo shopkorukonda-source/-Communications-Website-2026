@@ -135,14 +135,17 @@ async function loadOverviewStats(){
       $("today-bill-caption").textContent="Ask Admin to link your employee record";
       return;
     }
-    const [{data:ownBills,count,error},sessionResult]=await Promise.all([
+    const workDate=new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Kolkata"});
+    const [{count,error},sessionResult,attendanceResult]=await Promise.all([
       supabase.from("billing_transactions").select("id",{count:"exact",head:true}).eq("employee_id",currentEmployee.id).gte("created_at",start.toISOString()),
-      supabase.from("drawer_sessions").select("id,status,opened_at").eq("employee_id",currentEmployee.id).eq("status","open").order("opened_at",{ascending:false}).limit(1)
+      supabase.from("drawer_sessions").select("id,status,opened_at,drawer_id").eq("employee_id",currentEmployee.id).eq("status","open").order("opened_at",{ascending:false}).limit(1),
+      supabase.from("attendance").select("id,check_in,lunch_start,lunch_end,check_out,status").eq("employee_id",currentEmployee.id).eq("work_date",workDate).maybeSingle()
     ]);
     $("today-bill-count").textContent=error?"—":String(count||0);
     $("today-bill-caption").textContent=error?"Unable to load your bills":"Bills you recorded today";
     $("cash-position").textContent="—";
     $("cash-position-caption").textContent="";
+    renderEmployeeShiftControls(sessionResult.data?.[0]||null,attendanceResult.data||null,sessionResult.error||attendanceResult.error);
     return;
   }
   const [{count,error},sessionResult]=await Promise.all([
@@ -155,6 +158,35 @@ async function loadOverviewStats(){
   $("cash-position").textContent=""+money(cash);
   const open=sessionResult.data?.[0];
   $("cash-position-caption").textContent=open?"Live Shop Cash · Shift open":"Shop Cash wallet balance";
+}
+
+function renderEmployeeShiftControls(openSession,attendance,error){
+ const host=$("employee-shift-controls");if(!host)return;
+ if(currentProfile?.role!=="employee"){host.innerHTML="";return;}
+ if(error){host.innerHTML='<div class="shift-control-card"><strong>Shift status unavailable</strong><p>Please refresh or contact Admin.</p></div>';return;}
+ let label="",action="",description="";
+ if(openSession){
+   if(attendance?.lunch_start&&!attendance?.lunch_end){label="Lunch Break Close";action="lunch-close";description="Your lunch break is active. Close it before continuing work.";}
+   else if(!attendance?.lunch_start){label="Lunch Break";action="lunch-start";description="Record your lunch break when you leave for lunch.";}
+   else {label="Shift Close";action="shift-close";description="Complete your shift and enter the cash denomination count.";}
+ }else if(attendance?.check_out){
+   host.innerHTML='<div class="shift-control-card"><div><span class="eyebrow">TODAY’S SHIFT</span><strong>Shift Closed</strong><p>Your shift has been closed for today.</p></div><span class="shift-complete-mark">✓</span></div>';return;
+ }else{
+   label="Shift Start";action="shift-start";description="Open your assigned cash drawer and record opening cash to start work.";
+ }
+ host.innerHTML='<div class="shift-control-card"><div class="shift-control-copy"><span class="eyebrow">TODAY’S SHIFT</span><strong>'+label+'</strong><p>'+description+'</p></div><button type="button" class="primary-btn shift-control-action" data-employee-shift-action="'+action+'">'+label+'</button><div class="shift-control-message" id="employee-shift-message" role="status"></div></div>';
+ const button=host.querySelector("[data-employee-shift-action]");
+ button.addEventListener("click",async()=>{
+   if(action==="shift-start"||action==="shift-close"){
+     const target=document.querySelector('.nav-item[data-view="drawers"]');if(target)target.click();
+     return;
+   }
+   button.disabled=true;const msg=$("employee-shift-message");msg.textContent="Saving…";
+   const result=await supabase.rpc("set_attendance_lunch",{p_action:action==="lunch-start"?"start":"end"});
+   if(result.error){msg.textContent=result.error.message;button.disabled=false;return;}
+   msg.textContent=action==="lunch-start"?"Lunch break recorded.":"Lunch break closed.";
+   await loadOverviewStats();
+ });
 }
 
 function renderCategories() {
@@ -315,7 +347,7 @@ document.querySelectorAll(".nav-item").forEach(btn=>btn.addEventListener("click"
   document.querySelectorAll(".nav-item").forEach(item=>item.classList.toggle("active",item===btn));
   $("overview-view").classList.toggle("hidden",view!=="overview");
   $("other-view").classList.toggle("hidden",view==="overview");
-  if(view==="overview"){ $("page-title").textContent=currentProfile?.role==="employee"?"My Dashboard":"Overview"; return; }
+  if(view==="overview"){ $("page-title").textContent=currentProfile?.role==="employee"?"My Dashboard":"Overview"; await loadOverviewStats(); return; }
   $("page-title").textContent=btn.textContent.trim();
   if(view==="billing") {
     await renderQuickBilling();
