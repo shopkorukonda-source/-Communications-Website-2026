@@ -974,7 +974,7 @@ async function renderQuickBilling(){
     <button id="save-billing" class="primary-btn admin-add-btn">Save one bill with all services</button>
   </div>
   <div class="admin-table-wrap"><h3>Recent bills & edit window</h3><div id="recent-bills"></div></div>
-  <div class="admin-table-wrap"><h3>PAN Applications · Pending Submission</h3><p class="muted">Customer collection is saved immediately. PAN processing wallet debit happens only when you mark the application submitted.</p><div id="pan-pending-list"></div></div>`;
+  <div class="admin-table-wrap"><h3>PAN Applications · Pending Submission</h3><p class="muted">Customer collection is saved immediately. Enter the ACK number and select a processing wallet, then save to debit the PAN processing cost.</p><div id="pan-pending-list"></div></div>`;
   $("save-billing").addEventListener("click",saveQuickBilling);
   const count=$("bill-count");
   count.addEventListener("change",()=>{let n=Math.max(1,Math.min(100,Number(count.value)||1));count.value=n;setBillingRows(n);});
@@ -1385,11 +1385,11 @@ async function loadPendingPanApplications(){
   host.innerHTML=(data||[]).map(q=>{
     const item=Array.isArray(q.billing_items)?q.billing_items[0]:q.billing_items;
     const bill=Array.isArray(item?.billing_transactions)?item.billing_transactions[0]:item?.billing_transactions;
-    return '<div class="admin-service-row"><div class="admin-service-main"><strong>PAN · Bill #'+escapeHtml(bill?.bill_number||"")+'</strong><small>'+escapeHtml(bill?.customer_name||"Customer")+' · '+escapeHtml(bill?.customer_phone||"")+' · Received '+new Date(q.created_at).toLocaleString("en-IN")+'</small></div><div class="admin-service-meta"><strong>Internal cost '+money(q.expected_cost)+'</strong><span>Pending submission</span></div><div class="admin-service-actions"><select data-pan-wallet="'+q.billing_item_id+'"><option value="">Select debit wallet</option>'+options+'</select><input data-pan-ack="'+q.billing_item_id+'" placeholder="Acknowledgement no. (optional)"><button data-pan-submit="'+q.billing_item_id+'">Mark as Submitted</button></div></div>';
+    return '<div class="admin-service-row"><div class="admin-service-main"><strong>PAN · Bill #'+escapeHtml(bill?.bill_number||"")+'</strong><small>'+escapeHtml(bill?.customer_name||"Customer")+' · '+escapeHtml(bill?.customer_phone||"")+' · Received '+new Date(q.created_at).toLocaleString("en-IN")+'</small></div><div class="admin-service-meta"><strong>Internal cost '+money(q.expected_cost)+'</strong><span>Pending submission</span></div><div class="admin-service-actions"><select data-pan-wallet="'+q.billing_item_id+'"><option value="">Select debit wallet</option>'+options+'</select><input data-pan-ack="'+q.billing_item_id+'" placeholder="Acknowledgement number (required)"><button data-pan-submit="'+q.billing_item_id+'">Save ACK & Debit Wallet</button></div></div>';
   }).join("")||'<div class="empty-state">No PAN applications pending submission.</div>';
   host.querySelectorAll("[data-pan-submit]").forEach(btn=>btn.addEventListener("click",async()=>{
     const id=btn.dataset.panSubmit,wallet=host.querySelector('[data-pan-wallet="'+id+'"]')?.value||"",ack=host.querySelector('[data-pan-ack="'+id+'"]')?.value||"";
-    if(!wallet){alert("Select the PAN processing wallet first.");return;}
+    if(!ack.trim()){alert("Enter the PAN acknowledgement number first.");return;}\n     if(!wallet){alert("Select the PAN processing wallet first.");return;}
     btn.disabled=true;
     try{
       const {error:rpcError}=await supabase.rpc("mark_pan_application_submitted",{p_billing_item_id:id,p_wallet_id:wallet,p_acknowledgement_number:ack});
