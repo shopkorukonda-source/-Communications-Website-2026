@@ -766,7 +766,8 @@ function calculateBillingRow(row){
     const pct=Number(row.charge_percent??svc.billing_config?.charge_percent??2);
     charge=Math.round((amount*pct/100)*100)/100;cost=0;profit=charge;
   } else if(svc.code==="AEPS_WITHDRAWAL"){
-    const bank=(row.bank||"").toLowerCase();charge=bank.includes("union")?0:Math.ceil(amount/1000)*Number(svc.billing_config?.charge_per_1000||10);cost=Number(row.cost||0);
+    const bank=(row.bank||"").toLowerCase();charge=bank.includes("union")?0:Math.ceil(amount/1000)*Number(svc.billing_config?.charge_per_1000||10);cost=0;
+    return {charge,cost,profit:charge,unitTotal:charge,total:charge};
   } else {
     const bc=svc.billing_config||{},cc=svc.processing_cost_config||{},pc=svc.profit_config||{};
     if(svc.billing_type==="fixed") charge=Number(bc.customer_charge||0);
@@ -931,9 +932,10 @@ function onBillingRowChange(e){
 function onBillingWalletChange(){}
 
 function updateBillingTotals(){
-  let base=0,charges=0,costs=0,total=0;
+  let base=0,charges=0,costs=0,total=0,aepsCashPayout=0,hasAepsSettlement=false;
   billingRows.forEach((r,i)=>{
     const svc=services.find(s=>s.id===r.service_id),isCurrentBills=svc?.code==="CURRENT_BILLS",special=isPaperPageService(svc),alloc=automaticWalletDebits(r,svc),t=$("row-total-"+i),res=$("row-result-"+i),walletBox=$("wallet-auto-"+i);
+    if(svc?.code==="AEPS_WITHDRAWAL"){hasAepsSettlement=true;aepsCashPayout+=Number(r.base||0)*Math.max(1,Number(r.quantity||1));}
     const currentCalcs=isCurrentBills?(r.bill_amounts||[]).map(amount=>calculateBillingRow({...r,base:amount})):null;
     if(isCurrentBills)currentCalcs.forEach((x,j)=>{const charge=$("[data-current-charge='"+i+"-"+j+"']"),lineTotal=$("[data-current-total='"+i+"-"+j+"']");if(charge)charge.textContent=money(x.charge);if(lineTotal)lineTotal.textContent=money(x.total);});
     const calc=isCurrentBills?{charge:currentCalcs.reduce((a,x)=>a+x.charge,0),cost:currentCalcs.reduce((a,x)=>a+x.cost,0),profit:currentCalcs.reduce((a,x)=>a+x.profit,0),total:currentCalcs.reduce((a,x)=>a+x.total,0)}:calculateBillingRow(r);
@@ -946,7 +948,21 @@ function updateBillingTotals(){
   $("billing-totals").innerHTML='<div><small>Gross / base</small><strong>'+money(base+charges)+'</strong></div><div><small>Service charges</small><strong>'+money(charges)+'</strong></div><div><small>Customer total</small><strong>'+money(total)+'</strong></div>';
   const received=Number($("bill-received").value||0);
   const balance=Math.max(0,total-received),change=Math.max(0,received-total),status=$("bill-change");
+  const paymentPanel=document.querySelector(".billing-payment");
   status.classList.remove("payment-short","payment-exact","payment-change");
+  if(hasAepsSettlement){
+    $("bill-mode").value="cash";
+    $("bill-received").value=total.toFixed(2);
+    $("bill-cash").value=total.toFixed(2);
+    $("bill-upi").value="0";
+    if(paymentPanel)paymentPanel.classList.add("hidden");
+    const net=aepsCashPayout-total;
+    if(net>0.009){status.classList.add("payment-change");status.textContent="CASH TO GIVE CUSTOMER  ·  "+money(net);}
+    else if(net< -0.009){status.classList.add("payment-short");status.textContent="CASH TO COLLECT FROM CUSTOMER  ·  "+money(Math.abs(net));}
+    else{status.classList.add("payment-exact");status.textContent="SETTLEMENT EXACT  ·  ₹0.00";}
+    return;
+  }
+  if(paymentPanel)paymentPanel.classList.remove("hidden");
   if(received<total){status.classList.add("payment-short");status.textContent="BALANCE TO COLLECT  ·  "+money(balance);}
   else if(received===total){status.classList.add("payment-exact");status.textContent="PAYMENT SETTLED  ·  "+money(0);}
   else{status.classList.add("payment-change");status.textContent="RETURN TO CUSTOMER  ·  "+money(change);}
