@@ -909,7 +909,7 @@ async function setBillingRows(n){
   $("billing-rows").onclick=e=>{
     const btn=e.target.closest("[data-service-option]");if(!btn)return;
     const idx=Number(btn.dataset.rowIndex),svc=services.find(s=>s.id===btn.dataset.serviceOption);if(!svc)return;
-    billingRows[idx].service_id=svc.id;if(svc.code==="UPI_TO_CASH"){$("bill-mode").value="upi";updatePaymentFields();}billingRows[idx].base=svc.billing_config?.base_amount??"";billingRows[idx].charge=svc.billing_config?.customer_charge??"";billingRows[idx].cost=svc.processing_cost_config?.fixed_amount??"";billingRows[idx].charge_percent=svc.billing_config?.charge_percent??2;billingRows[idx].profit_wallet_id="";billingRows[idx].quantity=1;billingRows[idx].unit_count="";billingRows[idx].sets=1;billingRows[idx].item_label="";billingRows[idx].discount=0;billingRows[idx].wallet_debits=[];billingRows[idx].bill_count=1;billingRows[idx].bill_amounts=[""];
+    billingRows[idx].service_id=svc.id;if(svc.code==="UPI_TO_CASH"){$("bill-mode").value="upi";updatePaymentFields();}billingRows[idx].base=svc.billing_config?.base_amount??"";billingRows[idx].charge=svc.billing_config?.customer_charge??"";billingRows[idx].cost=svc.processing_cost_config?.fixed_amount??"";billingRows[idx].charge_percent=svc.billing_config?.charge_percent??2;billingRows[idx].profit_wallet_id="";billingRows[idx].quantity=1;billingRows[idx].unit_count="";billingRows[idx].sets=1;billingRows[idx].item_label="";billingRows[idx].discount=0;billingRows[idx].wallet_debits=[];billingRows[idx].bill_count=1;billingRows[idx].bill_amounts=[""];billingRows[idx].adjustment_type="";billingRows[idx].adjustment_amount=0;billingRows[idx].adjustment_mode="cash";billingRows[idx].selected_adjustment_wallet_id="";billingRows[idx].selected_upi_to_cash_wallet_id="";
     setBillingRows(billingRows.length);
   };
   updateBillingTotals();
@@ -940,7 +940,7 @@ function onBillingRowChange(e){
     billingRows[i].cost=svc?.processing_cost_config?.fixed_amount??"";
     billingRows[i].charge_percent=svc?.billing_config?.charge_percent??2;
     billingRows[i].profit_wallet_id="";
-    billingRows[i].quantity=1;billingRows[i].unit_count="";billingRows[i].sets=1;billingRows[i].item_label="";billingRows[i].discount=0;billingRows[i].wallet_debits=[];billingRows[i].bill_count=1;billingRows[i].bill_amounts=[""];billingRows[i].adjustment_type="";billingRows[i].adjustment_amount=0;billingRows[i].adjustment_mode="cash";billingRows[i].selected_upi_to_cash_wallet_id="";
+    billingRows[i].quantity=1;billingRows[i].unit_count="";billingRows[i].sets=1;billingRows[i].item_label="";billingRows[i].discount=0;billingRows[i].wallet_debits=[];billingRows[i].bill_count=1;billingRows[i].bill_amounts=[""];billingRows[i].adjustment_type="";billingRows[i].adjustment_amount=0;billingRows[i].adjustment_mode="cash";billingRows[i].selected_adjustment_wallet_id="";billingRows[i].selected_upi_to_cash_wallet_id="";
     setBillingRows(billingRows.length);return;
   }
   updateBillingTotals();
