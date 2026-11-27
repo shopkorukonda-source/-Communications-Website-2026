@@ -612,3 +612,24 @@ body{background:radial-gradient(ellipse at 8% 0%,#fbf8f0 0,transparent 36%),var(
 /* Definitively hide the sidebar logo for employee accounts; retain the topbar logo. */
 #app-screen.employee-mode .sidebar > .sidebar-brand,
 #app-screen.employee-mode .sidebar > .sidebar-brand[hidden]{display:none!important;visibility:hidden!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important}
+
+/* Recharge-required wallets stay inside Assigned Wallets and blink red. */
+#employee-wallets .employee-wallet-card.wallet-low-balance{
+ border:2px solid #dc2626!important;
+ background:#fff0f0!important;
+ color:#991b1b!important;
+ animation:walletLowBalanceBlink 1s ease-in-out infinite;
+}
+#employee-wallets .employee-wallet-card.wallet-low-balance strong,
+#employee-wallets .employee-wallet-card.wallet-low-balance b{color:#b91c1c!important}
+#employee-wallets .employee-wallet-card.wallet-low-balance small{color:#991b1b!important}
+.wallet-recharge-flag{
+ display:inline-block;margin:5px 0 0;padding:3px 6px;border-radius:4px;
+ background:#dc2626;color:#fff!important;font-size:9px;font-style:normal;
+ font-weight:900;letter-spacing:.4px;animation:walletFlagBlink .8s steps(2,start) infinite;
+}
+@keyframes walletFlagBlink{to{opacity:.35}}
+@media(prefers-reduced-motion:reduce){
+ #employee-wallets .employee-wallet-card.wallet-low-balance,.wallet-recharge-flag{animation:none!important}
+ #employee-wallets .employee-wallet-card.wallet-low-balance{background:#fecaca!important}
+}
