@@ -96,15 +96,10 @@ async function loadCatalog() {
       if (walletError) console.warn("Wallet list unavailable", walletError);
       walletOptions = wallets || [];
     }else if(currentEmployee?.id){
-      const [{data: assigned, error: assignedError},{data: profitRules,error:profitRulesError},{data: processingRules,error:processingRulesError}]=await Promise.all([
-        supabase.from("employee_wallet_access").select("wallet_id").eq("employee_id",currentEmployee.id).eq("is_active",true),
-        supabase.from("service_credit_wallet_rules").select("wallet_id"),
-        supabase.from("service_wallet_rules").select("wallet_id")
-      ]);
+      const {data: assigned, error: assignedError}=await supabase.from("employee_wallet_access").select("wallet_id").eq("employee_id",currentEmployee.id).eq("is_active",true);
       if(assignedError)console.warn("Assigned wallet list unavailable",assignedError);
-      if(profitRulesError)console.warn("Service profit wallet list unavailable",profitRulesError);
-      if(processingRulesError)console.warn("Service processing wallet list unavailable",processingRulesError);
-      const ids=[...new Set([...(assigned||[]).map(x=>x.wallet_id),...(profitRules||[]).map(x=>x.wallet_id),...(processingRules||[]).map(x=>x.wallet_id)])];
+      // Employee dashboard and billing may expose only wallets explicitly assigned to this employee.
+      const ids=[...new Set((assigned||[]).map(x=>x.wallet_id))];
       if(ids.length){
         const {data: wallets,error:walletError}=await supabase.from("wallets").select("id,name,wallet_type,provider,current_balance,is_active,low_balance_threshold,low_balance_alert_enabled").eq("is_active",true).in("id",ids).order("name");
         if(walletError)console.warn("Assigned and service profit wallet details unavailable",walletError);
@@ -138,12 +133,10 @@ async function refreshWalletBalances(){
   try{
     let ids=null;
     if(currentProfile.role!=="admin" && currentEmployee?.id){
-      const [{data:assigned,error:assignedError},{data:rules,error:rulesError}]=await Promise.all([
-        supabase.from("employee_wallet_access").select("wallet_id").eq("employee_id",currentEmployee.id).eq("is_active",true),
-        supabase.from("service_credit_wallet_rules").select("wallet_id")
-      ]);
-      if(assignedError)throw assignedError;if(rulesError)throw rulesError;
-      ids=[...new Set([...(assigned||[]).map(x=>x.wallet_id),...(rules||[]).map(x=>x.wallet_id)])];
+      const {data:assigned,error:assignedError}=await supabase.from("employee_wallet_access").select("wallet_id").eq("employee_id",currentEmployee.id).eq("is_active",true);
+      if(assignedError)throw assignedError;
+      // Never add service credit/profit wallets to an employee's visible balance list.
+      ids=[...new Set((assigned||[]).map(x=>x.wallet_id))];
     }
     let query=supabase.from("wallets").select("id,name,wallet_type,provider,current_balance,is_active,low_balance_threshold,low_balance_alert_enabled").order("name");
     if(currentProfile.role!=="admin")query=ids?.length?query.in("id",ids):query.eq("id","00000000-0000-0000-0000-000000000000");
