@@ -949,7 +949,7 @@ function calculateBillingRow(row){
   }
   if(svc.code==="CREDIT_CARD_BANK")profit=charge;
   else if(["CURRENT_BILLS","MONEY_TRANSFER","PRIVATE_BUS_TICKET","APSRTC_TICKET","TTD_TICKET"].includes(svc.code))profit=charge-cost;
-  else if(svc.profit_mode==="manual")profit=charge-cost;
+  else if(svc.profit_mode==="manual"&&svc.code!=="PAN_CARD")profit=charge-cost;
   const unitTotal=(svc.code==="AEPS_WITHDRAWAL"||svc.code==="CASH_TO_UPI")?charge:amount+charge;
   return {charge,cost,profit,unitTotal,total:unitTotal*qty};
 }
