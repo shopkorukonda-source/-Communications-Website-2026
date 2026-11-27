@@ -943,7 +943,7 @@ function calculateBillingRow(row){
   if(svc.code==="CREDIT_CARD_BANK")profit=charge;
   else if(["CURRENT_BILLS","MONEY_TRANSFER","PRIVATE_BUS_TICKET","APSRTC_TICKET","TTD_TICKET"].includes(svc.code))profit=charge-cost;
   else if(svc.profit_mode==="manual")profit=charge-cost;
-  const unitTotal=svc.code==="AEPS_WITHDRAWAL"?charge:amount+charge;
+  const unitTotal=(svc.code==="AEPS_WITHDRAWAL"||svc.code==="CASH_TO_UPI")?charge:amount+charge;
   return {charge,cost,profit,unitTotal,total:unitTotal*qty};
 }
 async function renderQuickBilling(){
@@ -1147,13 +1147,14 @@ function onBillingWalletChange(){}
 
 function isAepsWithdrawalService(svc){return !!svc&&(svc.code==="AEPS_WITHDRAWAL"||/aeps.*withdrawal|withdrawal.*aeps/i.test(svc.name||""));}
 function updateBillingTotals(){
-  let base=0,charges=0,costs=0,total=0,aepsCashPayout=0,aepsExtraUpiCharge=0,hasAepsSettlement=false;
+  let base=0,charges=0,costs=0,total=0,aepsCashPayout=0,aepsExtraUpiCharge=0,cashToUpiPrincipal=0,hasAepsSettlement=false;
   billingRows.forEach((r,i)=>{
     const svc=services.find(s=>s.id===r.service_id),isCurrentBills=svc?.code==="CURRENT_BILLS",special=isPaperPageService(svc),alloc=walletDebitsForRow(r,svc),t=$("row-total-"+i),res=$("row-result-"+i),walletBox=$("wallet-auto-"+i);
     const currentCalcs=isCurrentBills?(r.bill_amounts||[]).map(amount=>calculateBillingRow({...r,base:amount})):null;
     if(isCurrentBills)currentCalcs.forEach((x,j)=>{const charge=$("[data-current-charge='"+i+"-"+j+"']"),lineTotal=$("[data-current-total='"+i+"-"+j+"']");if(charge)charge.textContent=money(x.charge);if(lineTotal)lineTotal.textContent=money(x.total);});
     const calc=isCurrentBills?{charge:currentCalcs.reduce((a,x)=>a+x.charge,0),cost:currentCalcs.reduce((a,x)=>a+x.cost,0),profit:currentCalcs.reduce((a,x)=>a+x.profit,0),total:currentCalcs.reduce((a,x)=>a+x.total,0)}:calculateBillingRow(r);
     if(isAepsWithdrawalService(svc)){hasAepsSettlement=true;aepsCashPayout+=Number(r.base||0)*Math.max(1,Number(r.quantity||1));if(r.aeps_charge_mode==="extra_upi")aepsExtraUpiCharge+=calc.charge*Math.max(1,Number(r.quantity||1));}
+    if(svc?.code==="CASH_TO_UPI"&&billingRows.some(x=>isAepsWithdrawalService(services.find(y=>y.id===x.service_id))))cashToUpiPrincipal+=Number(r.base||0)*Math.max(1,Number(r.quantity||1));
     const slabCharge=$("slab-charge-"+i),slabCost=$("slab-cost-"+i);if(slabCharge)slabCharge.value=money(calc.charge);if(slabCost)slabCost.value=money(calc.cost);
     const aepsExtra=["UPI_TO_CASH","CASH_TO_UPI"].includes(svc?.code)&&r.adjustment_type==="extra"?Math.max(0,Number(r.adjustment_amount||0)):0;
     base+=isCurrentBills?(r.bill_amounts||[]).reduce((a,x)=>a+Number(x||0),0):Number(r.base||0);charges+=calc.charge;costs+=calc.cost;total+=calc.total+aepsExtra;
@@ -1172,7 +1173,7 @@ function updateBillingTotals(){
     $("bill-mode").value=cashOffset>0&&upiCharge>0?"split":upiCharge>0?"upi":"cash";
     $("bill-received").value=total.toFixed(2);$("bill-cash").value=cashOffset.toFixed(2);$("bill-upi").value=upiCharge.toFixed(2);
     if(paymentPanel)paymentPanel.classList.add("hidden");
-    const net=aepsCashPayout-cashOffset;
+    const net=aepsCashPayout-cashOffset-cashToUpiPrincipal;
     if(net>0.009){status.classList.add("payment-change");status.textContent="CASH TO GIVE CUSTOMER  ·  "+money(net);}
     else if(net< -0.009){status.classList.add("payment-short");status.textContent="CASH TO COLLECT FROM CUSTOMER  ·  "+money(Math.abs(net));}
     else{status.classList.add("payment-exact");status.textContent="SETTLEMENT EXACT  ·  ₹0.00";}
