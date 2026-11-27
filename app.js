@@ -769,8 +769,12 @@ function calculateBillingRow(row){
       charge=slab?Number(slab.customer_charge??slab.charge??0):0;
       if(slab&&slab.percentage!=null)charge=Math.round(amount*Number(slab.percentage))/100;
     } else charge=Math.ceil(amount/1000)*Number(cfg.charge_per_1000||10);
-    cost=0;
-    return {charge,cost,profit:charge,unitTotal:charge,total:charge};
+    const pcfg=svc.processing_cost_config||{};
+    if(svc.processing_cost_type==="fixed")cost=Number(pcfg.fixed_amount||0);
+    else if(svc.processing_cost_type==="percentage")cost=Math.round(amount*Number(pcfg.percentage||0))/100;
+    else if(svc.processing_cost_type==="slabs"){const ps=(pcfg.slabs||[]).find(x=>amount>=Number(x.min||0)&&(x.max==null||amount<=Number(x.max)));cost=Number(ps?.cost??ps?.processing_cost??0);}
+    else cost=Math.max(0,Number(row.cost||0));
+    return {charge,cost,profit:charge-cost,unitTotal:charge,total:charge};
   } else {
     const bc=svc.billing_config||{},cc=svc.processing_cost_config||{},pc=svc.profit_config||{};
     if(svc.billing_type==="fixed") charge=Number(bc.customer_charge||0);
@@ -828,6 +832,17 @@ async function renderQuickBilling(){
 }
 function automaticWalletDebits(row,svc){
   if(svc?.code==="UPI_TO_CASH")return [];
+  if(isAepsWithdrawalService(svc)){
+    const walletId=row.aeps_processing_wallet_id;
+    const rule=(billingWalletRules[row.service_id]||[]).find(x=>x.wallet_id===walletId);
+    if(!rule||!walletId)return [];
+    const cfg=rule.debit_config||{},mode=cfg.mode||(cfg.fixed_amount!=null?"fixed_amount":"processing_cost"),amount=Number(row.base||0);
+    let debit=0;
+    if(mode==="fixed_amount")debit=Number(cfg.fixed_amount||0);
+    else if(mode==="percentage")debit=Math.round(amount*Number(cfg.percentage||0))/100;
+    else debit=calculateBillingRow(row).cost;
+    return debit>0?[{wallet_id:walletId,amount:debit}]:[];
+  }
   if(svc?.code==="CASH_TO_UPI"&&row.adjustment_type==="deduct"){
     const walletId=row.selected_adjustment_wallet_id;
     const allowed=(billingWalletRules[row.service_id]||[]).some(rule=>rule.wallet_id===walletId);
@@ -888,7 +903,7 @@ async function setBillingRows(n){
       : special
       ? '<label>Book / PDF name (optional)<input data-field="item_label" data-i="'+i+'" value="'+escapeHtml(r.item_label||"")+'" placeholder="Book 1 / PDF 1"></label><label>'+(svc.code==="PRINTOUT"?"PDF pages":"Xerox papers")+'<input data-field="unit_count" data-i="'+i+'" type="number" min="1" step="1" value="'+escapeHtml(r.unit_count||"")+'" placeholder="Enter count"></label><label>Number of sets<input data-field="sets" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.sets||1)+'"></label><label>Admin fixed rate (automatic)<input type="text" readonly value="'+money(rate)+' / '+(svc.code==="PRINTOUT"?"page":"paper")+'"></label><label>Discount (₹)<input data-field="discount" data-i="'+i+'" type="number" min="0" step="0.01" value="'+Number(r.discount||0)+'" placeholder="Optional"></label>'
       : isAeps
-        ? '<label>Withdrawal Amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0.01" step="0.01" value="'+escapeHtml(r.base||"")+'" placeholder="Enter AEPS amount"></label><label>Bank (AEPS)<input data-field="bank" data-i="'+i+'" value="'+escapeHtml(r.bank||"")+'" placeholder="Bank name"></label><label>AEPS Credit Wallet<select data-field="aeps_wallet_id" data-i="'+i+'"><option value="">Select wallet to credit</option>'+(billingWalletRules[r.service_id]||[]).map(rule=>{const w=walletOptions.find(x=>x.id===rule.wallet_id&&x.is_active);return w?'<option value="'+w.id+'" '+(r.aeps_wallet_id===w.id?"selected":"")+'>'+escapeHtml(w.name)+' · '+money(w.current_balance)+'</option>':"";}).join("")+'</select></label><label>AEPS Charge Collection<select data-field="aeps_charge_mode" data-i="'+i+'"><option value="deduct" '+((r.aeps_charge_mode||"deduct")==="deduct"?"selected":"")+' >Deduct from customer payout</option><option value="extra_upi" '+(r.aeps_charge_mode==="extra_upi"?"selected":"")+' >Extra charge – collect through UPI</option></select></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label>'
+        ? '<label>Withdrawal Amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0.01" step="0.01" value="'+escapeHtml(r.base||"")+'" placeholder="Enter AEPS amount"></label><label>Bank (AEPS)<input data-field="bank" data-i="'+i+'" value="'+escapeHtml(r.bank||"")+'" placeholder="Bank name"></label><label>Processing Wallet<select data-field="aeps_processing_wallet_id" data-i="'+i+'"><option value="">Select processing wallet</option>'+(billingWalletRules[r.service_id]||[]).map(rule=>{const w=walletOptions.find(x=>x.id===rule.wallet_id&&x.is_active);return w?'<option value="'+w.id+'" '+(r.aeps_processing_wallet_id===w.id?"selected":"")+'>'+escapeHtml(w.name)+' · Debit '+money(rule.debit_config?.fixed_amount??(rule.debit_config?.percentage!=null?Number(r.base||0)*Number(rule.debit_config.percentage)/100:calculateBillingRow(r).cost))+'</option>':"";}).join("")+'</select></label><label>AEPS Credit Wallet<select data-field="aeps_wallet_id" data-i="'+i+'"><option value="">Select wallet to credit</option>'+(billingWalletRules[r.service_id]||[]).map(rule=>{const w=walletOptions.find(x=>x.id===rule.wallet_id&&x.is_active);return w?'<option value="'+w.id+'" '+(r.aeps_wallet_id===w.id?"selected":"")+'>'+escapeHtml(w.name)+' · '+money(w.current_balance)+'</option>':"";}).join("")+'</select></label><label>AEPS Charge Collection<select data-field="aeps_charge_mode" data-i="'+i+'"><option value="deduct" '+((r.aeps_charge_mode||"deduct")==="deduct"?"selected":"")+' >Deduct from customer payout</option><option value="extra_upi" '+(r.aeps_charge_mode==="extra_upi"?"selected":"")+' >Extra charge – collect through UPI</option></select></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label>'
         : isCreditCard
         ? '<label>Transfer amount (₹)<input data-field="base" data-i="'+i+'" type="number" min="0.01" step="0.01" value="'+escapeHtml(r.base||"")+'" placeholder="Enter amount"></label><label>Service charge (%)<input data-field="charge_percent" data-i="'+i+'" type="number" min="0.01" max="100" step="0.01" value="'+escapeHtml(r.charge_percent??svc.billing_config?.charge_percent??2)+'"></label><label>Profit wallet<select data-field="profit_wallet_id" data-i="'+i+'"><option value="">Select wallet</option>'+ccWalletIds.map(id=>{const w=walletOptions.find(x=>x.id===id&&x.is_active);return w?'<option value="'+w.id+'" '+(r.profit_wallet_id===w.id?"selected":"")+'>'+escapeHtml(w.name)+' · '+money(w.current_balance)+'</option>':"";}).join("")+'</select></label><label>Quantity<input data-field="quantity" data-i="'+i+'" type="number" min="1" step="1" value="'+Number(r.quantity||1)+'"></label>'
         : isCashTransfer
@@ -1021,7 +1036,7 @@ async function saveQuickBilling(){
       const svc=services.find(s=>s.id===r.service_id),special=isPaperPageService(svc);
       const wallet_debits=automaticWalletDebits(r,svc);
       if(svc.code==="CURRENT_BILLS"&&Number(r.base)>=10&&!(billingWalletRules[r.service_id]||[]).some(x=>x.wallet_id===r.current_bills_wallet_id))throw new Error("Select one Current Bills processing wallet assigned by Admin.");
-      if(isAepsWithdrawalService(svc)&&!(billingWalletRules[r.service_id]||[]).some(x=>x.wallet_id===r.aeps_wallet_id))throw new Error("Select an AEPS credit wallet assigned by Admin.");
+      if(isAepsWithdrawalService(svc)&&!(billingWalletRules[r.service_id]||[]).some(x=>x.wallet_id===r.aeps_processing_wallet_id))throw new Error("Select an AEPS processing wallet assigned by Admin.");if(isAepsWithdrawalService(svc)&&!(billingWalletRules[r.service_id]||[]).some(x=>x.wallet_id===r.aeps_wallet_id))throw new Error("Select an AEPS credit wallet assigned by Admin.");
       if(svc.code==="CREDIT_CARD_BANK"){
         if(!(billingProfitWalletRules[r.service_id]||[]).includes(r.profit_wallet_id))throw new Error("Select a profit wallet assigned by Admin for Credit Card service.");
         if(!(Number(r.base)>0)||!(Number(r.charge_percent)>0)||Number(r.charge_percent)>100)throw new Error("Enter a valid transfer amount and percentage (0.01–100).");
@@ -1036,7 +1051,7 @@ async function saveQuickBilling(){
       const snapshot=special
         ? {base_amount:0,service_charge:calc.gross,count_unit:svc.code==="PRINTOUT"?"pages":"papers",unit_count:Number(r.unit_count),sets:Number(r.sets),total_count:calc.count,item_label:r.item_label||null,unit_rate:calc.rate,discount_amount:calc.discount,wallet_debits}
         : svc.code==="CREDIT_CARD_BANK" ? {base_amount:Number(r.base),service_charge:calc.charge,charge_percent:Number(r.charge_percent),profit_wallet_id:r.profit_wallet_id,wallet_debits}
-        : isAepsWithdrawalService(svc) ? {base_amount:Number(r.base),service_charge:calc.charge,bank:r.bank||null,aeps_wallet_id:r.aeps_wallet_id||null,aeps_charge_mode:r.aeps_charge_mode||"deduct",wallet_debits}
+        : isAepsWithdrawalService(svc) ? {base_amount:Number(r.base),service_charge:calc.charge,bank:r.bank||null,aeps_processing_wallet_id:r.aeps_processing_wallet_id||null,aeps_wallet_id:r.aeps_wallet_id||null,aeps_charge_mode:r.aeps_charge_mode||"deduct",wallet_debits}
         : {base_amount:Number(r.base),service_charge:calc.charge,bank:r.bank||null,cash_to_upi_mode:svc.code==="CASH_TO_UPI"&&r.adjustment_type==="deduct"?"deduct":null,cash_to_upi_wallet_id:svc.code==="CASH_TO_UPI"&&r.adjustment_type==="deduct"?r.selected_adjustment_wallet_id:null,upi_to_cash_wallet_id:svc.code==="UPI_TO_CASH"?r.selected_upi_to_cash_wallet_id||null:null,current_bills_wallet_id:svc.code==="CURRENT_BILLS"?r.current_bills_wallet_id||null:null,wallet_debits};
       const itemPayload={service_id:r.service_id,quantity,customer_unit_price:price,processing_unit_cost:calc.cost,pricing_snapshot:snapshot,wallet_debits};
       if(currentProfile?.role==="admin")itemPayload.profit_amount=calc.profit;
