@@ -94,13 +94,9 @@ async function loadCatalog() {
       if (walletError) console.warn("Wallet list unavailable", walletError);
       walletOptions = wallets || [];
     }else if(currentEmployee?.id){
-      const [{data: assigned, error: assignedError},{data: profitRules,error:profitRulesError}]=await Promise.all([
-        supabase.from("employee_wallet_access").select("wallet_id").eq("employee_id",currentEmployee.id).eq("is_active",true),
-        supabase.from("service_profit_wallet_rules").select("wallet_id")
-      ]);
+      const {data: assigned, error: assignedError}=await supabase.from("employee_wallet_access").select("wallet_id").eq("employee_id",currentEmployee.id).eq("is_active",true);
       if(assignedError)console.warn("Assigned wallet list unavailable",assignedError);
-      if(profitRulesError)console.warn("Service profit wallet list unavailable",profitRulesError);
-      const ids=[...new Set([...(assigned||[]).map(x=>x.wallet_id),...(profitRules||[]).map(x=>x.wallet_id)])];
+      const ids=[...new Set((assigned||[]).map(x=>x.wallet_id))];
       if(ids.length){
         const {data: wallets,error:walletError}=await supabase.from("wallets").select("id,name,wallet_type,provider,current_balance,is_active,low_balance_threshold,low_balance_alert_enabled").eq("is_active",true).in("id",ids).order("name");
         if(walletError)console.warn("Assigned and service profit wallet details unavailable",walletError);
@@ -123,13 +119,11 @@ function renderEmployeeWallets(){
  const heading=isAdmin?"ALL SHOP WALLETS":"MY ASSIGNED WALLETS";
  const title=isAdmin?"Wallet balances":"Assigned wallet balances";
  if(!walletOptions.length){host.innerHTML='<div class="announcement-heading"><div><div class="eyebrow">'+heading+'</div><h3>'+(isAdmin?"No active wallets created":"No wallets assigned")+'</h3></div></div>';return;}
- host.innerHTML='<div class="announcement-heading"><div><div class="eyebrow">'+heading+'</div><h3>'+title+'</h3></div></div><div class="employee-wallet-grid">'+walletOptions.filter(w=>w.is_active!==false).map(w=>'<article class="employee-wallet-card"><div><strong>'+escapeHtml(w.name)+'</strong><small>'+escapeHtml(w.provider||w.wallet_type||"Wallet")+'</small></div><b>'+money(w.current_balance)+'</b></article>').join("")+'</div>';
+ const lowIds=new Set(walletOptions.filter(w=>w.low_balance_alert_enabled!==false&&Number(w.current_balance||0)<=Number(w.low_balance_threshold||0)).map(w=>w.id));
+ host.innerHTML='<div class="announcement-heading"><div><div class="eyebrow">'+heading+'</div><h3>'+title+'</h3></div></div><div class="employee-wallet-grid">'+walletOptions.filter(w=>w.is_active!==false).map(w=>{const low=lowIds.has(w.id);return '<article class="employee-wallet-card'+(low?' wallet-low-balance':'')+'"><div><strong>'+escapeHtml(w.name)+'</strong><small>'+escapeHtml(w.provider||w.wallet_type||"Wallet")+(low?'<em class="wallet-recharge-flag">RECHARGE REQUIRED</em>':'')+'</small></div><b>'+money(w.current_balance)+'</b></article>';}).join("")+'</div>';
 }
 function renderWalletAlerts(){
- const host=$("wallet-alerts");if(!host)return;
- const low=walletOptions.filter(w=>w.low_balance_alert_enabled!==false&&Number(w.current_balance||0)<=Number(w.low_balance_threshold||0));
- if(!low.length){host.innerHTML="";return;}
- host.innerHTML='<div class="announcement-heading"><div><div class="eyebrow">WALLET BALANCE ALERT</div><h3>Recharge Required</h3></div></div><div class="announcement-list">'+low.map(w=>'<article class="announcement-card wallet-low-balance"><div class="announcement-icon">₹</div><div class="announcement-copy"><strong>'+escapeHtml(w.name)+'</strong><p>Current balance '+money(w.current_balance)+' · Minimum '+money(w.low_balance_threshold||0)+'</p></div></article>').join("")+'</div>';
+ const host=$("wallet-alerts");if(host)host.innerHTML="";
 }
 async function loadOverviewStats(){
   const start=new Date();start.setHours(0,0,0,0);
