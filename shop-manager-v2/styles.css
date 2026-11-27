@@ -608,3 +608,7 @@ body{background:radial-gradient(ellipse at 8% 0%,#fbf8f0 0,transparent 36%),var(
 
 /* Employee view: keep the SLV logo beside the Overview heading only. */
 .employee-mode .sidebar-brand{display:none!important}
+
+/* Definitively hide the sidebar logo for employee accounts; retain the topbar logo. */
+#app-screen.employee-mode .sidebar > .sidebar-brand,
+#app-screen.employee-mode .sidebar > .sidebar-brand[hidden]{display:none!important;visibility:hidden!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important}
