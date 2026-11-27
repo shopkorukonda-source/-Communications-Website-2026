@@ -50,6 +50,8 @@ async function showApp(user) {
   appScreen.classList.remove("hidden");
   appScreen.classList.toggle("admin-mode", profile.role === "admin");
   appScreen.classList.toggle("employee-mode", profile.role === "employee");
+  const sidebarBrand = document.querySelector("#app-screen .sidebar > .sidebar-brand");
+  if (sidebarBrand) sidebarBrand.hidden = profile.role === "employee";
   $("user-name").textContent = profile.display_name || user.email;
   $("user-role").textContent = profile.role;
   $("avatar").textContent = (profile.display_name || user.email || "S").slice(0,1).toUpperCase();
