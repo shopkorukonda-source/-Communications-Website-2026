@@ -974,7 +974,7 @@ async function renderQuickBilling(){
     <button id="save-billing" class="primary-btn admin-add-btn">Save one bill with all services</button>
   </div>
   <div class="admin-table-wrap"><h3>Recent bills & edit window</h3><div id="recent-bills"></div></div>
-  <div class="admin-table-wrap"><h3>PAN Applications · Pending Submission</h3><p class="muted">Customer collection is saved immediately. Enter the ACK number and select a processing wallet, then save to debit the PAN processing cost.</p><div id="pan-pending-list"></div></div>`;
+  <div class="admin-table-wrap"><h3>PAN Applications · Pending Submission</h3><p class="muted">Customer collection is saved immediately. Enter the ACK number and select a processing wallet, then save to debit the PAN processing cost.</p><div id="pan-pending-list"></div><div class="admin-table-wrap pan-search-panel"><h3>Search PAN Applications</h3><p class="muted">Search pending and submitted applications using applicant name, date of birth, PAN type, ACK number, mobile number or bill number.</p><div id="pan-application-search"></div></div></div>`;
   $("save-billing").addEventListener("click",saveQuickBilling);
   const count=$("bill-count");
   count.addEventListener("change",()=>{let n=Math.max(1,Math.min(100,Number(count.value)||1));count.value=n;setBillingRows(n);});
@@ -1382,12 +1382,38 @@ async function loadPendingPanApplications(){
     const wallet=walletOptions.find(w=>w.id===rule.wallet_id&&w.is_active);
     return wallet?'<option value="'+wallet.id+'">'+escapeHtml(wallet.name)+' · Balance '+money(wallet.current_balance)+'</option>':"";
   }).join("");
-  host.innerHTML=(data||[]).map(q=>{
-    const item=Array.isArray(q.billing_items)?q.billing_items[0]:q.billing_items;
-    const bill=Array.isArray(item?.billing_transactions)?item.billing_transactions[0]:item?.billing_transactions;
-    const applicantName=q.applicant_name||bill?.customer_name||"";
-    return '<div class="admin-service-row pan-pending-card"><div class="admin-service-main"><strong>PAN · Bill #'+escapeHtml(bill?.bill_number||"")+'</strong><small>'+escapeHtml(bill?.customer_name||"Customer")+' · '+escapeHtml(bill?.customer_phone||"")+' · Received '+new Date(q.created_at).toLocaleString("en-IN")+'</small></div><div class="admin-service-meta"><strong>Internal cost '+money(q.expected_cost)+'</strong><span>Pending submission</span></div><div class="admin-form-grid pan-pending-fields"><label>Applicant Name<input data-pan-name="'+q.billing_item_id+'" value="'+escapeHtml(applicantName)+'" placeholder="Applicant full name" required></label><label>Date of Birth<input data-pan-dob="'+q.billing_item_id+'" type="date" value="'+escapeHtml(q.date_of_birth||"")+'" required></label><label>PAN Type<select data-pan-type="'+q.billing_item_id+'" required><option value="">Select PAN type</option><option value="new_pan" '+(q.pan_type==="new_pan"?"selected":"")+'>New PAN</option><option value="correction" '+(q.pan_type==="correction"?"selected":"")+'>PAN Correction</option><option value="reprint" '+(q.pan_type==="reprint"?"selected":"")+'>PAN Reprint</option></select></label><label>ACK Number<input data-pan-ack="'+q.billing_item_id+'" value="'+escapeHtml(q.acknowledgement_number||"")+'" placeholder="Acknowledgement number (required)" required></label><label>Processing Wallet<select data-pan-wallet="'+q.billing_item_id+'" required><option value="">Select debit wallet</option>'+options+'</select></label><button data-pan-submit="'+q.billing_item_id+'">Save Details, ACK & Debit</button></div></div>';
-  }).join("")||'<div class="empty-state">No PAN applications pending submission.</div>';
+  const renderPending=(rows)=>{
+    host.innerHTML=(rows||[]).map(q=>{
+      const item=Array.isArray(q.billing_items)?q.billing_items[0]:q.billing_items;
+      const bill=Array.isArray(item?.billing_transactions)?item.billing_transactions[0]:item?.billing_transactions;
+      const applicantName=q.applicant_name||bill?.customer_name||"";
+      return '<div class="admin-service-row pan-pending-card"><div class="admin-service-main"><strong>PAN · Bill #'+escapeHtml(bill?.bill_number||"")+'</strong><small>'+escapeHtml(bill?.customer_name||"Customer")+' · '+escapeHtml(bill?.customer_phone||"")+' · Received '+new Date(q.created_at).toLocaleString("en-IN")+'</small></div><div class="admin-service-meta"><strong>Internal cost '+money(q.expected_cost)+'</strong><span>Pending submission</span></div><div class="admin-form-grid pan-pending-fields"><label>Applicant Name<input data-pan-name="'+q.billing_item_id+'" value="'+escapeHtml(applicantName)+'" placeholder="Applicant full name" required></label><label>Date of Birth<input data-pan-dob="'+q.billing_item_id+'" type="date" value="'+escapeHtml(q.date_of_birth||"")+'" required></label><label>PAN Type<select data-pan-type="'+q.billing_item_id+'" required><option value="">Select PAN type</option><option value="new_pan" '+(q.pan_type==="new_pan"?"selected":"")+'>New PAN</option><option value="correction" '+(q.pan_type==="correction"?"selected":"")+'>PAN Correction</option><option value="reprint" '+(q.pan_type==="reprint"?"selected":"")+'>PAN Reprint</option></select></label><label>ACK Number<input data-pan-ack="'+q.billing_item_id+'" value="'+escapeHtml(q.acknowledgement_number||"")+'" placeholder="Acknowledgement number (required)" required></label><label>Processing Wallet<select data-pan-wallet="'+q.billing_item_id+'" required><option value="">Select debit wallet</option>'+options+'</select></label><button data-pan-submit="'+q.billing_item_id+'">Save Details, ACK & Debit</button></div></div>';
+    }).join("")||'<div class="empty-state">No PAN applications pending submission.</div>';
+  };
+  renderPending(data||[]);
+  const searchHost=$("pan-application-search");
+  if(searchHost){
+    const {data:allRows,error:searchError}=await supabase.from("pan_application_processing")
+      .select("id,billing_item_id,transaction_id,expected_cost,status,created_at,acknowledgement_number,applicant_name,date_of_birth,pan_type,billing_items(customer_unit_price,billing_transactions(bill_number,customer_name,customer_phone))")
+      .order("created_at",{ascending:false}).limit(1000);
+    if(searchError){searchHost.innerHTML='<p class="muted">PAN search unavailable: '+escapeHtml(searchError.message)+'</p>';}
+    else{
+      const records=(allRows||[]).map(q=>{
+        const item=Array.isArray(q.billing_items)?q.billing_items[0]:q.billing_items;
+        const bill=Array.isArray(item?.billing_transactions)?item.billing_transactions[0]:item?.billing_transactions;
+        return {q,bill,name:q.applicant_name||bill?.customer_name||"",phone:bill?.customer_phone||"",billNo:String(bill?.bill_number||"")};
+      });
+      searchHost.innerHTML='<div class="admin-form-grid pan-search-fields"><label>Applicant Name<input id="pan-search-name" placeholder="Search applicant name"></label><label>Date of Birth<input id="pan-search-dob" type="date"></label><label>PAN Type<select id="pan-search-type"><option value="">All PAN types</option><option value="new_pan">New PAN</option><option value="correction">PAN Correction</option><option value="reprint">PAN Reprint</option></select></label><label>ACK Number<input id="pan-search-ack" placeholder="Search ACK number"></label><label>Mobile / Bill No.<input id="pan-search-reference" placeholder="Mobile number or bill number"></label></div><div id="pan-search-results" class="admin-table-wrap"><p class="muted">Enter any detail above to search PAN applications.</p></div>';
+      const runSearch=()=>{
+        const name=$("pan-search-name").value.trim().toLowerCase(),dob=$("pan-search-dob").value,type=$("pan-search-type").value,ack=$("pan-search-ack").value.trim().toLowerCase(),ref=$("pan-search-reference").value.trim().toLowerCase();
+        const filtered=records.filter(({q,bill,name:appName,phone,billNo})=>
+          (!name||appName.toLowerCase().includes(name))&&(!dob||q.date_of_birth===dob)&&(!type||q.pan_type===type)&&(!ack||String(q.acknowledgement_number||"").toLowerCase().includes(ack))&&(!ref||phone.toLowerCase().includes(ref)||billNo.includes(ref))
+        );
+        $("pan-search-results").innerHTML=filtered.length?'<div class="admin-table-wrap"><table><thead><tr><th>Applicant</th><th>DOB</th><th>PAN Type</th><th>ACK Number</th><th>Mobile</th><th>Bill</th><th>Status</th></tr></thead><tbody>'+filtered.map(({q,bill,name:appName,phone,billNo})=>'<tr><td>'+escapeHtml(appName||"—")+'</td><td>'+escapeHtml(q.date_of_birth||"—")+'</td><td>'+escapeHtml(({new_pan:"New PAN",correction:"PAN Correction",reprint:"PAN Reprint"})[q.pan_type]||"—")+'</td><td>'+escapeHtml(q.acknowledgement_number||"—")+'</td><td>'+escapeHtml(phone||"—")+'</td><td>'+escapeHtml(billNo||"—")+'</td><td>'+escapeHtml(q.status==="submitted"?"Submitted":"Pending")+'</td></tr>').join("")+'</tbody></table></div>':'<div class="empty-state">No matching PAN applications found.</div>';
+      };
+      ["pan-search-name","pan-search-dob","pan-search-type","pan-search-ack","pan-search-reference"].forEach(id=>$(id).addEventListener(id==="pan-search-type"?"change":"input",runSearch));
+    }
+  }
   host.querySelectorAll("[data-pan-submit]").forEach(btn=>btn.addEventListener("click",async()=>{
     const id=btn.dataset.panSubmit,wallet=host.querySelector('[data-pan-wallet="'+id+'"]')?.value||"",ack=host.querySelector('[data-pan-ack="'+id+'"]')?.value||"",applicantName=host.querySelector('[data-pan-name="'+id+'"]')?.value||"",dob=host.querySelector('[data-pan-dob="'+id+'"]')?.value||"",panType=host.querySelector('[data-pan-type="'+id+'"]')?.value||"";
     if(!applicantName.trim()){alert("Enter applicant name.");return;}
