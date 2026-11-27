@@ -909,7 +909,7 @@ async function setBillingRows(n){
   $("billing-rows").onclick=e=>{
     const btn=e.target.closest("[data-service-option]");if(!btn)return;
     const idx=Number(btn.dataset.rowIndex),svc=services.find(s=>s.id===btn.dataset.serviceOption);if(!svc)return;
-    billingRows[idx].service_id=svc.id;if(svc.code==="UPI_TO_CASH"){$("bill-mode").value="upi";updatePaymentFields();}billingRows[idx].base=svc.billing_config?.base_amount??"";billingRows[idx].charge=svc.billing_config?.customer_charge??"";billingRows[idx].cost=svc.processing_cost_config?.fixed_amount??"";billingRows[idx].charge_percent=svc.billing_config?.charge_percent??2;billingRows[idx].profit_wallet_id="";billingRows[idx].quantity=1;billingRows[idx].unit_count="";billingRows[idx].sets=1;billingRows[idx].item_label="";billingRows[idx].discount=0;billingRows[idx].wallet_debits=[];billingRows[idx].bill_count=1;billingRows[idx].bill_amounts=[""];billingRows[idx].adjustment_type="";billingRows[idx].adjustment_amount=0;billingRows[idx].adjustment_mode="cash";billingRows[idx].selected_adjustment_wallet_id="";billingRows[idx].selected_upi_to_cash_wallet_id="";
+    billingRows[idx].service_id=svc.id;if(svc.code==="UPI_TO_CASH"){$("bill-mode").value="upi";updatePaymentFields();}billingRows[idx].base=svc.billing_config?.base_amount??"";if(svc.code==="CASH_TO_UPI")billingRows[idx].adjustment_type="deduct";billingRows[idx].charge=svc.billing_config?.customer_charge??"";billingRows[idx].cost=svc.processing_cost_config?.fixed_amount??"";billingRows[idx].charge_percent=svc.billing_config?.charge_percent??2;billingRows[idx].profit_wallet_id="";billingRows[idx].quantity=1;billingRows[idx].unit_count="";billingRows[idx].sets=1;billingRows[idx].item_label="";billingRows[idx].discount=0;billingRows[idx].wallet_debits=[];billingRows[idx].bill_count=1;billingRows[idx].bill_amounts=[""];billingRows[idx].adjustment_type="";billingRows[idx].adjustment_amount=0;billingRows[idx].adjustment_mode="cash";billingRows[idx].selected_adjustment_wallet_id="";billingRows[idx].selected_upi_to_cash_wallet_id="";
     setBillingRows(billingRows.length);
   };
   updateBillingTotals();
@@ -934,6 +934,7 @@ function onBillingRowChange(e){
   }
   if(field==="service_id"){
     const svc=services.find(s=>s.id===e.target.value);
+    if(svc?.code==="CASH_TO_UPI")billingRows[i].adjustment_type="deduct";
     billingRows[i].base=svc?.billing_config?.base_amount??"";
     billingRows[i].charge=svc?.billing_config?.customer_charge??"";
     billingRows[i].aeps_wallet_id=(billingWalletRules[svc?.id]||[])[0]?.wallet_id||"";billingRows[i].aeps_charge_mode="deduct";
