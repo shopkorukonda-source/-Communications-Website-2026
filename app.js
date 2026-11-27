@@ -1164,7 +1164,7 @@ function updateBillingTotals(){
   let base=0,charges=0,costs=0,total=0,aepsCashPayout=0,aepsExtraUpiCharge=0,cashToUpiPrincipal=0,hasAepsSettlement=false;
   billingRows.forEach((r,i)=>{
     const svc=services.find(s=>s.id===r.service_id),isCurrentBills=svc?.code==="CURRENT_BILLS",special=isPaperPageService(svc),alloc=walletDebitsForRow(r,svc),t=$("row-total-"+i),res=$("row-result-"+i),walletBox=$("wallet-auto-"+i);
-    const currentCalcs=isCurrentBills?(r.bill_amounts||[]).map(amount=>calculateBillingRow({...r,base:amount})):null;
+    const currentCalcs=isCurrentBills?(r.bill_amounts||[]).map(amount=>{const billRow={...r,base:String(amount||0)};billRow.wallet_debits=walletDebitsForRow(billRow,svc);return calculateBillingRow(billRow);}):null;
     if(isCurrentBills)currentCalcs.forEach((x,j)=>{const charge=$("[data-current-charge='"+i+"-"+j+"']"),lineTotal=$("[data-current-total='"+i+"-"+j+"']");if(charge)charge.textContent=money(x.charge);if(lineTotal)lineTotal.textContent=money(x.total);});
     const calc=isCurrentBills?{charge:currentCalcs.reduce((a,x)=>a+x.charge,0),cost:currentCalcs.reduce((a,x)=>a+x.cost,0),profit:currentCalcs.reduce((a,x)=>a+x.profit,0),total:currentCalcs.reduce((a,x)=>a+x.total,0)}:calculateBillingRow(r);
     if(isAepsWithdrawalService(svc)){hasAepsSettlement=true;aepsCashPayout+=Number(r.base||0)*Math.max(1,Number(r.quantity||1));if(r.aeps_charge_mode==="extra_upi")aepsExtraUpiCharge+=calc.charge*Math.max(1,Number(r.quantity||1));}
