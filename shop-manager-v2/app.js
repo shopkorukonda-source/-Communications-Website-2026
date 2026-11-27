@@ -796,7 +796,7 @@ function calculateBillingRow(row){
   if(svc.code==="CREDIT_CARD_BANK")profit=charge;
   else if(["CURRENT_BILLS","MONEY_TRANSFER","PRIVATE_BUS_TICKET","APSRTC_TICKET","TTD_TICKET","AEPS_WITHDRAWAL"].includes(svc.code))profit=charge-cost;
   else if(svc.profit_mode==="manual")profit=charge-cost;
-  const unitTotal=amount+charge;
+  const unitTotal=svc.code==="CASH_TO_UPI"&&row.adjustment_type==="deduct"?amount:amount+charge;
   return {charge,cost,profit,unitTotal,total:unitTotal*qty};
 }
 async function renderQuickBilling(){
@@ -827,6 +827,14 @@ async function renderQuickBilling(){
 }
 function automaticWalletDebits(row,svc){
   if(svc?.code==="UPI_TO_CASH")return [];
+  if(svc?.code==="CASH_TO_UPI"&&row.adjustment_type==="deduct"){
+    const walletId=row.selected_adjustment_wallet_id;
+    const allowed=(billingWalletRules[row.service_id]||[]).some(rule=>rule.wallet_id===walletId);
+    if(!walletId||!allowed)return [];
+    const calc=calculateBillingRow(row),amount=Number(row.base||0),qty=Math.max(1,Number(row.quantity||1));
+    const debit=Math.round((amount-calc.charge)*qty*100)/100;
+    return debit>0?[{wallet_id:walletId,amount:debit}]:[];
+  }
   if(svc?.code==="CURRENT_BILLS"){const rule=(billingWalletRules[row.service_id]||[]).find(x=>x.wallet_id===row.current_bills_wallet_id);if(!rule)return [];const amount=Number(row.base||row.bill_amounts?.find(v=>Number(v)>0)||0),processing=currentBillsProcessingCost(amount,svc,rule);return amount>0?[{wallet_id:rule.wallet_id,amount:amount+processing}]:[];}
   const rules=billingWalletRules[row.service_id]||[];
   if(!rules.length)return [];
@@ -940,10 +948,11 @@ function onBillingWalletChange(){}
 
 function isAepsWithdrawalService(svc){return !!svc&&(svc.code==="AEPS_WITHDRAWAL"||/aeps.*withdrawal|withdrawal.*aeps/i.test(svc.name||""));}
 function updateBillingTotals(){
-  let base=0,charges=0,costs=0,total=0,aepsCashPayout=0,aepsExtraUpiCharge=0,hasAepsSettlement=false;
+  let base=0,charges=0,costs=0,total=0,aepsCashPayout=0,aepsExtraUpiCharge=0,hasAepsSettlement=false,cashToUpiDeduct=null;
   billingRows.forEach((r,i)=>{
     const svc=services.find(s=>s.id===r.service_id),isCurrentBills=svc?.code==="CURRENT_BILLS",special=isPaperPageService(svc),alloc=automaticWalletDebits(r,svc),t=$("row-total-"+i),res=$("row-result-"+i),walletBox=$("wallet-auto-"+i);
     if(isAepsWithdrawalService(svc)){hasAepsSettlement=true;aepsCashPayout+=Number(r.base||0)*Math.max(1,Number(r.quantity||1));if(r.aeps_charge_mode==="extra_upi")aepsExtraUpiCharge+=calculateBillingRow(r).charge*Math.max(1,Number(r.quantity||1));}
+    if(svc?.code==="CASH_TO_UPI"&&r.adjustment_type==="deduct")cashToUpiDeduct={amount:Number(r.base||0)*Math.max(1,Number(r.quantity||1)),charge:calculateBillingRow(r).charge*Math.max(1,Number(r.quantity||1))};
     const currentCalcs=isCurrentBills?(r.bill_amounts||[]).map(amount=>calculateBillingRow({...r,base:amount})):null;
     if(isCurrentBills)currentCalcs.forEach((x,j)=>{const charge=$("[data-current-charge='"+i+"-"+j+"']"),lineTotal=$("[data-current-total='"+i+"-"+j+"']");if(charge)charge.textContent=money(x.charge);if(lineTotal)lineTotal.textContent=money(x.total);});
     const calc=isCurrentBills?{charge:currentCalcs.reduce((a,x)=>a+x.charge,0),cost:currentCalcs.reduce((a,x)=>a+x.cost,0),profit:currentCalcs.reduce((a,x)=>a+x.profit,0),total:currentCalcs.reduce((a,x)=>a+x.total,0)}:calculateBillingRow(r);
@@ -958,6 +967,16 @@ function updateBillingTotals(){
   const balance=Math.max(0,total-received),change=Math.max(0,received-total),status=$("bill-change");
   const paymentPanel=document.querySelector(".billing-payment");
   status.classList.remove("payment-short","payment-exact","payment-change");
+  if(cashToUpiDeduct){
+    $("bill-mode").value="cash";
+    $("bill-received").value=total.toFixed(2);
+    $("bill-cash").value=total.toFixed(2);
+    $("bill-upi").value="0";
+    if(paymentPanel)paymentPanel.classList.add("hidden");
+    status.classList.add("payment-exact");
+    status.textContent="CUSTOMER CASH · "+money(cashToUpiDeduct.amount)+"  |  PHONEPE TO SEND · "+money(Math.max(0,cashToUpiDeduct.amount-cashToUpiDeduct.charge));
+    return;
+  }
   if(hasAepsSettlement){
     const cashOffset=Math.max(0,total-aepsExtraUpiCharge),upiCharge=Math.max(0,aepsExtraUpiCharge);
     $("bill-mode").value=cashOffset>0&&upiCharge>0?"split":upiCharge>0?"upi":"cash";
@@ -1017,7 +1036,7 @@ async function saveQuickBilling(){
         ? {base_amount:0,service_charge:calc.gross,count_unit:svc.code==="PRINTOUT"?"pages":"papers",unit_count:Number(r.unit_count),sets:Number(r.sets),total_count:calc.count,item_label:r.item_label||null,unit_rate:calc.rate,discount_amount:calc.discount,wallet_debits}
         : svc.code==="CREDIT_CARD_BANK" ? {base_amount:Number(r.base),service_charge:calc.charge,charge_percent:Number(r.charge_percent),profit_wallet_id:r.profit_wallet_id,wallet_debits}
         : isAepsWithdrawalService(svc) ? {base_amount:Number(r.base),service_charge:calc.charge,bank:r.bank||null,aeps_wallet_id:r.aeps_wallet_id||null,aeps_charge_mode:r.aeps_charge_mode||"deduct",wallet_debits}
-        : {base_amount:Number(r.base),service_charge:calc.charge,bank:r.bank||null,upi_to_cash_wallet_id:svc.code==="UPI_TO_CASH"?r.selected_upi_to_cash_wallet_id||null:null,current_bills_wallet_id:svc.code==="CURRENT_BILLS"?r.current_bills_wallet_id||null:null,wallet_debits};
+        : {base_amount:Number(r.base),service_charge:calc.charge,bank:r.bank||null,cash_to_upi_mode:svc.code==="CASH_TO_UPI"&&r.adjustment_type==="deduct"?"deduct":null,cash_to_upi_wallet_id:svc.code==="CASH_TO_UPI"&&r.adjustment_type==="deduct"?r.selected_adjustment_wallet_id:null,upi_to_cash_wallet_id:svc.code==="UPI_TO_CASH"?r.selected_upi_to_cash_wallet_id||null:null,current_bills_wallet_id:svc.code==="CURRENT_BILLS"?r.current_bills_wallet_id||null:null,wallet_debits};
       const itemPayload={service_id:r.service_id,quantity,customer_unit_price:price,processing_unit_cost:calc.cost,pricing_snapshot:snapshot,wallet_debits};
       if(currentProfile?.role==="admin")itemPayload.profit_amount=calc.profit;
       items.push(itemPayload);
@@ -1043,7 +1062,8 @@ async function saveQuickBilling(){
     const payload={drawer_id:activeDrawerId,customer_name:$("bill-customer").value.trim()||null,customer_phone:$("bill-phone").value.trim()||null,payment_mode:finalMode,customer_total:customerTotalWithAdjustment,amount_received:received,cash_received:cash,upi_received:upi,items};
     const {data,error}=editingBillId?await supabase.rpc("update_bill_with_approval",{p_transaction_id:editingBillId,p_payload:{...payload,notes:null},p_edit_request_id:null}):await supabase.rpc("create_bill",{payload});
     if(error)throw error;
-    if(adjustmentRows.length){const adjustmentResult=adjustmentServiceCode==="UPI_TO_CASH"?await supabase.rpc("settle_upi_to_cash",{p_transaction_id:data||editingBillId,p_adjustment_type:adjustmentType,p_adjustment_amount:adjustmentAmount,p_destination_wallet_id:adjustmentRow?.selected_upi_to_cash_wallet_id}):await supabase.rpc("set_aeps_cash_adjustment",{p_transaction_id:data||editingBillId,p_adjustment_type:adjustmentType,p_amount:adjustmentAmount,p_mode:adjustmentMode,p_wallet_id:adjustmentServiceCode==="CASH_TO_UPI"?adjustmentRow?.selected_adjustment_wallet_id||null:null});if(adjustmentResult.error)throw adjustmentResult.error;}
+    if(adjustmentRows.length&&adjustmentServiceCode==="UPI_TO_CASH"){const adjustmentResult=await supabase.rpc("settle_upi_to_cash",{p_transaction_id:data||editingBillId,p_adjustment_type:adjustmentType,p_adjustment_amount:adjustmentAmount,p_destination_wallet_id:adjustmentRow?.selected_upi_to_cash_wallet_id});if(adjustmentResult.error)throw adjustmentResult.error;}
+    if(adjustmentRows.length&&adjustmentServiceCode==="CASH_TO_UPI"&&adjustmentType==="extra"&&adjustmentAmount>0){const adjustmentResult=await supabase.rpc("set_aeps_cash_adjustment",{p_transaction_id:data||editingBillId,p_adjustment_type:adjustmentType,p_amount:adjustmentAmount,p_mode:adjustmentMode,p_wallet_id:null});if(adjustmentResult.error)throw adjustmentResult.error;}
     msg.textContent=(editingBillId?"Bill updated successfully.":"Bills saved successfully.")+" Transaction ID: "+(data||editingBillId);editingBillId=null;$("save-billing").textContent="Save one bill with all services";
     $("bill-received").value="0";$("bill-cash").value="0";$("bill-upi").value="0";
     $("bill-customer").value="";$("bill-phone").value="";
