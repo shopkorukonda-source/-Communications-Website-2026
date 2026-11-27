@@ -861,6 +861,14 @@ function paperPageRate(row,svc,count){
   const slab=(pricing.quantity_slabs||[]).find(x=>count>=Number(x.min_quantity||x.min||0)&&(x.max_quantity==null&&x.max==null||count<=Number(x.max_quantity??x.max)));
   return Number(slab?.rate??slab?.customer_charge??pricing.customer_charge??0);
 }
+function cashToUpiFeeBase(row){
+  const amount=Math.max(0,Number(row.base||0));
+  const aepsTotal=billingRows.reduce((sum,r)=>{
+    const service=services.find(s=>s.id===r.service_id);
+    return sum+(service?.code==="AEPS_WITHDRAWAL"?Math.max(0,Number(r.base||0))*Math.max(1,Number(r.quantity||1)):0);
+  },0);
+  return Math.max(0,amount-aepsTotal);
+}
 function calculateBillingRow(row){
   const svc=services.find(s=>s.id===row.service_id), amount=Number(row.base||0),qty=Math.max(1,Number(row.quantity||1));
   if(!svc||amount<0)return {charge:0,cost:0,profit:0,unitTotal:0,total:0};
@@ -880,6 +888,17 @@ function calculateBillingRow(row){
     const configuredCost=costSlab?Number(costSlab.cost??costSlab.processing_cost??0):(slab?.wallet_extra!=null?Number(slab.wallet_extra):Number(cfg.above_1000?.wallet_extra??row.cost??0));
     if(slab){charge=Number(slab.customer_charge||0);cost=debitTotal>0?debitTotal-amount:configuredCost;}
     else if(amount>1000){charge=10+Math.ceil((amount-1000)/100)*Number(cfg.above_1000?.extra_per_100||1);cost=debitTotal>0?debitTotal-amount:configuredCost;}
+  } else if(svc.code==="CASH_TO_UPI"){
+    const feeBase=cashToUpiFeeBase(row),bc=svc.billing_config||{};
+    if(feeBase>0){
+      if(svc.billing_type==="fixed")charge=Number(bc.customer_charge||0);
+      else if(svc.billing_type==="percentage")charge=Math.round(feeBase*Number(bc.percentage||0))/100;
+      else if(svc.billing_type==="slabs"){
+        const slab=(bc.slabs||[]).find(x=>feeBase>=Number(x.min||0)&&(x.max==null||feeBase<=Number(x.max)));
+        charge=slab?(slab.percentage!=null?Math.round(feeBase*Number(slab.percentage))/100:Number(slab.customer_charge??slab.charge??0)):0;
+      }else charge=Number(row.charge||bc.customer_charge||0);
+    }
+    cost=0;profit=charge;
   } else if(svc.code==="MONEY_TRANSFER"){
     charge=Math.ceil(amount/1000)*Number(svc.billing_config?.charge_per_1000||10);cost=Number(row.cost||0);
   } else if(svc.code==="PRIVATE_BUS_TICKET"){
@@ -1001,7 +1020,7 @@ function isManualProcessingWalletService(svc){
   return isManualJobApplicationWalletService(svc)||["AEPS_WITHDRAWAL","UPI_TO_CASH","CASH_TO_UPI"].includes(svc?.code);
 }
 function walletDebitsForRow(row,svc){
-  if(svc?.code==="AEPS_WITHDRAWAL")return [];
+  if(["AEPS_WITHDRAWAL","CASH_TO_UPI"].includes(svc?.code))return [];
   if(!isManualProcessingWalletService(svc))return automaticWalletDebits(row,svc);
   const rules=billingWalletRules[row.service_id]||[];
   const selectedIds=svc?.multi_wallet_debit?rules.map(x=>String(x.wallet_id)):(row.processing_wallet_id?[String(row.processing_wallet_id)]:(Array.isArray(row.processing_wallet_ids)?row.processing_wallet_ids.map(String):[]));
@@ -1029,7 +1048,7 @@ function manualProcessingWalletHtml(row,svc,index){
     if(!w)return "";
     return multi?'<div class="wallet-choice"><span>'+escapeHtml(w.name)+' · Debit '+money(debit?.amount||0)+'</span></div>':'<option value="'+w.id+'" '+(selectedId===String(w.id)?"selected":"")+'>'+escapeHtml(w.name)+' · Balance '+money(w.current_balance)+'</option>';
   }).join("");
-  const debitTotal=debits.reduce((n,x)=>n+Number(x.amount||0),0),aepsCredit=svc.code==="AEPS_WITHDRAWAL"?Number(row.base||0):0;
+  const debitTotal=svc.code==="CASH_TO_UPI"?Number(row.base||0):debits.reduce((n,x)=>n+Number(x.amount||0),0),aepsCredit=svc.code==="AEPS_WITHDRAWAL"?Number(row.base||0):0;
   const control=multi?'<p>Admin-selected wallets are automatically debited using each wallet rule.</p><div class="wallet-choice-grid">'+(opts||"<small>No processing wallets assigned. Configure them in Admin Services.</small>")+'</div>':'<label>'+(svc.code==="AEPS_WITHDRAWAL"?"AEPS credit wallet":"Processing wallet")+' <select data-field="processing_wallet_id" data-i="'+index+'"><option value="">Select one wallet</option>'+opts+'</select></label>';
   return '<div class="wallet-map-box"><strong>Transaction wallet'+(multi?"s":"")+'</strong>'+control+(svc.code==="AEPS_WITHDRAWAL"?'<small>Selected wallet credit: <span id="manual-wallet-credit-'+index+'">'+money(aepsCredit)+'</span></small>':'<small>Total wallet debit: <span id="manual-wallet-debit-'+index+'">'+money(debitTotal)+'</span></small>')+'</div>';
 }
@@ -1224,7 +1243,11 @@ async function saveQuickBilling(){
       if(!r.service_id||Number(r.base||0)<0)throw new Error("Every entered row needs a service and valid count or bill amount.");
       const svc=services.find(s=>s.id===r.service_id),special=isPaperPageService(svc);
       const wallet_debits=walletDebitsForRow(r,svc);
-      if(isManualProcessingWalletService(svc)){
+      if(isManualProcessingWalletService(svc)&&svc.code==="CASH_TO_UPI"){
+        const selectedWalletId=String(r.processing_wallet_id||"");
+        if(!selectedWalletId)throw new Error("Select the wallet from which the Cash to UPI amount should be debited.");
+        if(!(billingWalletRules[r.service_id]||[]).some(x=>String(x.wallet_id)===selectedWalletId))throw new Error("Selected Cash to UPI wallet is not assigned by Admin.");
+      }else if(isManualProcessingWalletService(svc)){
         const assignedRules=billingWalletRules[r.service_id]||[];
         if(svc.code==="AEPS_WITHDRAWAL"){
           const selectedWalletId=String(r.processing_wallet_id||"");
@@ -1254,6 +1277,7 @@ async function saveQuickBilling(){
         ? {base_amount:0,service_charge:calc.gross,count_unit:"papers",print_type:svc.code==="PRINTOUT"?(r.print_type||"single_side"):"single_side",page_count:Number(r.unit_count),unit_count:Number(r.unit_count),sets:Number(r.sets),total_count:calc.count,item_label:r.item_label||null,unit_rate:calc.rate,discount_amount:calc.discount,wallet_debits}
         : svc.code==="CREDIT_CARD_BANK" ? {base_amount:Number(r.base),service_charge:calc.charge,charge_percent:Number(r.charge_percent),credit_wallet_id:r.credit_wallet_id,wallet_debits}
         : isAepsWithdrawalService(svc) ? {base_amount:Number(r.base),service_charge:calc.charge,bank:r.bank||null,aeps_wallet_id:r.processing_wallet_id||null,aeps_charge_mode:r.aeps_charge_mode||"deduct",wallet_debits}
+        : svc.code==="CASH_TO_UPI" ? {base_amount:Number(r.base),service_charge:calc.charge,cash_to_upi_wallet_id:r.processing_wallet_id||null,wallet_debits}
         : {base_amount:Number(r.base),service_charge:calc.charge,bank:r.bank||null,wallet_debits};
       const itemPayload={service_id:r.service_id,quantity,customer_unit_price:price,processing_unit_cost:calc.cost,pricing_snapshot:snapshot,wallet_debits};
       if(currentProfile?.role==="admin")itemPayload.profit_amount=calc.profit;
@@ -1263,8 +1287,13 @@ async function saveQuickBilling(){
     if(!items.length)throw new Error("Enter at least one bill.");
     const adjustmentRows=expandedBillingRows.filter(r=>["UPI_TO_CASH","CASH_TO_UPI"].includes(services.find(s=>s.id===r.service_id)?.code));
     if(adjustmentRows.length>1)throw new Error("Please bill one cash/UPI transfer service row at a time when using an adjustment.");
-    const adjustmentRow=adjustmentRows[0]||null,adjustmentServiceCode=services.find(s=>s.id===adjustmentRow?.service_id)?.code||null,adjustmentType=adjustmentRow?.adjustment_type||null,adjustmentAmount=Math.max(0,Number(adjustmentRow?.adjustment_amount||0)),adjustmentMode=adjustmentRow?.adjustment_mode||null;
+    const adjustmentRow=adjustmentRows[0]||null,adjustmentServiceCode=services.find(s=>s.id===adjustmentRow?.service_id)?.code||null;
+    const hasAepsAndCashToUpi=expandedBillingRows.some(r=>services.find(s=>s.id===r.service_id)?.code==="AEPS_WITHDRAWAL")&&expandedBillingRows.some(r=>services.find(s=>s.id===r.service_id)?.code==="CASH_TO_UPI");
+    const adjustmentType=adjustmentServiceCode==="CASH_TO_UPI"?"deduct":adjustmentRow?.adjustment_type||null;
+    const adjustmentAmount=adjustmentServiceCode==="CASH_TO_UPI"?Math.max(0,Number(adjustmentRow?.base||0)):Math.max(0,Number(adjustmentRow?.adjustment_amount||0));
+    const adjustmentMode=adjustmentRow?.adjustment_mode||null;
     if(adjustmentAmount>0&&!adjustmentType)throw new Error("Select Amount Deduct or Amount Extra.");
+    if(adjustmentServiceCode==="CASH_TO_UPI"&&adjustmentAmount>0&&!adjustmentRow?.processing_wallet_id)throw new Error("Select the Cash to UPI debit wallet.");
     if(["AEPS_WITHDRAWAL","UPI_TO_CASH","CASH_TO_UPI"].includes(adjustmentServiceCode)&&adjustmentType==="extra")throw new Error("This service allows customer charge only; Amount Extra is not allowed.");
     if(adjustmentType==="extra"&&adjustmentAmount>0&&adjustmentServiceCode!=="UPI_TO_CASH"&&!["cash","upi"].includes(adjustmentMode))throw new Error("Select Cash or UPI for Amount Extra.");
     const mode=$("bill-mode").value,ccOnly=items.length>0&&items.every(x=>services.find(s=>s.id===x.service_id)?.code==="CREDIT_CARD_BANK");
@@ -1285,7 +1314,7 @@ async function saveQuickBilling(){
       ? await supabase.rpc("update_bill_with_approval",{p_transaction_id:editingBillingTransactionId,p_payload:payload,p_edit_request_id:null})
       : await supabase.rpc("create_bill",{payload});
     if(result.error)throw result.error;
-    if(adjustmentRows.length){const adjustmentResult=await supabase.rpc("set_aeps_cash_adjustment",{p_transaction_id:result.data,p_adjustment_type:adjustmentType,p_amount:adjustmentAmount,p_mode:adjustmentMode});if(adjustmentResult.error)throw adjustmentResult.error;}
+    if(adjustmentRows.length){const adjustmentResult=await supabase.rpc("set_aeps_cash_adjustment",{p_transaction_id:result.data,p_adjustment_type:adjustmentType,p_amount:adjustmentAmount,p_mode:adjustmentMode,p_wallet_id:adjustmentServiceCode==="CASH_TO_UPI"?(adjustmentRow?.processing_wallet_id||null):null});if(adjustmentResult.error)throw adjustmentResult.error;}
     const wasEditing=Boolean(editingBillingTransactionId);
     const successText=wasEditing
       ?"Bill #"+(editingBillingBillNumber||"")+" updated successfully."
@@ -1354,7 +1383,7 @@ async function loadBillIntoQuickBilling(id){
         bill_amounts:isCurrent?[String(snap.base_amount??"")]:[""],
         credit_wallet_id:snap.credit_wallet_id||"",
         charge_percent:snap.charge_percent??svc?.billing_config?.charge_percent??2,
-        processing_wallet_id:snap.aeps_wallet_id||walletDebits[0]?.wallet_id||"",
+        processing_wallet_id:snap.aeps_wallet_id||snap.cash_to_upi_wallet_id||walletDebits[0]?.wallet_id||"",
         processing_wallet_ids:walletDebits.map(x=>String(x.wallet_id)),
         adjustment_type:["AEPS_WITHDRAWAL","UPI_TO_CASH","CASH_TO_UPI"].includes(svc?.code)?(["AEPS_WITHDRAWAL","UPI_TO_CASH","CASH_TO_UPI"].includes(svc?.code)&&bill.cash_adjustment_type==="extra"?"":(bill.cash_adjustment_type||"")):"",
         adjustment_amount:["AEPS_WITHDRAWAL","UPI_TO_CASH","CASH_TO_UPI"].includes(svc?.code)?(bill.cash_adjustment_type==="extra"?0:Number(bill.cash_adjustment_amount||0)):0,
