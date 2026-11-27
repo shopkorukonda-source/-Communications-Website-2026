@@ -1061,11 +1061,11 @@ function manualProcessingWalletHtml(row,svc,index){
   const opts=rules.map(rule=>{
     const w=walletOptions.find(x=>x.id===rule.wallet_id&&x.is_active),debit=debits.find(x=>x.wallet_id===rule.wallet_id);
     if(!w)return "";
-    if(svc.code==="CURRENT_BILLS")return '<label class="wallet-choice"><input type="checkbox" data-field="processing_wallet_ids" data-i="'+index+'" value="'+w.id+'" '+(selectedIds.includes(String(w.id))?'checked':'')+'><span>'+escapeHtml(w.name)+' · Balance '+money(w.current_balance)+'</span></label>';
+    if(["CURRENT_BILLS","AEPS_WITHDRAWAL"].includes(svc.code))return '<label class="wallet-choice"><input type="checkbox" data-field="processing_wallet_ids" data-i="'+index+'" value="'+w.id+'" '+(selectedIds.includes(String(w.id))?'checked':'')+'><span>'+escapeHtml(w.name)+' · Balance '+money(w.current_balance)+'</span></label>';
     return multi?'<div class="wallet-choice"><span>'+escapeHtml(w.name)+' · Debit '+money(debit?.amount||0)+'</span></div>':'<option value="'+w.id+'" '+(selectedId===String(w.id)?"selected":"")+'>'+escapeHtml(w.name)+' · Balance '+money(w.current_balance)+'</option>';
   }).join("");
   const debitTotal=svc.code==="CASH_TO_UPI"?Number(row.base||0):svc.code==="CURRENT_BILLS"?(row.bill_amounts||[]).reduce((sum,amount)=>sum+walletDebitsForRow({...row,base:String(amount||0)},svc).reduce((n,x)=>n+Number(x.amount||0),0),0):debits.reduce((n,x)=>n+Number(x.amount||0),0),aepsCredit=svc.code==="AEPS_WITHDRAWAL"?Number(row.base||0):0;
-  const control=svc.code==="CURRENT_BILLS"?'<p>Oka wallet ni tick cheyyandi.</p><div class="wallet-choice-grid">'+(opts||"<small>No processing wallets assigned. Configure them in Admin Services.</small>")+'</div>':multi?'<p>Admin-selected wallets are automatically debited using each wallet rule.</p><div class="wallet-choice-grid">'+(opts||"<small>No processing wallets assigned. Configure them in Admin Services.</small>")+'</div>':'<label>'+(svc.code==="AEPS_WITHDRAWAL"?"AEPS credit wallet":"Processing wallet")+' <select data-field="processing_wallet_id" data-i="'+index+'"><option value="">Select one wallet</option>'+opts+'</select></label>';
+  const control=["CURRENT_BILLS","AEPS_WITHDRAWAL"].includes(svc.code)?'<p>Oka wallet ni tick cheyyandi.</p><div class="wallet-choice-grid">'+(opts||"<small>No processing wallets assigned. Configure them in Admin Services.</small>")+'</div>':multi?'<p>Admin-selected wallets are automatically debited using each wallet rule.</p><div class="wallet-choice-grid">'+(opts||"<small>No processing wallets assigned. Configure them in Admin Services.</small>")+'</div>':'<label>'+(svc.code==="AEPS_WITHDRAWAL"?"AEPS credit wallet":"Processing wallet")+' <select data-field="processing_wallet_id" data-i="'+index+'"><option value="">Select one wallet</option>'+opts+'</select></label>';
   return '<div class="wallet-map-box"><strong>Transaction wallet'+(multi?"s":"")+'</strong>'+control+(svc.code==="AEPS_WITHDRAWAL"?'<small>Selected wallet credit: <span id="manual-wallet-credit-'+index+'">'+money(aepsCredit)+'</span></small>':'<small>Total wallet debit: <span id="manual-wallet-debit-'+index+'">'+money(debitTotal)+'</span></small>')+'</div>';
 }
 async function setBillingRows(n){
@@ -1136,7 +1136,7 @@ function onBillingRowChange(e){
   if(field==="processing_wallet_id"){billingRows[i].processing_wallet_id=e.target.value;billingRows[i].processing_wallet_ids=e.target.value?[e.target.value]:[];setBillingRows(billingRows.length);return;}
   if(field==="processing_wallet_ids"){
     const walletId=String(e.target.value);
-    if(services.find(s=>s.id===billingRows[i].service_id)?.code==="CURRENT_BILLS"){
+    if(["CURRENT_BILLS","AEPS_WITHDRAWAL"].includes(services.find(s=>s.id===billingRows[i].service_id)?.code)){
       billingRows[i].processing_wallet_ids=e.target.checked?[walletId]:[];
     }else{
       const ids=Array.isArray(billingRows[i].processing_wallet_ids)?billingRows[i].processing_wallet_ids.map(String):[];
