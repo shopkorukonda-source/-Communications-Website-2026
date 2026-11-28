@@ -39,6 +39,19 @@ export async function renderOperations(view, ctx) {
        }catch(error){msg.textContent=error.message||"Unable to verify shop location.";}
        finally{if(submit)submit.disabled=false;}
      });
+    if(!admin && window.__slvAutoStartShift){
+      window.__slvAutoStartShift=false;
+      const drawerSelect=$("op-drawer-id");
+      if(drawers.length===1){
+        drawerSelect.value=drawers[0].id;
+        $("op-opening-cash").value="0";
+        setTimeout(()=>{const form=$("op-drawer-open");if(form)form.requestSubmit();},120);
+      }else if(drawers.length>1){
+        $("op-open-msg").textContent="More than one drawer is available. Select the drawer to start your shift.";
+      }else{
+        $("op-open-msg").textContent="No drawer is assigned to your employee login. Please contact Admin.";
+      }
+    }
     host.querySelectorAll("[data-op-close]").forEach(b=>b.addEventListener("click",()=>{const ed=$("op-close-editor");const denoms=[500,200,100,50,20,10,5,2,1,0.5];ed.innerHTML='<div class="admin-editor"><h3>Close shift · denomination count</h3><div class="denomination-grid">'+denoms.map(d=>'<label>₹'+d+' <input type="number" min="0" value="0" data-op-denom="'+d+'"></label>').join("")+'</div><label>Counted cash (₹)<input id="op-counted" type="number" min="0" step=".01" value="0"></label><div id="op-close-msg" class="message"></div><button class="primary-btn" id="op-close-confirm">Confirm shift close</button></div>';const inputs=[...ed.querySelectorAll("[data-op-denom]")];const calc=()=>{$("op-counted").value=inputs.reduce((s,x)=>s+Number(x.dataset.opDenom)*Number(x.value||0),0).toFixed(2);};inputs.forEach(x=>x.addEventListener("input",calc));$("op-close-confirm").addEventListener("click",async()=>{const den=inputs.map(x=>({denomination:Number(x.dataset.opDenom),quantity:Number(x.value||0)})).filter(x=>x.quantity>0);const r=await supabase.rpc("close_drawer_session",{p_session_id:b.dataset.opClose,p_counted_cash:Number($("op-counted").value||0),p_denominations:den});if(r.error){$("op-close-msg").textContent=r.error.message;}else{const tally=await supabase.from("drawer_sessions").select("expected_cash,counted_cash,difference").eq("id",b.dataset.opClose).single();if(tally.error){$("op-close-msg").textContent="Shift closed. Cash tally saved; refresh to view reconciliation.";}else{$("op-close-msg").textContent="Shift closed · Expected "+money(tally.data.expected_cash)+" · Counted "+money(tally.data.counted_cash)+" · Difference "+money(tally.data.difference);}b.disabled=true;}});}));
     return;
   }
