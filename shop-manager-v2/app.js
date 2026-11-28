@@ -150,9 +150,11 @@ async function loadOverviewStats(){
     }
     const workDate=new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Kolkata"});
     employeeShiftDateKey = workDate;
+    const workDateStart=new Date(workDate+"T00:00:00+05:30").toISOString();
+    const workDateEnd=new Date(new Date(workDateStart).getTime()+86400000).toISOString();
     const [{count,error},sessionResult,attendanceResult]=await Promise.all([
       supabase.from("billing_transactions").select("id",{count:"exact",head:true}).eq("employee_id",currentEmployee.id).gte("created_at",start.toISOString()),
-      supabase.from("drawer_sessions").select("id,status,opened_at,drawer_id").eq("employee_id",currentEmployee.id).eq("status","open").order("opened_at",{ascending:false}).limit(1),
+      supabase.from("drawer_sessions").select("id,status,opened_at,drawer_id").eq("employee_id",currentEmployee.id).eq("status","open").gte("opened_at",workDateStart).lt("opened_at",workDateEnd).order("opened_at",{ascending:false}).limit(1),
       supabase.from("attendance").select("id,work_date,check_in,lunch_start,lunch_end,check_out,status,notes").eq("employee_id",currentEmployee.id).eq("work_date",workDate).maybeSingle()
     ]);
     $("today-bill-count").textContent=error?"—":String(count||0);
@@ -344,9 +346,12 @@ document.querySelectorAll(".nav-item").forEach(btn=>btn.addEventListener("click"
   const view = btn.dataset.view;
   const shiftRequiredViews=["billing","quicklinks","panforms","ucl","expenses"];
   if(currentProfile?.role==="employee" && currentEmployee && shiftRequiredViews.includes(view)){
+    const workDate=new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Kolkata"});
+    const workDateStart=new Date(workDate+"T00:00:00+05:30").toISOString();
+    const workDateEnd=new Date(new Date(workDateStart).getTime()+86400000).toISOString();
     const [active,lunch]=await Promise.all([
-      supabase.from("drawer_sessions").select("id").eq("employee_id",currentEmployee.id).eq("status","open").order("opened_at",{ascending:false}).limit(1).maybeSingle(),
-      supabase.from("attendance").select("lunch_start,lunch_end").eq("employee_id",currentEmployee.id).eq("work_date",new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Kolkata"})).maybeSingle()
+      supabase.from("drawer_sessions").select("id").eq("employee_id",currentEmployee.id).eq("status","open").gte("opened_at",workDateStart).lt("opened_at",workDateEnd).order("opened_at",{ascending:false}).limit(1).maybeSingle(),
+      supabase.from("attendance").select("lunch_start,lunch_end").eq("employee_id",currentEmployee.id).eq("work_date",workDate).maybeSingle()
     ]);
     if(active.error || !active.data){
       alert("Please Start Shift at the shop first. Billing and work actions are locked until your shift is open.");
