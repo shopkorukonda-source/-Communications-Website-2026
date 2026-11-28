@@ -177,7 +177,12 @@ function renderEmployeeShiftControls(openSession,attendance,error){
  host.innerHTML='<div class="shift-control-card"><div class="shift-control-copy"><span class="eyebrow">TODAY’S SHIFT</span><strong>'+label+'</strong><p>'+description+'</p></div><button type="button" class="primary-btn shift-control-action" data-employee-shift-action="'+action+'">'+label+'</button><div class="shift-control-message" id="employee-shift-message" role="status"></div></div>';
  const button=host.querySelector("[data-employee-shift-action]");
  button.addEventListener("click",async()=>{
-   if(action==="shift-start"||action==="shift-close"){
+   if(action==="shift-start"){
+     window.__slvAutoStartShift=true;
+     const target=document.querySelector('.nav-item[data-view="drawers"]');if(target)target.click();
+     return;
+   }
+   if(action==="shift-close"){
      const target=document.querySelector('.nav-item[data-view="drawers"]');if(target)target.click();
      return;
    }
