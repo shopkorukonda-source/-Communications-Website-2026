@@ -652,3 +652,28 @@ body{background:radial-gradient(ellipse at 8% 0%,#fbf8f0 0,transparent 36%),var(
 .lunch-break-editor .admin-form-actions{justify-content:flex-start;gap:8px}
 .lunch-break-editor .admin-form-actions .primary-btn{font-size:11px;padding:7px 12px;min-height:32px;border-radius:7px}
 .lunch-break-editor .message{font-size:10px;min-height:14px;margin-top:7px}
+
+
+/* Employee dashboard: compact, correctly stacked shift / lunch controls */
+#employee-shift-controls{display:block!important;width:100%!important;min-width:0!important}
+#employee-shift-controls .shift-control-card{
+ display:flex!important;flex-direction:column!important;align-items:stretch!important;
+ justify-content:flex-start!important;gap:9px!important;padding:14px 16px!important;
+ min-height:0!important;height:auto!important;width:100%!important;
+}
+#employee-shift-controls .shift-control-copy{
+ display:block!important;flex:0 0 auto!important;width:100%!important;
+ max-width:none!important;min-width:0!important;
+}
+#employee-shift-controls .shift-control-copy .eyebrow{font-size:9px!important;margin-bottom:4px!important}
+#employee-shift-controls .shift-control-copy strong,
+#employee-shift-controls .shift-control-card>div>strong{font-size:15px!important;line-height:1.3!important}
+#employee-shift-controls .shift-control-copy p,
+#employee-shift-controls .shift-control-card p{font-size:11px!important;line-height:1.45!important;margin-top:4px!important}
+#employee-shift-controls .shift-control-action{
+ display:flex!important;flex:0 0 auto!important;align-self:flex-start!important;
+ width:auto!important;min-width:150px!important;max-width:230px!important;
+ margin:2px 0 0!important;padding:9px 16px!important;
+ font-size:12px!important;line-height:1.25!important;border-radius:7px!important;
+}
+#employee-shift-controls .shift-control-message{font-size:10px!important;min-height:0!important;width:100%!important}
