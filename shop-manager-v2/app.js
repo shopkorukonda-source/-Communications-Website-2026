@@ -17,6 +17,7 @@ let walletOptions = [];
 let editingServiceId = null;
 let pendingEmployeeShiftCloseSessionId = null;
 let employeeShiftRefreshTimer = null;
+let employeeShiftDateKey = "";
 
 function setMessage(message, isError = true) {
   $("login-message").textContent = message;
@@ -76,7 +77,10 @@ async function showApp(user) {
   if (profile.role === "employee" && !employeeShiftRefreshTimer) {
     employeeShiftRefreshTimer = setInterval(() => {
       if (currentProfile?.role === "employee" && !appScreen.classList.contains("hidden")) {
-        loadOverviewStats().catch(error => console.warn("Shift status refresh failed", error));
+        const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+        if (today !== employeeShiftDateKey || document.visibilityState === "visible") {
+          loadOverviewStats().catch(error => console.warn("Shift status refresh failed", error));
+        }
       }
     }, 60000);
   }
@@ -145,16 +149,18 @@ async function loadOverviewStats(){
       return;
     }
     const workDate=new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Kolkata"});
+    employeeShiftDateKey = workDate;
     const [{count,error},sessionResult,attendanceResult]=await Promise.all([
       supabase.from("billing_transactions").select("id",{count:"exact",head:true}).eq("employee_id",currentEmployee.id).gte("created_at",start.toISOString()),
       supabase.from("drawer_sessions").select("id,status,opened_at,drawer_id").eq("employee_id",currentEmployee.id).eq("status","open").order("opened_at",{ascending:false}).limit(1),
-      supabase.from("attendance").select("id,check_in,lunch_start,lunch_end,check_out,status,notes").eq("employee_id",currentEmployee.id).eq("work_date",workDate).maybeSingle()
+      supabase.from("attendance").select("id,work_date,check_in,lunch_start,lunch_end,check_out,status,notes").eq("employee_id",currentEmployee.id).eq("work_date",workDate).maybeSingle()
     ]);
     $("today-bill-count").textContent=error?"—":String(count||0);
     $("today-bill-caption").textContent=error?"Unable to load your bills":"Bills you recorded today";
     $("cash-position").textContent="—";
     $("cash-position-caption").textContent="";
-    renderEmployeeShiftControls(sessionResult.data?.[0]||null,attendanceResult.data||null,sessionResult.error||attendanceResult.error);
+    const todayAttendance = attendanceResult.data?.work_date === workDate ? attendanceResult.data : null;
+    renderEmployeeShiftControls(sessionResult.data?.[0]||null,todayAttendance,sessionResult.error||attendanceResult.error);
     return;
   }
   const [{count,error},sessionResult]=await Promise.all([
