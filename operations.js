@@ -36,6 +36,7 @@ export async function renderOperations(view, ctx) {
          if(r.error)throw r.error;
          msg.textContent="Shift opened. GPS verified ("+Math.round(accuracy)+" m accuracy); attendance check-in recorded.";
          await renderOperations(view,ctx);
+         if(!admin){const overview=document.querySelector('.nav-item[data-view="overview"]');if(overview)overview.click();}
        }catch(error){msg.textContent=error.message||"Unable to verify shop location.";}
        finally{if(submit)submit.disabled=false;}
      });
