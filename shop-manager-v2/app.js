@@ -16,6 +16,7 @@ let currentEmployee = null;
 let walletOptions = [];
 let editingServiceId = null;
 let pendingEmployeeShiftCloseSessionId = null;
+let employeeShiftRefreshTimer = null;
 
 function setMessage(message, isError = true) {
   $("login-message").textContent = message;
@@ -72,6 +73,13 @@ async function showApp(user) {
   }
   await loadCatalog();
   if (profile.role === "employee") { await loadEmployeeAnnouncements(); await loadEmployeeTaskReminders(); }
+  if (profile.role === "employee" && !employeeShiftRefreshTimer) {
+    employeeShiftRefreshTimer = setInterval(() => {
+      if (currentProfile?.role === "employee" && !appScreen.classList.contains("hidden")) {
+        loadOverviewStats().catch(error => console.warn("Shift status refresh failed", error));
+      }
+    }, 60000);
+  }
 }
 
 async function loadCatalog() {
@@ -140,7 +148,7 @@ async function loadOverviewStats(){
     const [{count,error},sessionResult,attendanceResult]=await Promise.all([
       supabase.from("billing_transactions").select("id",{count:"exact",head:true}).eq("employee_id",currentEmployee.id).gte("created_at",start.toISOString()),
       supabase.from("drawer_sessions").select("id,status,opened_at,drawer_id").eq("employee_id",currentEmployee.id).eq("status","open").order("opened_at",{ascending:false}).limit(1),
-      supabase.from("attendance").select("id,check_in,lunch_start,lunch_end,check_out,status").eq("employee_id",currentEmployee.id).eq("work_date",workDate).maybeSingle()
+      supabase.from("attendance").select("id,check_in,lunch_start,lunch_end,check_out,status,notes").eq("employee_id",currentEmployee.id).eq("work_date",workDate).maybeSingle()
     ]);
     $("today-bill-count").textContent=error?"—":String(count||0);
     $("today-bill-caption").textContent=error?"Unable to load your bills":"Bills you recorded today";
@@ -171,7 +179,8 @@ function renderEmployeeShiftControls(openSession,attendance,error){
    else if(!attendance?.lunch_start){label="Lunch Break";action="lunch-start";description="Record your lunch break when you leave for lunch.";}
    else {label="Shift Close";action="shift-close";description="Complete your shift and enter the cash denomination count.";}
  }else if(attendance?.check_out){
-   host.innerHTML='<div class="shift-control-card"><div><span class="eyebrow">TODAY’S SHIFT</span><strong>Shift Closed</strong><p>Your shift has been closed for today.</p></div><span class="shift-complete-mark">✓</span></div>';return;
+   const autoClosed=String(attendance?.notes||"").includes("Auto-closed at 9:00 PM IST");
+   host.innerHTML='<div class="shift-control-card"><div><span class="eyebrow">TODAY’S SHIFT</span><strong>Shift Closed</strong><p>'+(autoClosed?"Your shift was automatically closed at 9:00 PM IST. Cash denomination count was not recorded.":"Your shift has been closed for today.")+'</p></div><span class="shift-complete-mark">✓</span></div>';return;
  }else{
    label="Shift Start";action="shift-start";description="Open your assigned cash drawer and record opening cash to start work.";
  }
